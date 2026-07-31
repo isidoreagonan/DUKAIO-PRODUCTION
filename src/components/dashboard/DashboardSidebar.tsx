@@ -23,7 +23,7 @@ type NavItem = {
 };
 
 const mainItems: NavItem[] = [
-  { title: "Accueil", url: "/dashboard", icon: LayoutDashboard, end: true },
+  { title: "Tableau de bord", url: "/dashboard", icon: LayoutDashboard, end: true },
   { title: "Produits", url: "/dashboard/products", icon: Package },
   { title: "Ventes", url: "/dashboard/sales", icon: ShoppingCart },
   { title: "Analytiques", url: "/dashboard/analytics", icon: BarChart3 },
@@ -50,22 +50,19 @@ export function DashboardSidebar() {
     const active = !item.external && isActive(item.url, item.end);
     const inner = (
       <>
-        {active && (
-          <span className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-1 rounded-r-full bg-accent shadow-[0_0_12px_hsl(var(--accent)/0.7)]" />
-        )}
-        <item.icon className={`h-4 w-4 shrink-0 ${active ? "text-accent" : ""}`} />
+        <item.icon className={`h-5 w-5 shrink-0 ${active ? "text-[#3f48cc]" : "text-white"}`} />
         {!collapsed && <span className="truncate flex-1 text-left">{item.title}</span>}
         {!collapsed && item.badge && (
-          <span className="ml-auto rounded-md bg-accent px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[hsl(224_65%_9%)] shadow-[0_0_10px_hsl(var(--accent)/0.6)]">
+          <span className="ml-auto rounded bg-[#ef4444] px-2 py-0.5 text-[10px] font-bold text-white">
             {item.badge}
           </span>
         )}
       </>
     );
-    const classes = `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[12px] font-bold uppercase tracking-[0.12em] transition-all ${
+    const classes = `group relative flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium transition-all ${
       active
-        ? "bg-[hsl(0_0%_98%/0.95)] text-[hsl(221_83%_35%)] shadow-[0_4px_14px_-4px_rgba(0,0,0,0.45)]"
-        : "text-white/70 hover:text-white hover:bg-white/5"
+        ? "bg-white text-[#3f48cc] shadow-sm"
+        : "text-white hover:bg-white/10"
     }`;
     if (item.external) {
       return (
@@ -87,23 +84,16 @@ export function DashboardSidebar() {
       className="dashboard-shell-scope border-r-0"
     >
       <SidebarContent
-        className="relative flex flex-col bg-[linear-gradient(180deg,hsl(224_60%_14%)_0%,hsl(224_65%_9%)_100%)] text-white overflow-hidden"
+        className="relative flex flex-col bg-[#3f48cc] text-white overflow-hidden"
       >
-        {/* Decorative gold orb */}
-        <div className="pointer-events-none absolute -top-20 -right-20 h-48 w-48 rounded-full bg-accent/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-primary/30 blur-3xl" />
-
-        {/* Profile block — store logo as primary, user avatar as small badge */}
-        <div className="relative px-4 pt-6 pb-5 flex flex-col items-center text-center border-b border-white/10">
+        {/* Profile block — Store switcher simplified */}
+        <div className="px-4 py-6 flex flex-col items-start border-b border-white/10">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="group relative">
-                {/* Gold halo */}
-                <span className="absolute -inset-1.5 rounded-2xl bg-gradient-to-br from-accent via-accent/60 to-primary blur-[8px] opacity-70 group-hover:opacity-100 transition-opacity" />
-                {/* Store logo (primary visual) */}
+              <button className="w-full flex items-center gap-3 text-left outline-none">
                 <div
-                  className={`relative overflow-hidden rounded-2xl ring-2 ring-accent shadow-[0_8px_24px_-6px_hsl(var(--accent)/0.5)] bg-gradient-to-br from-primary to-accent flex items-center justify-center ${
-                    collapsed ? "h-10 w-10" : "h-20 w-20"
+                  className={`flex shrink-0 items-center justify-center rounded-lg bg-white/20 overflow-hidden ${
+                    collapsed ? "h-10 w-10 mx-auto" : "h-10 w-10"
                   }`}
                 >
                   {activeStore?.logo_url ? (
@@ -113,25 +103,18 @@ export function DashboardSidebar() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className={`font-extrabold text-white ${collapsed ? "text-base" : "text-2xl"}`}>
-                      {activeStore?.name?.charAt(0)?.toUpperCase() || "D"}
-                    </span>
+                    <Store className="h-5 w-5 text-white" />
                   )}
                 </div>
-                {/* User avatar as small badge bottom-right */}
                 {!collapsed && (
-                  <Avatar className="absolute -bottom-1 -right-1 h-7 w-7 ring-2 ring-[hsl(224_65%_9%)] shadow-md">
-                    <AvatarImage src={profile?.avatar_url || ""} />
-                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-[10px] font-bold">
-                      {profile?.display_name?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-lg font-bold text-white truncate">
+                      {activeStore?.name || "Dukaio"}
+                    </p>
+                  </div>
                 )}
-                {/* Switcher chevron */}
                 {!collapsed && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-accent flex items-center justify-center ring-2 ring-[hsl(224_65%_9%)] shadow-md">
-                    <ChevronsUpDown className="h-2.5 w-2.5 text-[hsl(224_65%_9%)]" />
-                  </span>
+                  <ChevronsUpDown className="h-4 w-4 text-white/70 shrink-0" />
                 )}
               </button>
             </DropdownMenuTrigger>
@@ -176,51 +159,30 @@ export function DashboardSidebar() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {!collapsed && (
-            <div className="mt-4 space-y-1 max-w-full w-full">
-              <p className="text-[13px] font-extrabold tracking-[0.08em] uppercase text-white truncate">
-                {activeStore?.name || "Dukaio"}
-              </p>
-              <div className="flex items-center justify-center gap-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent))]" />
-                <p className="text-[10px] text-white/60 truncate font-medium">
-                  {profile?.display_name || user?.email?.split("@")[0]}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
-
         {/* Navigation */}
-        <nav className="relative flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+        <nav className="relative flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {mainItems.map(renderItem)}
 
-          <div className="pt-3 mt-3 border-t border-white/10 space-y-1">
+          <div className="pt-4 mt-4 border-t border-white/10 space-y-2">
             {bottomItems.map(renderItem)}
           </div>
-
         </nav>
 
         {/* Footer mini brand + signout */}
-        <div className="relative px-3 pb-4 pt-2 border-t border-white/10">
+        <div className="relative px-4 pb-6 pt-4 border-t border-white/10">
           <button
             onClick={signOut}
-            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-[11px] font-bold uppercase tracking-[0.15em] text-white/60 hover:text-white hover:bg-white/5 transition-all"
+            className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium text-white hover:bg-white/10 transition-all"
             title="Déconnexion"
           >
-            <LogOut className="h-3.5 w-3.5" />
-            {!collapsed && <span>Déconnexion</span>}
+            <LogOut className="h-5 w-5 shrink-0" />
+            {!collapsed && <span className="truncate flex-1 text-left">Déconnexion</span>}
           </button>
-          {!collapsed && (
-            <div className="mt-2 flex items-center justify-center gap-1.5 opacity-50">
-              <img src={logo} alt="" className="h-3 w-3" />
-              <span className="text-[10px] text-white/60 tracking-wider">DUKAIO</span>
-            </div>
-          )}
         </div>
       </SidebarContent>
     </Sidebar>
   );
 }
+
