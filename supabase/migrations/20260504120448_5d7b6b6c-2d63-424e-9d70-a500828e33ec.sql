@@ -1,0 +1,11 @@
+
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS file_password TEXT,
+  ADD COLUMN IF NOT EXISTS watermark_enabled BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS sales_limit INTEGER,
+  ADD COLUMN IF NOT EXISTS hide_from_store BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS collect_shipping_address BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS hide_sales_count BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.orders
+  ADD COLUMN IF NOT EXISTS shipping_address JSONB;

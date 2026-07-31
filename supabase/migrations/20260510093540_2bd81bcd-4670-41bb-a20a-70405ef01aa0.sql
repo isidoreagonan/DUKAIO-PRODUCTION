@@ -1,0 +1,1 @@
+UPDATE public.login_otps SET used = true WHERE used = false;

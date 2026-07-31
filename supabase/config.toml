@@ -1,0 +1,58 @@
+project_id = "nexozjpjbhqfjplrogvz"
+
+[functions.pawapay-deposit]
+verify_jwt = false
+
+[functions.pawapay-status]
+verify_jwt = false
+
+[functions.pawapay-webhook]
+verify_jwt = false
+
+[functions.stripe-create-payment-intent]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.get-stripe-config]
+verify_jwt = false
+
+[functions.release-pending-funds]
+verify_jwt = false
+
+[functions.rewrite-description]
+verify_jwt = false
+
+[functions.send-campaign]
+verify_jwt = false
+
+[functions.notify-sale]
+verify_jwt = false
+
+[functions.analyze-kyc]
+verify_jwt = false
+
+[functions.admin-kyc]
+verify_jwt = false
+
+[functions.marketplace-search]
+verify_jwt = false
+
+[functions.visual-search]
+verify_jwt = false
+
+[functions.analyze-badge-eligibility]
+verify_jwt = false
+
+[functions.subscribe-badge]
+verify_jwt = false
+
+[functions.admin-badge]
+verify_jwt = false
+
+[functions.community-access]
+verify_jwt = false
+
+[functions.didit-webhook]
+verify_jwt = false
