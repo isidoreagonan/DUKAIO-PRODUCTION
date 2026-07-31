@@ -30,11 +30,6 @@ const mainItems: NavItem[] = [
   { title: "Autres", url: "/dashboard/menu", icon: LayoutGrid, badge: "New" },
 ];
 
-const bottomItems: NavItem[] = [
-  { title: "Paramètres", url: "/dashboard/settings", icon: Settings },
-  { title: "Centre d'aide", url: "/faq", icon: HelpCircle, external: true },
-];
-
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -166,10 +161,6 @@ export function DashboardSidebar() {
         {/* Navigation */}
         <nav className="relative flex-1 py-4 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] px-4">
           {mainItems.map(renderItem)}
-
-          <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
-            {bottomItems.map(renderItem)}
-          </div>
         </nav>
 
         {/* Footer mini brand + signout */}
