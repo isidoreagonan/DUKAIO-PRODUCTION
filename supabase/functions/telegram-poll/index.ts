@@ -27,7 +27,7 @@ async function tg(method: string, body: unknown) {
   const res = await fetch(`${GATEWAY_URL}/${method}`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,
+      Authorization: `Bearer ${Deno.env.get("GROQ_API_KEY")}`,
       "X-Connection-Api-Key": Deno.env.get("TELEGRAM_API_KEY")!,
       "Content-Type": "application/json",
     },
@@ -43,14 +43,14 @@ async function send(chatId: number, text: string) {
 }
 
 async function aiReply(history: { role: "user" | "assistant"; content: string }[]): Promise<string> {
-  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const apiKey = Deno.env.get("GROQ_API_KEY");
   if (!apiKey) return "L'IA n'est pas configurée.";
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history.slice(-10)],
       max_tokens: 600,
     }),

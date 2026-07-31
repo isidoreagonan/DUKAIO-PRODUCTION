@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
 
     // Optional: scan a single user (admin trigger)
     let targetUserId: string | null = null;
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       let aiReasoning = "Revenu insuffisant pour analyse IA.";
       let isEligible = false;
 
-      if (computedGrade && kycVerified && LOVABLE_API_KEY) {
+      if (computedGrade && kycVerified && GROQ_API_KEY) {
         const prompt = `Tu es un système de vérification anti-fraude pour la plateforme Dukaio. Analyse ce vendeur et donne un score de confiance de 0 à 100.
 
 Données vendeur:
@@ -111,14 +111,14 @@ Critères d'évaluation:
 Réponds en JSON strict: {"score": <0-100>, "is_eligible": <bool>, "reasoning": "<1-2 phrases>"}`;
 
         try {
-          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const aiResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              Authorization: `Bearer ${GROQ_API_KEY}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
+              model: "llama-3.3-70b-versatile",
               messages: [{ role: "user", content: prompt }],
               tools: [
                 {
