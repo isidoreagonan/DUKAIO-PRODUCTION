@@ -1,31 +1,7 @@
 User-agent: *
 Allow: /
-Allow: /products
-Allow: /fichiers
-Allow: /cours
-Allow: /licences
-Allow: /pricing
-Allow: /about
-Allow: /blog
-Allow: /contact
-Allow: /faq
-Allow: /documentation
-Allow: /partners
-Allow: /terms
-Allow: /register
-Allow: /login
-
-Disallow: /bundles
 Disallow: /dashboard/
-Disallow: /dashboard
-Disallow: /onboarding
-Disallow: /mes-achats
-Disallow: /buyer-dashboard
-Disallow: /buyer-login
-Disallow: /payment-callback
-Disallow: /cart
-Disallow: /reset-password
-Disallow: /forgot-password
-Disallow: /search
+Disallow: /buyer/
+Disallow: /mes-achats/
 
-Sitemap: https://dukaio.com/sitemap.xml
+Sitemap: https://ecom-revolt.com/sitemap.xml
