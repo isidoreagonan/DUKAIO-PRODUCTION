@@ -43,8 +43,6 @@ const Marketplace = () => {
   const { loading } = useAuth();
   const navigate = useNavigate();
   const [topProducts, setTopProducts] = useState<MarketplaceProduct[]>([]);
-  const [newProducts, setNewProducts] = useState<MarketplaceProduct[]>([]);
-  const [recommended, setRecommended] = useState<MarketplaceProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
@@ -53,15 +51,11 @@ const Marketplace = () => {
         const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marketplace-search`;
         const headers = { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY };
 
-        const [popRes, newRes, recoRes] = await Promise.all([
-          fetch(`${base}?sort=popular&limit=12`, { headers }).then((r) => r.json()),
-          fetch(`${base}?sort=recent&limit=12`, { headers }).then((r) => r.json()),
-          fetch(`${base}?sort=relevance&limit=12`, { headers }).then((r) => r.json()),
-        ]);
-
-        setTopProducts(popRes?.products || []);
-        setNewProducts(newRes?.products || []);
-        setRecommended(recoRes?.products || []);
+        const popRes = await fetch(`${base}?sort=popular&limit=50`, { headers }).then((r) => r.json());
+        
+        // Filter products to only include those with more than 5 sales
+        const popularProducts = (popRes?.products || []).filter((p: MarketplaceProduct) => (p.sales_count || 0) > 5);
+        setTopProducts(popularProducts);
       } catch (e) {
         console.error("Marketplace fetch error", e);
       } finally {
@@ -295,25 +289,6 @@ const Marketplace = () => {
         </div>
       </section>
 
-      {/* NEW */}
-      <ProductSection
-        title="Nouveautés"
-        subtitle="Les derniers ajouts de nos créateurs"
-        icon={<Clock className="h-4 w-4 text-primary sm:h-5 sm:w-5" />}
-        products={newProducts}
-        loading={loadingProducts}
-        ctaLink="/search?sort=recent"
-      />
-
-      {/* RECOMMENDED */}
-      <ProductSection
-        title="Recommandés pour vous"
-        subtitle="Une sélection de la marketplace"
-        icon={<Sparkles className="h-4 w-4 text-primary sm:h-5 sm:w-5" />}
-        products={recommended}
-        loading={loadingProducts}
-        ctaLink="/search"
-      />
 
       {/* MARKETING TOOLS — VENDOR POWER SECTION */}
       <section className="py-12 sm:py-16">
