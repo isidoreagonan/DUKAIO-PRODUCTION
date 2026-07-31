@@ -50,7 +50,7 @@ export function DashboardSidebar() {
     const active = !item.external && isActive(item.url, item.end);
     const inner = (
       <>
-        <item.icon className={`shrink-0 ${collapsed ? "h-5 w-5" : "h-5 w-5"} ${active ? "text-[#3f48cc]" : "text-white"}`} />
+        <item.icon className={`shrink-0 ${collapsed ? "h-6 w-6" : "h-5 w-5"} ${active ? "text-[#3f48cc]" : "text-white"}`} />
         {!collapsed && <span className="truncate flex-1 text-left">{item.title}</span>}
         {!collapsed && item.badge && (
           <span className="ml-auto rounded bg-[#ef4444] px-2 py-0.5 text-[10px] font-bold text-white">
@@ -60,7 +60,7 @@ export function DashboardSidebar() {
       </>
     );
     const classes = `group relative flex items-center rounded-2xl text-[15px] font-medium transition-all ${
-      collapsed ? "justify-center w-10 h-10 mx-auto p-0" : "gap-3 px-4 py-3"
+      collapsed ? "justify-center w-[48px] h-[48px] mx-auto p-0" : "gap-3 px-4 py-3"
     } ${
       active
         ? "bg-white text-[#3f48cc] shadow-sm"
@@ -89,23 +89,23 @@ export function DashboardSidebar() {
         className="relative flex flex-col bg-[#3f48cc] text-white overflow-hidden"
       >
         {/* Profile block — Store switcher simplified */}
-        <div className={`pt-6 pb-4 flex ${collapsed ? "flex-col items-center gap-4" : "px-4 items-center justify-between"} border-b border-transparent`}>
+        <div className={`pt-8 pb-4 flex ${collapsed ? "flex-col items-center gap-6" : "px-4 items-center justify-between"} border-b border-transparent`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className={`flex items-center gap-3 text-left outline-none ${collapsed ? "justify-center w-full" : "flex-1 min-w-0"}`}>
                 <div
                   className={`flex shrink-0 items-center justify-center overflow-hidden ${
-                    collapsed ? "h-8 w-8 mx-auto" : "h-10 w-10 ml-1 rounded-lg bg-white/20"
+                    collapsed ? "h-12 w-12 mx-auto" : "h-10 w-10 ml-1 rounded-lg bg-white/20"
                   }`}
                 >
                   {activeStore?.logo_url ? (
                     <img
                       src={activeStore.logo_url}
                       alt={activeStore.name}
-                      className={`h-full w-full object-cover ${collapsed ? "rounded-[10px]" : "rounded-lg"}`}
+                      className={`h-full w-full object-cover ${collapsed ? "rounded-xl" : "rounded-lg"}`}
                     />
                   ) : (
-                    <Store className={`${collapsed ? "h-5 w-5" : "h-5 w-5"} text-white`} />
+                    <Store className={`${collapsed ? "h-6 w-6" : "h-5 w-5"} text-white`} />
                   )}
                 </div>
                 {!collapsed && (
@@ -160,11 +160,11 @@ export function DashboardSidebar() {
           </DropdownMenu>
 
           {/* Trigger next to logo when expanded, below logo when collapsed */}
-          <SidebarTrigger className={`shrink-0 text-white hover:text-[#3f48cc] hover:bg-white rounded-xl [&>svg]:w-5 [&>svg]:h-5 transition-colors ${collapsed ? "w-10 h-10" : "w-10 h-10 mr-1"}`} />
+          <SidebarTrigger className={`shrink-0 text-white hover:text-[#3f48cc] hover:bg-white rounded-xl [&>svg]:w-6 [&>svg]:h-6 transition-colors ${collapsed ? "w-[48px] h-[48px]" : "w-10 h-10 mr-1"}`} />
         </div>
 
         {/* Navigation */}
-        <nav className={`relative flex-1 py-4 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] ${collapsed ? "px-1" : "px-4"}`}>
+        <nav className="relative flex-1 py-4 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] px-4">
           {mainItems.map(renderItem)}
 
           <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
@@ -173,15 +173,15 @@ export function DashboardSidebar() {
         </nav>
 
         {/* Footer mini brand + signout */}
-        <div className={`relative pb-6 pt-4 border-t border-transparent ${collapsed ? "px-1" : "px-4"}`}>
+        <div className="relative pb-6 pt-4 border-t border-transparent px-4">
           <button
             onClick={signOut}
             className={`flex items-center rounded-2xl text-[15px] font-medium text-white hover:bg-white/10 transition-all ${
-              collapsed ? "justify-center w-10 h-10 mx-auto p-0" : "w-full gap-3 px-4 py-3"
+              collapsed ? "justify-center w-[48px] h-[48px] mx-auto p-0" : "w-full gap-3 px-4 py-3"
             }`}
             title="Déconnexion"
           >
-            <LogOut className={`shrink-0 h-5 w-5`} />
+            <LogOut className={`shrink-0 ${collapsed ? "h-6 w-6" : "h-5 w-5"}`} />
             {!collapsed && <span className="truncate flex-1 text-left">Déconnexion</span>}
           </button>
         </div>
