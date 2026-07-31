@@ -61,16 +61,19 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.03, 0.3) }}
       whileHover={{ y: -4 }}
-      className={`group ${fixedWidth ? "w-[160px] shrink-0 sm:w-[200px]" : ""}`}
+      className={`group relative flex flex-col overflow-hidden rounded-[14px] bg-card border border-border/50 shadow-sm transition-all hover:shadow-md ${
+        fixedWidth ? "w-[220px] shrink-0 sm:w-auto" : "w-full"
+      }`}
     >
-      <Link to={href} className="block">
-        <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-secondary ring-1 ring-border/50">
+      <Link to={href} className="flex flex-col flex-1">
+        {/* Image */}
+        <div className="relative aspect-square w-full bg-secondary overflow-hidden">
           {product.thumbnail_url ? (
             <img
               src={product.thumbnail_url}
               alt={product.title}
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -78,17 +81,14 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
             </div>
           )}
 
-          {/* gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-
-          {/* top-left badge */}
+          {/* Discount badge */}
           {hasDiscount && (
-            <span className="absolute left-2 top-2 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold uppercase text-destructive-foreground shadow-md">
+            <span className="absolute left-3 top-3 rounded-md bg-[#3f48cc] px-2 py-1 text-[10px] font-bold text-white shadow-sm">
               -{discountPct}%
             </span>
           )}
 
-          {/* heart */}
+          {/* Heart button */}
           <button
             type="button"
             onClick={(e) => {
@@ -96,48 +96,50 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
               setLiked((s) => !s);
             }}
             aria-label="Favori"
-            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 text-foreground shadow-md backdrop-blur transition-all hover:scale-110 active:scale-95"
+            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition-all hover:scale-110 active:scale-95 hover:text-red-500"
           >
             <Heart
-              className={`h-4 w-4 transition-colors ${
-                liked ? "fill-destructive text-destructive" : ""
+              className={`h-3.5 w-3.5 transition-colors ${
+                liked ? "fill-red-500 text-red-500" : ""
               }`}
             />
           </button>
-
-          {/* sales count chip bottom */}
-          {(product.sales_count || 0) > 0 && (
-            <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-background/90 px-2 py-0.5 text-[10px] font-semibold text-foreground shadow-md backdrop-blur">
-              <Star className="h-2.5 w-2.5 fill-primary text-primary" />
-              {product.sales_count} vendus
-            </span>
-          )}
         </div>
 
-        <div className="mt-2.5 space-y-1">
-          {cat && (
-            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              {cat.emoji} {cat.label}
-            </span>
-          )}
-          <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-foreground transition-colors group-hover:text-primary sm:text-sm">
+        {/* Content */}
+        <div className="flex flex-col flex-1 p-3.5 sm:p-4">
+          <h3 className="line-clamp-2 text-[13px] font-bold leading-tight text-slate-800 transition-colors group-hover:text-[#3f48cc] sm:text-sm mb-1.5 min-h-[38px]">
             {product.title}
           </h3>
+          
           {product.store?.display_name && (
-            <p className="flex items-center gap-1 truncate text-[11px] text-muted-foreground">
-              <span className="truncate">par {product.store.display_name}</span>
+            <p className="flex items-center gap-1.5 truncate text-[11px] text-slate-500 mb-3">
+              <span>Par:</span>
+              {product.store.store_logo_url || product.store.avatar_url ? (
+                <img 
+                  src={product.store.store_logo_url || product.store.avatar_url} 
+                  alt={product.store.display_name}
+                  className="w-4 h-4 rounded-full object-cover bg-slate-100"
+                />
+              ) : null}
+              <span className="font-medium text-slate-700 truncate">{product.store.display_name}</span>
               {grade && <VerifiedBadge grade={grade} size="xs" />}
             </p>
           )}
-          <div className="flex items-baseline gap-1.5 pt-0.5">
-            <span className="text-sm font-bold text-foreground sm:text-base">
+
+          <div className="flex items-end gap-2 mt-auto mb-3.5">
+            <span className="text-[15px] font-extrabold text-[#3f48cc]">
               {Number(product.price).toLocaleString()} FCFA
             </span>
             {hasDiscount && (
-              <span className="text-[11px] text-muted-foreground line-through">
-                {Number(product.original_price).toLocaleString()}
+              <span className="text-[11px] font-medium text-slate-400 line-through pb-0.5">
+                {Number(product.original_price).toLocaleString()} FCFA
               </span>
             )}
+          </div>
+
+          <div className="w-full bg-[#3f48cc]/90 text-white hover:bg-[#3f48cc] py-2 rounded-lg text-[13px] font-semibold text-center transition-colors">
+            Acheter maintenant
           </div>
         </div>
       </Link>
