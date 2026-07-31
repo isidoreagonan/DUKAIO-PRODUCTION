@@ -6,7 +6,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveStore } from "@/hooks/useActiveStore";
-import { Sidebar, SidebarContent, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -59,20 +59,22 @@ export function DashboardSidebar() {
         )}
       </>
     );
-    const classes = `group relative flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium transition-all ${
+    const classes = `group relative flex items-center rounded-xl text-[15px] font-medium transition-all ${
+      collapsed ? "justify-center w-11 h-11 mx-auto p-0" : "gap-3 px-4 py-3"
+    } ${
       active
         ? "bg-white text-[#3f48cc] shadow-sm"
         : "text-white hover:bg-white/10"
     }`;
     if (item.external) {
       return (
-        <a key={item.title} href={item.url} target="_blank" rel="noopener noreferrer" className={classes}>
+        <a key={item.title} href={item.url} target="_blank" rel="noopener noreferrer" className={classes} title={collapsed ? item.title : undefined}>
           {inner}
         </a>
       );
     }
     return (
-      <NavLink key={item.title} to={item.url} end={item.end} className={classes}>
+      <NavLink key={item.title} to={item.url} end={item.end} className={classes} title={collapsed ? item.title : undefined}>
         {inner}
       </NavLink>
     );
@@ -87,13 +89,13 @@ export function DashboardSidebar() {
         className="relative flex flex-col bg-[#3f48cc] text-white overflow-hidden"
       >
         {/* Profile block — Store switcher simplified */}
-        <div className="px-4 py-6 flex flex-col items-start border-b border-white/10">
+        <div className={`px-3 py-6 flex ${collapsed ? "flex-col items-center gap-4" : "items-center justify-between"} border-b border-white/10`}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-3 text-left outline-none">
+              <button className={`flex items-center gap-3 text-left outline-none ${collapsed ? "justify-center" : "flex-1 min-w-0"}`}>
                 <div
                   className={`flex shrink-0 items-center justify-center rounded-lg bg-white/20 overflow-hidden ${
-                    collapsed ? "h-10 w-10 mx-auto" : "h-10 w-10"
+                    collapsed ? "h-11 w-11" : "h-10 w-10 ml-1"
                   }`}
                 >
                   {activeStore?.logo_url ? (
@@ -107,14 +109,11 @@ export function DashboardSidebar() {
                   )}
                 </div>
                 {!collapsed && (
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-2">
                     <p className="text-lg font-bold text-white truncate">
                       {activeStore?.name || "Dukaio"}
                     </p>
                   </div>
-                )}
-                {!collapsed && (
-                  <ChevronsUpDown className="h-4 w-4 text-white/70 shrink-0" />
                 )}
               </button>
             </DropdownMenuTrigger>
@@ -159,10 +158,13 @@ export function DashboardSidebar() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Trigger next to logo when expanded, below logo when collapsed */}
+          <SidebarTrigger className={`shrink-0 h-9 w-9 text-white/70 hover:text-white hover:bg-white/10 rounded-lg ${collapsed ? "" : "mr-1"}`} />
         </div>
 
         {/* Navigation */}
-        <nav className="relative flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <nav className="relative flex-1 px-3 py-6 space-y-2 overflow-y-auto">
           {mainItems.map(renderItem)}
 
           <div className="pt-4 mt-4 border-t border-white/10 space-y-2">
@@ -171,10 +173,12 @@ export function DashboardSidebar() {
         </nav>
 
         {/* Footer mini brand + signout */}
-        <div className="relative px-4 pb-6 pt-4 border-t border-white/10">
+        <div className="relative px-3 pb-6 pt-4 border-t border-white/10">
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium text-white hover:bg-white/10 transition-all"
+            className={`flex items-center rounded-xl text-[15px] font-medium text-white hover:bg-white/10 transition-all ${
+              collapsed ? "justify-center w-11 h-11 mx-auto p-0" : "w-full gap-3 px-4 py-3"
+            }`}
             title="Déconnexion"
           >
             <LogOut className="h-5 w-5 shrink-0" />

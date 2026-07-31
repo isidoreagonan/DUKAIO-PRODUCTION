@@ -56,7 +56,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
               ) : (
                 <>
-                  <SidebarTrigger className="shrink-0 h-9 w-9 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg" />
                   <Link
                     to="/marketplace"
                     className="inline-flex items-center gap-2 h-9 pl-3 pr-2.5 rounded-lg bg-[hsl(214_100%_97%)] text-[hsl(221_83%_45%)] hover:bg-[hsl(214_100%_94%)] transition-colors text-sm font-semibold"
