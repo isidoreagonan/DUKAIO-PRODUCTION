@@ -43,6 +43,7 @@ const Marketplace = () => {
   const { loading } = useAuth();
   const navigate = useNavigate();
   const [topProducts, setTopProducts] = useState<MarketplaceProduct[]>([]);
+  const [otherProducts, setOtherProducts] = useState<MarketplaceProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
@@ -51,11 +52,19 @@ const Marketplace = () => {
         const base = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/marketplace-search`;
         const headers = { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY };
 
-        const popRes = await fetch(`${base}?sort=popular&limit=50`, { headers }).then((r) => r.json());
+        const [popRes, recentRes] = await Promise.all([
+          fetch(`${base}?sort=popular&limit=50`, { headers }).then((r) => r.json()),
+          fetch(`${base}?sort=recent&limit=100`, { headers }).then((r) => r.json()),
+        ]);
         
         // Filter products to only include those with more than 5 sales
         const popularProducts = (popRes?.products || []).filter((p: MarketplaceProduct) => (p.sales_count || 0) > 5);
         setTopProducts(popularProducts);
+
+        // For others, take recent, filter out those already in top products
+        const topIds = new Set(popularProducts.map((p: MarketplaceProduct) => p.id));
+        const others = (recentRes?.products || []).filter((p: MarketplaceProduct) => !topIds.has(p.id));
+        setOtherProducts(others);
       } catch (e) {
         console.error("Marketplace fetch error", e);
       } finally {
@@ -259,6 +268,16 @@ const Marketplace = () => {
         products={topProducts}
         loading={loadingProducts}
         ctaLink="/search?sort=popular"
+      />
+
+      {/* OTHER PRODUCTS */}
+      <ProductSection
+        title="Autres produits"
+        subtitle="Découvrez notre catalogue complet"
+        icon={<ShoppingBag className="h-4 w-4 text-primary sm:h-5 sm:w-5" />}
+        products={otherProducts}
+        loading={loadingProducts}
+        ctaLink="/search"
       />
 
       {/* VERIFIED PROMO STRIP */}
