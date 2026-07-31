@@ -179,7 +179,7 @@ const DashboardOverview = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 max-w-[1400px]">
+      <div className="space-y-5 max-w-[1400px] mx-auto w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}

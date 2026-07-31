@@ -72,7 +72,7 @@ const DashboardSales = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 max-w-6xl">
+      <div className="space-y-5 max-w-6xl mx-auto w-full">
         {/* ============ Mobile premium hero ============ */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
