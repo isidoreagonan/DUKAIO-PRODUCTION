@@ -164,11 +164,24 @@ const CreateProduct = () => {
       formData.append('bucket', bucketName);
       formData.append('key', path);
 
-      const { data, error } = await supabase.functions.invoke("r2-storage", {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch(`${supabase.supabaseUrl}/functions/v1/r2-storage`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token ?? supabase.supabaseKey}`
+        },
         body: formData,
       });
       
-      if (error || !data?.success) throw new Error(error?.message || "Échec de l'upload vers Cloudflare");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Échec de l'upload vers le serveur");
+      }
+      
+      const data = await response.json();
+      
+      if (!data?.success) throw new Error("Échec de l'upload vers Cloudflare");
       
       if (isPublic) {
         return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;
