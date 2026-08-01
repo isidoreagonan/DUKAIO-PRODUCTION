@@ -169,7 +169,8 @@ const CreateProduct = () => {
       const response = await fetch(`${supabase.supabaseUrl}/functions/v1/r2-storage`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session?.access_token ?? supabase.supabaseKey}`
+          'Authorization': `Bearer ${session?.access_token ?? supabase.supabaseKey}`,
+          'apikey': supabase.supabaseKey
         },
         body: formData,
       });
