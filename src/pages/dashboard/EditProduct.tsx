@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import axios from "axios";
 import RichTextEditor from "@/components/RichTextEditor";
 import CourseLessonsManager, { type Lesson } from "@/components/dashboard/CourseLessonsManager";
+import { FileSizeLimitDialog } from "@/components/dashboard/FileSizeLimitDialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +57,10 @@ const EditProduct = () => {
   const [saving, setSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+
+  // Size limit dialog state
+  const [sizeLimitDialogOpen, setSizeLimitDialogOpen] = useState(false);
+  const [sizeLimitMaxMB, setSizeLimitMaxMB] = useState(2);
 
   // Product fields
   const [title, setTitle] = useState("");
@@ -773,7 +778,8 @@ const EditProduct = () => {
                                   continue;
                                 }
                                 if (f.size > 30 * 1024 * 1024) {
-                                  toast.error("La taille limite est de 30 MB par fichier.");
+                                  setSizeLimitMaxMB(30);
+                                  setSizeLimitDialogOpen(true);
                                   continue;
                                 }
 
@@ -885,18 +891,33 @@ const EditProduct = () => {
                                 <span className="text-xs text-white">{thumbnailData.progress}%</span>
                               </div>
                             ) : (
-                              <button
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  if (thumbnailData.path) {
-                                    await deleteFileFromR2(thumbnailData.path, true);
-                                  }
-                                  setThumbnailData(null);
-                                }}
-                                className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                              </button>
+                              <div className="flex gap-4">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    document.getElementById("edit-thumb-input")?.click();
+                                  }}
+                                  className="bg-primary hover:bg-primary/90 text-white p-2 rounded-full shadow-lg"
+                                  title="Remplacer"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (thumbnailData.path) {
+                                      await deleteFileFromR2(thumbnailData.path, true);
+                                    }
+                                    setThumbnailData(null);
+                                  }}
+                                  className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
+                                  title="Supprimer"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                              </div>
                             )}
                           </div>
                         </>
@@ -917,10 +938,16 @@ const EditProduct = () => {
                           const f = e.target.files?.[0];
                           if (f) {
                             if (f.size > 2 * 1024 * 1024) {
-                              toast.error("La taille de la vignette ne doit pas dépasser 2 MB.");
+                              setSizeLimitMaxMB(2);
+                              setSizeLimitDialogOpen(true);
                               e.target.value = "";
                               return;
                             }
+                            if (thumbnailData?.path) {
+                              // Optimistically delete old file if we are replacing it
+                              deleteFileFromR2(thumbnailData.path, true).catch(() => {});
+                            }
+                            
                             const preview = URL.createObjectURL(f);
                             setThumbnailData({ name: f.name, progress: 0, isUploading: true, previewUrl: preview });
                             
@@ -1145,6 +1172,12 @@ const EditProduct = () => {
           </div>
         </div>
       </div>
+
+      <FileSizeLimitDialog 
+        open={sizeLimitDialogOpen} 
+        onOpenChange={setSizeLimitDialogOpen} 
+        maxSizeMB={sizeLimitMaxMB} 
+      />
     </DashboardLayout>
   );
 };
