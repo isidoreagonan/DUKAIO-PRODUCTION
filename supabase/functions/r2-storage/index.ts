@@ -34,6 +34,7 @@ serve(async (req) => {
         accessKeyId: accessKeyId,
         secretAccessKey: secretAccessKey,
       },
+      forcePathStyle: true,
     });
 
     if (action === 'upload') {

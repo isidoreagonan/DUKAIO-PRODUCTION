@@ -73,7 +73,7 @@ const ProductModerationDialog = ({ open, onOpenChange, review }: ProductModerati
             <p className="text-sm leading-5 text-foreground">{review.summary}</p>
           </div>
 
-          {review.status === "rejected" && review.issues.length > 0 && (
+          {review.status === "rejected" && review.issues?.length > 0 && (
             <div className="space-y-1.5">
               <h3 className="text-xs font-semibold text-foreground">Raisons</h3>
               <ul className="space-y-1">
