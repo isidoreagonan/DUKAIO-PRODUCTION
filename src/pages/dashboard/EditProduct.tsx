@@ -218,7 +218,7 @@ const EditProduct = () => {
       }
       return path; 
     } catch (err: any) {
-      toast.error("Erreur upload: " + err.message);
+      toast.error(`Erreur upload: ${err.message}`);
       return null;
     }
   };

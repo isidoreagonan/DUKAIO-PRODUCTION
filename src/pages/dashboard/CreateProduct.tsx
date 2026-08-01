@@ -177,7 +177,7 @@ const CreateProduct = () => {
       }
       return path; 
     } catch (err: any) {
-      toast({ title: "Erreur upload", description: err.message, variant: "destructive" });
+      toast.error(`Erreur upload: ${err.message}`);
       return null;
     }
   };
