@@ -322,7 +322,7 @@ const CreateProduct = () => {
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-2">Téléchargez votre fichier</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Formats acceptés : PDF, ZIP, RAR, EPUB, DOCX, XLSX, etc. (Fichiers audio et vidéo non autorisés).
+              Formats acceptés : Images, PDF, ZIP. (Fichiers audio et vidéo strictement interdits).
             </p>
             <div
               className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
@@ -336,7 +336,7 @@ const CreateProduct = () => {
                   <Upload className="h-4 w-4" /> Choisir un fichier
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  PDF, ZIP, DOCX, XLSX, EPUB… (Pas de vidéo/audio) Taille max: 500 MB
+                  Images, PDF, ZIP uniquement. Taille max: 30 MB
                 </p>
               </div>
               {downloadFile && (
@@ -348,7 +348,7 @@ const CreateProduct = () => {
                 id="download-input"
                 type="file"
                 className="hidden"
-                accept=".pdf,.zip,.rar,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                accept="image/*,.pdf,.zip,.rar"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {

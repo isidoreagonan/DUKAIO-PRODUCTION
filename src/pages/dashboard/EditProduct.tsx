@@ -728,7 +728,7 @@ const EditProduct = () => {
                           <Button variant="outline" className="gap-2 rounded-full pointer-events-none">
                             <Upload className="h-4 w-4" /> {downloadUrl ? "Remplacer le fichier" : "Choisir un fichier"}
                           </Button>
-                          <p className="text-xs text-muted-foreground">PDF, ZIP, DOCX, EPUB… (Pas de vidéo/audio) Max 30 MB</p>
+                          <p className="text-xs text-muted-foreground">Images, PDF, ZIP uniquement. Taille max: 30 MB</p>
                         </div>
                         {downloadFile && (
                           <p className="text-sm font-medium text-foreground mt-4">📎 {downloadFile.name}</p>
@@ -737,7 +737,7 @@ const EditProduct = () => {
                           id="edit-download-input"
                           type="file"
                           className="hidden"
-                          accept=".pdf,.zip,.rar,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                          accept="image/*,.pdf,.zip,.rar"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
