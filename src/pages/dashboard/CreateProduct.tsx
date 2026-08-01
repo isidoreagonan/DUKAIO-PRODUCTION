@@ -159,13 +159,13 @@ const CreateProduct = () => {
     const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('bucket', bucketName);
-      formData.append('key', path);
-
       const { data, error } = await supabase.functions.invoke("r2-storage", {
-        body: formData,
+        body: file,
+        headers: {
+          'x-bucket': bucketName,
+          'x-key': path,
+          'x-content-type': file.type
+        }
       });
       
       if (error || !data?.success) throw new Error(error?.message || "Échec de l'upload vers Cloudflare");

@@ -4,7 +4,7 @@ import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.504.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-bucket, x-key, x-content-type',
 };
 
 serve(async (req) => {
@@ -38,23 +38,22 @@ serve(async (req) => {
     });
 
     if (req.method === 'POST') {
-      // Direct upload proxy to bypass CORS
-      const formData = await req.formData();
-      const file = formData.get('file') as File;
-      const bucketName = formData.get('bucket') as string;
-      const keyName = formData.get('key') as string;
+      // Direct upload proxy to bypass CORS, using raw binary body
+      const bucketName = req.headers.get('x-bucket');
+      const keyName = req.headers.get('x-key');
+      const fileType = req.headers.get('x-content-type');
       
-      if (!file || !bucketName || !keyName) {
-        throw new Error('Missing file, bucket, or key');
+      if (!bucketName || !keyName || !fileType) {
+        throw new Error('Missing bucket, key, or content-type headers');
       }
 
-      const arrayBuffer = await file.arrayBuffer();
+      const arrayBuffer = await req.arrayBuffer();
       const buffer = new Uint8Array(arrayBuffer);
 
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: keyName,
-        ContentType: file.type,
+        ContentType: fileType,
         Body: buffer,
       });
 
