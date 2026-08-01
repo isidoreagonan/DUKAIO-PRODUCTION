@@ -34,7 +34,6 @@ serve(async (req) => {
         accessKeyId: accessKeyId,
         secretAccessKey: secretAccessKey,
       },
-      forcePathStyle: true,
     });
 
     // Variables already destructured at line 16
