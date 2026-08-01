@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { Progress } from "@/components/ui/progress";
+import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "sonner";
@@ -50,6 +52,8 @@ const productTypes = [
 const TOTAL_STEPS = 5;
 
 const CreateProduct = () => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -164,13 +168,17 @@ const CreateProduct = () => {
       });
       if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
       
-      const uploadRes = await fetch(data.url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type }
+      const uploadRes = await axios.put(data.url, file, {
+        headers: { "Content-Type": file.type },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(percentCompleted);
+          }
+        }
       });
       
-      if (!uploadRes.ok) throw new Error("Échec de l'upload vers Cloudflare");
+      if (uploadRes.status !== 200) throw new Error("Échec de l'upload vers Cloudflare");
       
       if (isPublic) {
         return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;
@@ -194,6 +202,7 @@ const CreateProduct = () => {
     }
 
     setSaving(true);
+    setIsUploading(true);
     let createdProductId: string | null = null;
 
     try {
@@ -314,6 +323,8 @@ const CreateProduct = () => {
       }
     } finally {
       setSaving(false);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -861,6 +872,17 @@ const CreateProduct = () => {
             {step === 5 && getStep5Content()}
           </motion.div>
         </AnimatePresence>
+
+        {/* Upload Progress Bar */}
+        {isUploading && uploadProgress > 0 && uploadProgress < 100 && (
+          <div className="w-full max-w-md mx-auto mt-6 px-4 space-y-2">
+            <div className="flex justify-between text-sm text-muted-foreground font-medium">
+              <span>Téléversement du fichier...</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <Progress value={uploadProgress} className="h-2.5 w-full bg-primary/20" />
+          </div>
+        )}
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-center gap-3 mt-10">
