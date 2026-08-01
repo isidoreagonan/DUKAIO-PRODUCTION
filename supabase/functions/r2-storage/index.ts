@@ -37,6 +37,41 @@ serve(async (req) => {
       forcePathStyle: true,
     });
 
+    if (req.method === 'POST') {
+      // Direct upload proxy to bypass CORS
+      const formData = await req.formData();
+      const file = formData.get('file') as File;
+      const bucketName = formData.get('bucket') as string;
+      const keyName = formData.get('key') as string;
+      
+      if (!file || !bucketName || !keyName) {
+        throw new Error('Missing file, bucket, or key');
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = new Uint8Array(arrayBuffer);
+
+      const command = new PutObjectCommand({
+        Bucket: bucketName,
+        Key: keyName,
+        ContentType: file.type,
+        Body: buffer,
+      });
+
+      await s3Client.send(command);
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Legacy presigned URL handling
+    const { action, bucket, key, contentType } = await req.json();
+
+    if (!action || !bucket || !key) {
+      throw new Error('Missing required parameters (action, bucket, key)');
+    }
+
     if (action === 'upload') {
       const command = new PutObjectCommand({
         Bucket: bucket,
@@ -44,7 +79,6 @@ serve(async (req) => {
         ContentType: contentType,
       });
 
-      // Generate a presigned URL that expires in 1 hour (3600 seconds)
       const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
       
       return new Response(JSON.stringify({ url, method: 'PUT' }), {
@@ -58,21 +92,20 @@ serve(async (req) => {
         Key: key,
       });
 
-      // Generate a presigned URL that expires in 1 hour
       const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-
+      
       return new Response(JSON.stringify({ url }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    throw new Error('Invalid action. Use "upload" or "download".');
+    throw new Error('Invalid action');
 
-  } catch (error) {
-    console.error("R2 Error:", error.message);
+  } catch (error: any) {
+    console.error('Error:', error.message);
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

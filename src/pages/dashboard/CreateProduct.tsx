@@ -159,18 +159,16 @@ const CreateProduct = () => {
     const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
 
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('bucket', bucketName);
+      formData.append('key', path);
+
       const { data, error } = await supabase.functions.invoke("r2-storage", {
-        body: { action: "upload", bucket: bucketName, key: path, contentType: file.type }
-      });
-      if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
-      
-      const uploadRes = await fetch(data.url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type }
+        body: formData,
       });
       
-      if (!uploadRes.ok) throw new Error("Échec de l'upload vers Cloudflare");
+      if (error || !data?.success) throw new Error(error?.message || "Échec de l'upload vers Cloudflare");
       
       if (isPublic) {
         return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;
