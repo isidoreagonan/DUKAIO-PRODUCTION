@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Package, DollarSign, Users, Plus, Workflow, Tag, TrendingUp,
-  ExternalLink, ArrowUpRight, ShoppingCart, Eye, BarChart3,
-  ArrowUp, ArrowDown, Activity
+  Package, DollarSign, Users, Plus, TrendingUp,
+  ShoppingCart, Eye, BarChart3, Activity,
+  ArrowUpRight, ArrowDownRight, CreditCard, Wallet, Percent, MapPin,
+  Clock, CheckCircle2, MoreHorizontal
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,7 +20,7 @@ const fadeUp = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] as const },
+    transition: { delay: i * 0.05, duration: 0.3, ease: [0.25, 0.1, 0.25, 1] as const },
   }),
 };
 
@@ -29,6 +30,7 @@ const DashboardOverview = () => {
   const [stats, setStats] = useState({
     products: 0, published: 0, totalRevenue: 0, weekRevenue: 0,
     prevWeekRevenue: 0, clients: 0, totalSales: 0, weekSales: 0, visits: 0,
+    avgOrderValue: 0, conversionRate: 0,
   });
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -47,6 +49,10 @@ const DashboardOverview = () => {
       const orders = ordersRes.data || [];
       const published = products.filter((p: any) => p.is_published).length;
       const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount), 0);
+      
+      const visits = visitsRes.data?.length || 0;
+      const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+      const conversionRate = visits > 0 ? (orders.length / visits) * 100 : 0;
 
       const weekAgo = subDays(new Date(), 7);
       const twoWeeksAgo = subDays(new Date(), 14);
@@ -65,7 +71,9 @@ const DashboardOverview = () => {
         clients: uniqueClients,
         totalSales: orders.length,
         weekSales: weekOrders.length,
-        visits: visitsRes.data?.length || 0,
+        visits,
+        avgOrderValue,
+        conversionRate
       });
 
       // Chart data - 30 days
@@ -75,8 +83,8 @@ const DashboardOverview = () => {
         const dayOrders = orders.filter(o => format(new Date(o.created_at), "yyyy-MM-dd") === dayStr);
         const dayVisits = (visitsRes.data || []).filter((v: any) => format(new Date(v.created_at), "yyyy-MM-dd") === dayStr);
         return {
-          date: format(day, "dd", { locale: fr }),
-          fullDate: format(day, "dd MMM", { locale: fr }),
+          date: format(day, "dd/MM", { locale: fr }),
+          fullDate: format(day, "dd MMM yyyy", { locale: fr }),
           revenue: dayOrders.reduce((s, o) => s + Number(o.amount), 0),
           ventes: dayOrders.length,
           visites: dayVisits.length,
@@ -102,7 +110,7 @@ const DashboardOverview = () => {
       // Recent orders
       const { data: recent } = await supabase
         .from("orders")
-        .select("id, amount, status, created_at, products(title), customers(name)")
+        .select("id, amount, status, created_at, products(title), customers(name, email)")
         .eq("store_owner_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
@@ -113,62 +121,102 @@ const DashboardOverview = () => {
 
   const getGreeting = () => {
     const h = new Date().getHours();
-    if (h < 12) return "Bonjour";
-    if (h < 18) return "Bon après-midi";
-    return "Bonsoir";
+    if (h < 12) return { text: "Bonjour", emoji: "🌞" };
+    if (h < 18) return { text: "Bon après-midi", emoji: "👋" };
+    return { text: "Bonsoir", emoji: "🌙" };
   };
 
   const revenueChange = stats.prevWeekRevenue > 0
-    ? Math.round(((stats.weekRevenue - stats.prevWeekRevenue) / stats.prevWeekRevenue) * 100)
+    ? ((stats.weekRevenue - stats.prevWeekRevenue) / stats.prevWeekRevenue) * 100
     : stats.weekRevenue > 0 ? 100 : 0;
 
   const kpiCards = [
     {
-      label: "Revenu total",
+      label: "Volume Total",
       value: `${stats.totalRevenue.toLocaleString()} F`,
-      sub: `${stats.weekRevenue.toLocaleString()} F cette semaine`,
-      icon: DollarSign,
+      sub: `${stats.weekRevenue.toLocaleString()} F / Semaine`,
+      icon: Activity,
       change: revenueChange,
-      isHero: true,
+      color: "text-blue-600",
+      bg: "bg-blue-600/10",
     },
     {
-      label: "Ventes totales",
+      label: "Ventes Réussies",
       value: stats.totalSales.toString(),
       sub: `${stats.weekSales} cette semaine`,
-      icon: ShoppingCart,
+      icon: CheckCircle2,
       change: null,
-      isHero: false,
+      color: "text-emerald-600",
+      bg: "bg-emerald-600/10",
     },
     {
-      label: "Visiteurs (30j)",
-      value: stats.visits.toLocaleString(),
-      sub: "Derniers 30 jours",
-      icon: Eye,
+      label: "Panier Moyen",
+      value: `${Math.round(stats.avgOrderValue).toLocaleString()} F`,
+      sub: "Par transaction",
+      icon: CreditCard,
       change: null,
-      isHero: false,
+      color: "text-violet-600",
+      bg: "bg-violet-600/10",
     },
     {
-      label: "Clients uniques",
+      label: "Clients Uniques",
       value: stats.clients.toString(),
-      sub: `${stats.published} produits publiés`,
+      sub: "Au total",
       icon: Users,
       change: null,
-      isHero: false,
+      color: "text-amber-600",
+      bg: "bg-amber-600/10",
+    },
+    {
+      label: "Visiteurs (30J)",
+      value: stats.visits.toLocaleString(),
+      sub: "Trafic de la boutique",
+      icon: Eye,
+      change: null,
+      color: "text-pink-600",
+      bg: "bg-pink-600/10",
+    },
+    {
+      label: "Taux de Succès",
+      value: `${stats.conversionRate.toFixed(1)}%`,
+      sub: "Taux de conversion",
+      icon: Percent,
+      change: null,
+      color: "text-sky-600",
+      bg: "bg-sky-600/10",
+    },
+    {
+      label: "Produits Publiés",
+      value: stats.published.toString(),
+      sub: `Sur ${stats.products} produits`,
+      icon: Package,
+      change: null,
+      color: "text-orange-600",
+      bg: "bg-orange-600/10",
+    },
+    {
+      label: "Utilisation Plafond",
+      value: "0%",
+      sub: "0 / 5 000 000 F",
+      icon: Wallet,
+      change: null,
+      color: "text-slate-600",
+      bg: "bg-slate-600/10",
     },
   ];
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg p-3 min-w-[140px]">
-        <p className="text-xs font-medium text-muted-foreground mb-1.5">{payload[0]?.payload?.fullDate}</p>
+      <div className="rounded-lg border border-slate-200/50 bg-white shadow-xl p-3 min-w-[140px]">
+        <p className="text-xs font-semibold text-slate-800 mb-2">{payload[0]?.payload?.fullDate}</p>
         {payload.map((entry: any) => (
-          <div key={entry.dataKey} className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-1.5">
+          <div key={entry.dataKey} className="flex items-center justify-between gap-4 py-1">
+            <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-xs text-muted-foreground capitalize">{entry.dataKey}</span>
+              <span className="text-xs text-slate-600 capitalize">{entry.dataKey}</span>
             </div>
-            <span className="text-xs font-semibold text-foreground">
+            <span className="text-xs font-bold text-slate-900">
               {entry.dataKey === "revenue" ? `${entry.value.toLocaleString()} F` : entry.value}
             </span>
           </div>
@@ -179,44 +227,56 @@ const DashboardOverview = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 max-w-[1400px] mx-auto w-full">
-        {/* Header */}
+      <div className="space-y-6 w-full pb-10">
+        {/* Hero Blue Glass Banner */}
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3"
+          className="relative w-full rounded-md overflow-hidden dash-hero-3d bg-white/20 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] border border-white/20 text-white p-5 sm:p-7 flex flex-col justify-between min-h-[160px] group"
         >
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">
-              {getGreeting()}, {profile?.display_name || "Créateur"} 👋
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Vue d'ensemble de votre activité
-            </p>
+          {/* Animated Background Elements inside Hero */}
+          <div className="absolute top-0 right-0 p-10 opacity-30 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+            <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="100" cy="100" r="100" fill="url(#paint0_radial)" />
+              <defs>
+                <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) rotate(90) scale(100)">
+                  <stop stopColor="white" />
+                  <stop offset="1" stopColor="white" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+            </svg>
           </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-full gap-1.5 text-xs h-8 border-border/60"
-              onClick={() => navigate("/dashboard/analytics")}
-            >
-              <BarChart3 className="h-3.5 w-3.5" />
-              Analytiques
+
+          <div className="relative z-10 flex flex-col gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)]">
+                  {getGreeting().text} <span className="capitalize">{profile?.display_name?.toLowerCase() || "Créateur"}</span> {getGreeting().emoji}
+                </h1>
+              </div>
+              <p className="text-sm text-white/90 mt-2 font-medium max-w-xl">
+                {stats.totalSales > 0 
+                  ? "📈 Les premières ventes arrivent - suivez votre dynamique."
+                  : "🚀 Votre boutique est configurée - ajoutez votre premier produit pour démarrer."}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative z-10 mt-6 flex flex-wrap gap-2 sm:gap-3">
+            <Button size="sm" className="rounded-full bg-white text-blue-600 hover:bg-slate-50 font-bold h-9 px-4 text-xs">
+              <Plus className="h-4 w-4 mr-1.5" /> Nouveau produit
             </Button>
-            <Button
-              size="sm"
-              className="rounded-full gap-1.5 text-xs h-8"
-              onClick={() => navigate("/dashboard/products/new")}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Nouveau produit
+            <Button size="sm" className="rounded-full bg-white/10 hover:bg-white/20 text-white font-medium h-9 px-4 text-xs backdrop-blur-sm border border-white/20">
+              <ShoppingCart className="h-4 w-4 mr-1.5" /> Gérer les ventes
+            </Button>
+            <Button size="sm" className="rounded-full bg-white/10 hover:bg-white/20 text-white font-medium h-9 px-4 text-xs backdrop-blur-sm border border-white/20">
+              <BarChart3 className="h-4 w-4 mr-1.5" /> Analytiques
             </Button>
           </div>
         </motion.div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 8 KPI Cards Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           {kpiCards.map((card, i) => (
             <motion.div
               key={card.label}
@@ -224,186 +284,162 @@ const DashboardOverview = () => {
               initial="hidden"
               animate="visible"
               variants={fadeUp}
-              className={`group relative rounded-3xl p-5 sm:p-6 overflow-hidden transition-all duration-500 ${
-                card.isHero
-                  ? "dash-hero-3d text-white"
-                  : "dash-glass dash-glow-soft"
-              }`}
+              className="bg-white rounded-lg border border-slate-200/50 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.04)] transition-shadow group flex flex-col justify-between h-[110px]"
             >
-              <div className="flex items-start justify-between mb-5 relative">
-                <div className={`h-11 w-11 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${
-                  card.isHero
-                    ? "bg-white/20 backdrop-blur-md text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] border border-white/30"
-                    : "bg-gradient-to-br from-[hsl(var(--blue-bright))] to-[hsl(var(--blue-deep))] text-white shadow-[0_8px_20px_-4px_hsl(var(--blue-bright)/0.5),inset_0_1px_0_rgba(255,255,255,0.3)]"
-                }`}>
-                  <card.icon className="h-5 w-5" />
+              <div className="flex items-start justify-between">
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">{card.label}</p>
+                <div className={`h-7 w-7 rounded-lg ${card.bg} ${card.color} flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-transform`}>
+                  <card.icon className="h-3.5 w-3.5" />
                 </div>
-                {card.change !== null && (
-                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur-md ${
-                    card.isHero
-                      ? "bg-white/25 text-white border border-white/40"
-                      : card.change >= 0
-                        ? "bg-[hsl(var(--neon-green))]/10 text-[hsl(var(--neon-green))] border border-[hsl(var(--neon-green))]/30"
-                        : "bg-red-500/10 text-red-500 border border-red-500/20"
-                  }`}>
-                    {card.change >= 0 ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
-                    {Math.abs(card.change)}%
-                  </div>
-                )}
               </div>
-              <p className={`text-[10px] uppercase tracking-[0.18em] font-bold mb-2 ${
-                card.isHero ? "text-white/80" : "text-muted-foreground"
-              }`}>{card.label}</p>
-              <p className={`text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums leading-none dash-count-up ${
-                card.isHero ? "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)]" : "dash-gradient-text"
-              }`}>{card.value}</p>
-              <p className={`text-[11px] mt-2 ${
-                card.isHero ? "text-white/70" : "text-muted-foreground"
-              }`}>{card.sub}</p>
+              <div>
+                <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{card.value}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <p className="text-[10px] text-slate-500 truncate">{card.sub}</p>
+                  {card.change !== null && (
+                    <div className={`flex items-center text-[10px] font-bold ${
+                      card.change >= 0 ? "text-emerald-500" : "text-red-500"
+                    }`}>
+                      {card.change >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    </div>
+                  )}
+                </div>
+              </div>
             </motion.div>
           ))}
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {/* Revenue chart - takes 2 cols */}
-          <motion.div
-            custom={4}
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            className="lg:col-span-2 rounded-3xl dash-glass dash-glow-soft p-4 sm:p-5"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm sm:text-base font-semibold text-foreground">Revenus & Ventes</h3>
-                <p className="text-[11px] text-muted-foreground">30 derniers jours</p>
+        <motion.div
+          custom={4}
+          initial="hidden"
+          animate="visible"
+          variants={fadeUp}
+          className="bg-white rounded-xl border border-slate-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-5"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Volume des transactions</h3>
+              <p className="text-xs text-slate-500">Aperçu quotidien sur les 30 derniers jours (XOF)</p>
+            </div>
+            <div className="flex items-center gap-4 text-[11px] font-medium">
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+                <span className="text-slate-600">Revenus</span>
               </div>
-              <div className="flex items-center gap-3 text-[11px]">
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-primary" />
-                  <span className="text-muted-foreground">Revenu</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-muted-foreground">Ventes</span>
-                </div>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                <span className="text-slate-600">Ventes (qté)</span>
               </div>
             </div>
-            <div className="h-[220px] sm:h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#revGrad)" />
-                  <Area type="monotone" dataKey="ventes" stroke="#10b981" strokeWidth={2} fill="url(#salesGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
+          </div>
+          
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barGap={2} barSize={6}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#64748b", fontWeight: 500 }} axisLine={false} tickLine={false} dy={10} />
+                <YAxis tick={{ fontSize: 10, fill: "#64748b", fontWeight: 500 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                <Bar dataKey="revenue" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="ventes" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
 
-          {/* Visits mini chart */}
-          <motion.div
-            custom={5}
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            className="rounded-3xl dash-glass dash-glow-soft p-4 sm:p-5"
-          >
-            <div className="mb-4">
-              <h3 className="text-sm sm:text-base font-semibold text-foreground">Visites</h3>
-              <p className="text-[11px] text-muted-foreground">30 derniers jours</p>
+        {/* Bottom Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          {/* Top Products (Progress Bar Style) */}
+          <motion.div custom={5} initial="hidden" animate="visible" variants={fadeUp} className="bg-white rounded-xl border border-slate-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-5">
+            <div className="mb-5">
+              <h3 className="text-base font-bold text-slate-900">Meilleurs produits</h3>
+              <p className="text-xs text-slate-500">Répartition des encaissements (30 jours)</p>
             </div>
-            <div className="h-[220px] sm:h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="visites" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} opacity={0.8} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Bottom Row: Top Products */}
-        <div className="grid grid-cols-1 gap-3">
-          {/* Top Products */}
-          <motion.div
-            custom={6}
-            initial="hidden"
-            animate="visible"
-            variants={fadeUp}
-            className="rounded-3xl dash-glass dash-glow-soft"
-          >
-            <div className="flex items-center justify-between p-4 sm:p-5 pb-2">
-              <div>
-                <h3 className="text-sm sm:text-base font-semibold text-foreground">Meilleurs produits</h3>
-                <p className="text-[11px] text-muted-foreground">Par chiffre d'affaires</p>
-              </div>
-              <Button variant="ghost" size="sm" className="rounded-full text-xs h-7" onClick={() => navigate("/dashboard/products")}>
-                Voir tout
-              </Button>
-            </div>
-
-            <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+            <div className="space-y-4">
               {topProducts.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="h-12 w-12 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <Package className="h-5 w-5 text-muted-foreground/40" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground mb-1">Aucun produit</p>
-                  <p className="text-xs text-muted-foreground mb-3">Créez votre premier produit</p>
-                  <Button size="sm" className="rounded-full gap-1.5 h-8 text-xs" onClick={() => navigate("/dashboard/products/new")}>
-                    <Plus className="h-3.5 w-3.5" /> Créer
-                  </Button>
+                  <Package className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-slate-900">Aucun produit</p>
+                  <p className="text-xs text-slate-500">Créez votre premier produit pour générer des ventes.</p>
                 </div>
               ) : (
-                <div className="space-y-0.5">
-                  {topProducts.map((p, i) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center gap-3 py-2.5 px-2 rounded-xl hover:bg-muted/40 transition-colors cursor-pointer group"
-                      onClick={() => navigate(`/dashboard/products/${p.id}/edit`)}
-                    >
-                      <span className="text-[11px] font-bold text-muted-foreground/50 w-4 text-center shrink-0">
-                        {i + 1}
-                      </span>
-                      <div className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                        {p.thumbnail_url ? (
-                          <img src={p.thumbnail_url} alt={p.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <Package className="h-3.5 w-3.5 text-muted-foreground/40" />
-                        )}
+                topProducts.map((p, i) => {
+                  const maxSales = Math.max(...topProducts.map(t => t.salesTotal));
+                  const percentage = maxSales > 0 ? (p.salesTotal / maxSales) * 100 : 0;
+                  
+                  return (
+                    <div key={p.id} className="relative group cursor-pointer" onClick={() => navigate(`/dashboard/products/${p.id}/edit`)}>
+                      <div className="flex justify-between text-xs font-bold text-slate-800 mb-1.5 px-1">
+                        <span className="truncate pr-4">{p.title}</span>
+                        <span className="shrink-0">{p.salesTotal.toLocaleString()} F</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">{p.title}</p>
-                        <p className="text-[11px] text-muted-foreground">{p.salesCount} vente{p.salesCount > 1 ? "s" : ""}</p>
+                      <div className="h-8 w-full bg-slate-100 rounded-md overflow-hidden flex relative">
+                        <div 
+                          className="h-full bg-blue-500 transition-all duration-1000 ease-out" 
+                          style={{ width: `${Math.max(percentage, 5)}%` }}
+                        />
+                        <div className="absolute inset-y-0 left-3 flex items-center">
+                          <span className="text-[10px] font-bold text-white mix-blend-difference">{p.salesCount} VENTES</span>
+                        </div>
                       </div>
-                      <p className="text-sm font-bold text-foreground tabular-nums shrink-0">{p.salesTotal.toLocaleString()} F</p>
                     </div>
-                  ))}
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+
+          {/* Recent Orders List */}
+          <motion.div custom={6} initial="hidden" animate="visible" variants={fadeUp} className="bg-white rounded-xl border border-slate-200/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] p-5 flex flex-col">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <ArrowDownRight className="h-4 w-4 text-emerald-500" />
+                <h3 className="text-base font-bold text-slate-900">Dernières transactions</h3>
+              </div>
+              <Button variant="ghost" size="sm" className="text-xs font-medium text-blue-600 hover:text-blue-700 h-auto p-0" onClick={() => navigate("/dashboard/sales")}>
+                Tout voir →
+              </Button>
+            </div>
+            
+            <div className="flex-1 space-y-3">
+              {recentOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingCart className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-slate-900">Aucune transaction</p>
                 </div>
+              ) : (
+                recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-200/50 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                        <ArrowDownRight className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-900 truncate uppercase">
+                          {order.products?.title || "Produit supprimé"}
+                        </p>
+                        <p className="text-[10px] text-slate-500 truncate">
+                          {order.customers?.name || order.customers?.email || "Client inconnu"} • {format(new Date(order.created_at), "dd MMM HH:mm", { locale: fr })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 ml-3">
+                      <p className="text-sm font-extrabold text-emerald-600">
+                        +{Number(order.amount).toLocaleString()} F
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                        {order.status}
+                      </p>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           </motion.div>
 
         </div>
-
       </div>
     </DashboardLayout>
   );

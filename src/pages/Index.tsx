@@ -49,7 +49,7 @@ const Index = () => {
     );
   }
 
-  if (user) return <Navigate to="/dashboard" replace />;
+  // Remove automatic redirect to dashboard so logged-in users can view the landing page.
 
   return (
     <div className="min-h-screen bg-background">

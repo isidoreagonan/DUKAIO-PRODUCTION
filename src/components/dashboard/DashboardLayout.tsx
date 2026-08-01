@@ -169,7 +169,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             transition={{ duration: 0.2 }}
             className="flex-1 p-3 sm:p-4 lg:p-6 overflow-x-hidden pb-24 lg:pb-6 flex flex-col"
           >
-            <div className="w-full max-w-[1400px] mx-auto flex-1">
+            <div className="w-full flex-1">
               {children}
             </div>
           </motion.main>
