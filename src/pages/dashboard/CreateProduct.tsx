@@ -155,10 +155,31 @@ const CreateProduct = () => {
   const uploadFile = async (file: File, folder: string): Promise<string | null> => {
     const ext = file.name.split(".").pop();
     const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("product-assets").upload(path, file);
-    if (error) { toast.error("Erreur upload: " + error.message); return null; }
-    const { data } = supabase.storage.from("product-assets").getPublicUrl(path);
-    return data.publicUrl;
+    const isPublic = folder === "thumbnails" || folder === "banners";
+    const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("r2-storage", {
+        body: { action: "upload", bucket: bucketName, key: path, contentType: file.type }
+      });
+      if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
+      
+      const uploadRes = await fetch(data.url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type }
+      });
+      
+      if (!uploadRes.ok) throw new Error("Échec de l'upload vers Cloudflare");
+      
+      if (isPublic) {
+        return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;
+      }
+      return path; 
+    } catch (err: any) {
+      toast({ title: "Erreur upload", description: err.message, variant: "destructive" });
+      return null;
+    }
   };
 
   const handleSubmit = async () => {
