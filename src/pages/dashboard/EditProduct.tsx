@@ -201,15 +201,17 @@ const EditProduct = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke("r2-storage", {
+        body: { action: "upload", bucket: bucketName, key: path, contentType: file.type }
+      });
+      if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
+      
+      const uploadRes = await fetch(data.url, {
+        method: "PUT",
         body: file,
-        headers: {
-          'x-bucket': bucketName,
-          'x-key': path,
-          'x-content-type': file.type
-        }
+        headers: { "Content-Type": file.type }
       });
       
-      if (error || !data?.success) throw new Error(error?.message || "Échec de l'upload vers Cloudflare");
+      if (!uploadRes.ok) throw new Error("Échec de l'upload vers Cloudflare");
       
       if (isPublic) {
         return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;

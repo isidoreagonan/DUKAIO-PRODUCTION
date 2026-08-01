@@ -37,34 +37,6 @@ serve(async (req) => {
       forcePathStyle: true,
     });
 
-    if (req.method === 'POST') {
-      // Direct upload proxy to bypass CORS, using raw binary body
-      const bucketName = req.headers.get('x-bucket');
-      const keyName = req.headers.get('x-key');
-      const fileType = req.headers.get('x-content-type');
-      
-      if (!bucketName || !keyName || !fileType) {
-        throw new Error('Missing bucket, key, or content-type headers');
-      }
-
-      const arrayBuffer = await req.arrayBuffer();
-      const buffer = new Uint8Array(arrayBuffer);
-
-      const command = new PutObjectCommand({
-        Bucket: bucketName,
-        Key: keyName,
-        ContentType: fileType,
-        Body: buffer,
-      });
-
-      await s3Client.send(command);
-
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Legacy presigned URL handling
     const { action, bucket, key, contentType } = await req.json();
 
     if (!action || !bucket || !key) {
