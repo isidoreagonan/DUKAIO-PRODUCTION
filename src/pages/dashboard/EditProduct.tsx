@@ -707,7 +707,7 @@ const EditProduct = () => {
                           <Button variant="outline" className="gap-2 rounded-full pointer-events-none">
                             <Upload className="h-4 w-4" /> {downloadUrl ? "Remplacer le fichier" : "Choisir un fichier"}
                           </Button>
-                          <p className="text-xs text-muted-foreground">PDF, ZIP, MP3, MP4, DOCX… Max 500 MB</p>
+                          <p className="text-xs text-muted-foreground">PDF, ZIP, DOCX, EPUB… (Pas de vidéo/audio) Max 30 MB</p>
                         </div>
                         {downloadFile && (
                           <p className="text-sm font-medium text-foreground mt-4">📎 {downloadFile.name}</p>
@@ -716,7 +716,25 @@ const EditProduct = () => {
                           id="edit-download-input"
                           type="file"
                           className="hidden"
-                          onChange={(e) => setDownloadFile(e.target.files?.[0] || null)}
+                          accept=".pdf,.zip,.rar,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
+                                toast.error("Les fichiers vidéo et audio ne sont pas autorisés pour le moment en raison des limites de stockage.");
+                                e.target.value = ""; // Reset input
+                                return;
+                              }
+                              if (file.size > 30 * 1024 * 1024) {
+                                toast.error("Fichier trop volumineux (> 30 MB). Veuillez héberger votre fichier sur Google Drive, créer un document avec le lien, et l'importer ici.");
+                                e.target.value = ""; // Reset input
+                                return;
+                              }
+                              setDownloadFile(file);
+                            } else {
+                              setDownloadFile(null);
+                            }
+                          }}
                         />
                       </div>
                     </>
@@ -784,6 +802,15 @@ const EditProduct = () => {
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           if (f) {
+                            if (f.size > 2 * 1024 * 1024) {
+                              toast({
+                                title: "Image trop lourde",
+                                description: "La taille de la vignette ne doit pas dépasser 2 MB.",
+                                variant: "destructive"
+                              });
+                              e.target.value = "";
+                              return;
+                            }
                             setThumbnailFile(f);
                             const reader = new FileReader();
                             reader.onload = (ev) => setThumbnailPreview(ev.target?.result as string);
@@ -792,6 +819,9 @@ const EditProduct = () => {
                         }}
                       />
                     </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Créez une vignette mémorable. Utilisez une image (Max 2 MB) au format JPG ou PNG.
+                    </p>
                   </div>
                 </div>
               )}

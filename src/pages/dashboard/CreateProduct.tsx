@@ -301,7 +301,7 @@ const CreateProduct = () => {
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-2">Téléchargez votre fichier</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Tous les formats sont acceptés : PDF, ZIP, MP3, MP4, etc.
+              Formats acceptés : PDF, ZIP, RAR, EPUB, DOCX, XLSX, etc. (Fichiers audio et vidéo non autorisés).
             </p>
             <div
               className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
@@ -315,7 +315,7 @@ const CreateProduct = () => {
                   <Upload className="h-4 w-4" /> Choisir un fichier
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  PDF, ZIP, MP3, MP4, DOCX, XLSX… Taille max: 500 MB
+                  PDF, ZIP, DOCX, XLSX, EPUB… (Pas de vidéo/audio) Taille max: 500 MB
                 </p>
               </div>
               {downloadFile && (
@@ -327,7 +327,33 @@ const CreateProduct = () => {
                 id="download-input"
                 type="file"
                 className="hidden"
-                onChange={(e) => setDownloadFile(e.target.files?.[0] || null)}
+                accept=".pdf,.zip,.rar,.epub,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
+                      toast({
+                        title: "Format non autorisé",
+                        description: "Les fichiers vidéo et audio ne sont pas autorisés pour le moment en raison des limites de stockage. Utilisez un fichier ZIP ou PDF contenant un lien externe.",
+                        variant: "destructive"
+                      });
+                      e.target.value = ""; // Reset input
+                      return;
+                    }
+                    if (file.size > 30 * 1024 * 1024) {
+                      toast({
+                        title: "Fichier trop volumineux",
+                        description: "La taille limite est de 30 MB. Veuillez héberger votre fichier sur Google Drive, créer un document avec le lien, et importer ce document ici.",
+                        variant: "destructive"
+                      });
+                      e.target.value = ""; // Reset input
+                      return;
+                    }
+                    setDownloadFile(file);
+                  } else {
+                    setDownloadFile(null);
+                  }
+                }}
               />
             </div>
             <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
@@ -785,6 +811,15 @@ const CreateProduct = () => {
                         onChange={(e) => {
                           const f = e.target.files?.[0];
                           if (f) {
+                            if (f.size > 2 * 1024 * 1024) {
+                              toast({
+                                title: "Image trop lourde",
+                                description: "La taille de la vignette ne doit pas dépasser 2 MB.",
+                                variant: "destructive"
+                              });
+                              e.target.value = "";
+                              return;
+                            }
                             setThumbnailFile(f);
                             handleFilePreview(f, setThumbnailPreview);
                           }
@@ -792,43 +827,7 @@ const CreateProduct = () => {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Créez une vignette mémorable. Utilisez une image carrée (minimum 600x600px) au format JPG ou PNG.
-                    </p>
-                  </div>
-
-                  {/* Banner */}
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-3 block">
-                      Ajouter une bannière
-                    </label>
-                    <div
-                      className="relative w-full h-48 rounded-xl bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center overflow-hidden"
-                      onClick={() => document.getElementById("banner-input")?.click()}
-                    >
-                      {bannerPreview ? (
-                        <img src={bannerPreview} alt="Bannière" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex flex-col items-center gap-2">
-                          <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
-                          <span className="text-sm text-muted-foreground">Cliquez pour ajouter</span>
-                        </div>
-                      )}
-                      <input
-                        id="banner-input"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) {
-                            setBannerFile(f);
-                            handleFilePreview(f, setBannerPreview);
-                          }
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Créez une bannière attrayante. Utilisez une image rectangulaire (1200x400px recommandé).
+                      Créez une vignette mémorable. Utilisez une image (Max 2 MB) au format JPG ou PNG.
                     </p>
                   </div>
                 </div>
