@@ -37,11 +37,7 @@ serve(async (req) => {
       forcePathStyle: true,
     });
 
-    const { action, bucket, key, contentType } = await req.json();
-
-    if (!action || !bucket || !key) {
-      throw new Error('Missing required parameters (action, bucket, key)');
-    }
+    // Variables already destructured at line 16
 
     if (action === 'upload') {
       const command = new PutObjectCommand({
