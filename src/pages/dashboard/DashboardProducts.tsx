@@ -65,6 +65,12 @@ const DashboardProducts = () => {
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer ce produit ?")) return;
     try {
+      // Fetch product to get file URLs
+      const { data: product } = await supabase.from("products").select("thumbnail_url, download_url, seo_image_url").eq("id", id).single();
+      
+      // Fetch course lessons to get uploaded video URLs
+      const { data: lessons } = await supabase.from("course_lessons").select("video_url").eq("product_id", id).eq("video_type", "upload");
+
       // Delete related records first (cascade)
       await supabase.from("course_lessons").delete().eq("product_id", id);
       await supabase.from("product_faqs").delete().eq("product_id", id);
@@ -78,9 +84,46 @@ const DashboardProducts = () => {
       await supabase.from("cart_events").delete().eq("product_id", id);
       await supabase.from("payment_events").delete().eq("product_id", id);
       await supabase.from("orders").delete().eq("product_id", id);
+      
       // Finally delete the product
       const { error } = await supabase.from("products").delete().eq("id", id);
       if (error) throw error;
+
+      // Delete files from R2
+      const filesToDelete = [];
+      if (product) {
+        if (product.thumbnail_url) filesToDelete.push({ url: product.thumbnail_url, isPublic: true });
+        if (product.seo_image_url) filesToDelete.push({ url: product.seo_image_url, isPublic: true });
+        if (product.download_url) {
+          try {
+            const parsed = JSON.parse(product.download_url);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(url => filesToDelete.push({ url, isPublic: false }));
+            } else {
+              filesToDelete.push({ url: product.download_url, isPublic: false });
+            }
+          } catch(e) {
+            filesToDelete.push({ url: product.download_url, isPublic: false });
+          }
+        }
+      }
+      if (lessons) {
+        lessons.forEach(l => {
+          if (l.video_url) filesToDelete.push({ url: l.video_url, isPublic: false }); // course-videos are typically private but double check your logic
+        });
+      }
+
+      for (const file of filesToDelete) {
+        try {
+          const bucketName = file.isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
+          const path = file.url.replace(/^https?:\/\/[^\/]+\//, '');
+          await supabase.functions.invoke("r2-storage", {
+            body: { action: "delete", bucket: bucketName, key: path }
+          });
+        } catch(e) {
+          console.error("Failed to delete file from R2", file.url, e);
+        }
+      }
       toast.success("Produit supprimé");
       fetchProducts();
     } catch (err: any) {

@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import CourseLessonsManager, { type Lesson } from "@/components/dashboard/CourseLessonsManager";
 import RichTextEditor from "@/components/RichTextEditor";
-import ProductModerationDialog, { type ProductModerationReview } from "@/components/dashboard/ProductModerationDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -51,9 +50,17 @@ const productTypes = [
 
 const TOTAL_STEPS = 5;
 
+type UploadedFile = {
+  name: string;
+  url?: string;
+  path?: string;
+  progress: number;
+  isUploading: boolean;
+  error?: string;
+  previewUrl?: string;
+};
+
 const CreateProduct = () => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -82,22 +89,15 @@ const CreateProduct = () => {
   const [aiRewritingTitle, setAiRewritingTitle] = useState(false);
 
   // Step 4 - Images
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailData, setThumbnailData] = useState<UploadedFile | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   // Step 5 - Download file
-  const [downloadFile, setDownloadFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   // Course lessons
   const [courseLessons, setCourseLessons] = useState<Lesson[]>([]);
-
-
-  // Moderation
-  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
-  const [moderationReview, setModerationReview] = useState<ProductModerationReview | null>(null);
-  const [moderationRedirectPath, setModerationRedirectPath] = useState<string | null>(null);
 
   const selectedTypeData = productTypes.find(t => t.type === selectedType);
 
@@ -120,9 +120,10 @@ const CreateProduct = () => {
       case 2:
         return !!title.trim() && !!price && priceNum >= 100 && !priceError && !originalPriceError;
       case 3: return !!description.replace(/<[^>]*>/g, "").trim();
-      case 4: return true;
+      case 4: return !thumbnailData?.isUploading;
       case 5:
-        if (selectedType === "file") return !!downloadFile;
+        if (selectedType === "file") return uploadedFiles.some(f => f.url && !f.isUploading);
+        if (thumbnailData?.isUploading || uploadedFiles.some(f => f.isUploading)) return false;
         if (selectedType === "course") return courseLessons.length > 0;
         return true;
       default: return false;
@@ -156,7 +157,22 @@ const CreateProduct = () => {
     }
   };
 
-  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+  const deleteFileFromR2 = async (path: string, isPublic: boolean) => {
+    try {
+      const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
+      await supabase.functions.invoke("r2-storage", {
+        body: { action: "delete", bucket: bucketName, key: path }
+      });
+    } catch (e) {
+      console.error("Failed to delete", e);
+    }
+  };
+
+  const uploadFile = async (
+    file: File,
+    folder: string,
+    onProgress: (progress: number) => void
+  ): Promise<{ url: string; path: string } | null> => {
     const ext = file.name.split(".").pop();
     const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
     const isPublic = folder === "thumbnails" || folder === "banners";
@@ -167,23 +183,21 @@ const CreateProduct = () => {
         body: { action: "upload", bucket: bucketName, key: path, contentType: file.type }
       });
       if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
-      
+
       const uploadRes = await axios.put(data.url, file, {
         headers: { "Content-Type": file.type },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
+            onProgress(percentCompleted);
           }
         }
       });
-      
+
       if (uploadRes.status !== 200) throw new Error("Échec de l'upload vers Cloudflare");
-      
-      if (isPublic) {
-        return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;
-      }
-      return path; 
+
+      const url = isPublic ? `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}` : path;
+      return { url, path };
     } catch (err: any) {
       toast.error(`Erreur upload: ${err.message}`);
       return null;
@@ -192,8 +206,8 @@ const CreateProduct = () => {
 
   const handleSubmit = async () => {
     if (!user || !selectedType || !title.trim()) return;
-    if (selectedType === "file" && !downloadFile) {
-      toast.error("Veuillez ajouter un fichier pour ce produit");
+    if (selectedType === "file" && uploadedFiles.filter(f => f.url).length === 0) {
+      toast.error("Veuillez ajouter au moins un fichier pour ce produit");
       return;
     }
     if (selectedType === "course" && courseLessons.length === 0) {
@@ -202,23 +216,11 @@ const CreateProduct = () => {
     }
 
     setSaving(true);
-    setIsUploading(true);
     let createdProductId: string | null = null;
 
     try {
-      let thumbnailUrl: string | null = null;
-      let downloadUrl: string | null = null;
-
-      if (thumbnailFile) {
-        thumbnailUrl = await uploadFile(thumbnailFile, "thumbnails");
-        if (!thumbnailUrl) throw new Error("L'upload de la vignette a échoué. Le produit n'a pas été créé.");
-      }
-      if (downloadFile) {
-        downloadUrl = await uploadFile(downloadFile, "downloads");
-        if (!downloadUrl) throw new Error("L'upload du fichier a échoué. Le produit n'a pas été créé.");
-      }
-
       const effectivePrice = parseFloat(price);
+      const downloadUrls = uploadedFiles.filter(f => f.url).map(f => f.url);
 
       const productData: Record<string, unknown> = {
         title: title.trim(),
@@ -227,10 +229,10 @@ const CreateProduct = () => {
         price: effectivePrice,
         original_price: originalPrice ? parseFloat(originalPrice) : null,
         type: selectedType,
-        thumbnail_url: thumbnailUrl,
-        download_url: downloadUrl,
+        thumbnail_url: thumbnailData?.url || null,
+        download_url: downloadUrls.length > 0 ? JSON.stringify(downloadUrls) : null,
         creator_id: user.id,
-        is_published: false,
+        is_published: true, // Auto publish directly
       };
 
       if (selectedType === "license") {
@@ -241,7 +243,6 @@ const CreateProduct = () => {
       if (selectedType === "course") {
         productData.course_content_type = courseContentType;
       }
-
 
       const { data: productResult, error } = await supabase
         .from("products")
@@ -260,8 +261,8 @@ const CreateProduct = () => {
         for (const lesson of courseLessons) {
           let videoUrl = lesson.video_url;
           if (lesson.video_type === "upload" && lesson.file) {
-            const uploaded = await uploadFile(lesson.file, "course-videos");
-            if (uploaded) videoUrl = uploaded;
+            const uploaded = await uploadFile(lesson.file, "course-videos", () => {});
+            if (uploaded?.url) videoUrl = uploaded.url;
           }
           lessonsToInsert.push({
             product_id: productResult.id,
@@ -279,52 +280,17 @@ const CreateProduct = () => {
         }
       }
 
-
-      const { data: moderationData, error: moderationError } = await supabase.functions.invoke("analyze-product-moderation", {
-        body: { productId: productResult.id },
-      });
-
-      if (moderationError) throw moderationError;
-      if (moderationData?.error) throw new Error(moderationData.error);
-
-      const review = moderationData?.review as ProductModerationReview;
-      setModerationReview(review);
-
-      if (review?.status === "rejected") {
-        // Only block for rejected (illegal/scam)
-        setModerationDialogOpen(true);
-        setModerationRedirectPath(`/dashboard/products/${productResult.id}/edit`);
-        toast.error("Publication bloquée par la modération.");
-      } else {
-        // approved or needs_review → publish silently
-        const { error: publishError } = await supabase
-          .from("products")
-          .update({ is_published: true })
-          .eq("id", productResult.id);
-
-        if (publishError) throw publishError;
-
-        if (review?.status === "approved") {
-          setModerationDialogOpen(true);
-          setModerationRedirectPath("/dashboard/products");
-        } else {
-          // needs_review: publish without popup, admin notified by email
-          setModerationRedirectPath(null);
-          navigate("/dashboard/products");
-        }
-        toast.success("Produit publié avec succès !");
-      }
+      toast.success("Produit publié avec succès !");
+      navigate("/dashboard/products");
     } catch (error: any) {
       if (createdProductId) {
-        toast.error(error.message || "Analyse impossible. Le produit a été enregistré en brouillon.");
+        toast.error(error.message || "Erreur. Le produit a été enregistré en brouillon.");
         navigate(`/dashboard/products/${createdProductId}/edit`);
       } else {
         toast.error(error.message || "Impossible de créer le produit.");
       }
     } finally {
       setSaving(false);
-      setIsUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -337,58 +303,96 @@ const CreateProduct = () => {
             <p className="text-sm text-muted-foreground mb-6">
               Formats acceptés : Images, PDF, ZIP. (Fichiers audio et vidéo strictement interdits).
             </p>
-            <div
-              className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => document.getElementById("download-input")?.click()}
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="h-14 w-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                  <Upload className="h-6 w-6 text-amber-600" />
+            <div className="space-y-4">
+              <div
+                className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => document.getElementById("download-input")?.click()}
+              >
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-14 w-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Upload className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <Button variant="outline" className="gap-2 rounded-full pointer-events-none">
+                    <Upload className="h-4 w-4" /> Choisir un fichier (Max 5)
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Images, PDF, ZIP uniquement. Taille max: 30 MB par fichier.
+                  </p>
                 </div>
-                <Button variant="outline" className="gap-2 rounded-full pointer-events-none">
-                  <Upload className="h-4 w-4" /> Choisir un fichier
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Images, PDF, ZIP uniquement. Taille max: 30 MB
-                </p>
+                <input
+                  id="download-input"
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept="image/*,.pdf,.zip,.rar"
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    
+                    if (uploadedFiles.length + files.length > 5) {
+                      toast.error("Vous ne pouvez ajouter que 5 fichiers maximum.");
+                      e.target.value = "";
+                      return;
+                    }
+
+                    for (const f of files) {
+                      if (f.type.startsWith("video/") || f.type.startsWith("audio/")) {
+                        toast.error("Les fichiers vidéo et audio ne sont pas autorisés.");
+                        continue;
+                      }
+                      if (f.size > 30 * 1024 * 1024) {
+                        toast.error("La taille limite est de 30 MB par fichier.");
+                        continue;
+                      }
+
+                      const newFile: UploadedFile = { name: f.name, progress: 0, isUploading: true };
+                      setUploadedFiles(prev => [...prev, newFile]);
+                      
+                      uploadFile(f, "downloads", (p) => {
+                        setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: p } : pf));
+                      }).then(res => {
+                        if (res) {
+                          setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: 100, isUploading: false, url: res.url, path: res.path } : pf));
+                        } else {
+                          setUploadedFiles(prev => prev.filter(pf => pf.name !== f.name));
+                        }
+                      });
+                    }
+                    e.target.value = "";
+                  }}
+                />
               </div>
-              {downloadFile && (
-                <p className="text-sm font-medium text-foreground mt-4">
-                  📎 {downloadFile.name}
-                </p>
+
+              {uploadedFiles.length > 0 && (
+                <div className="space-y-3">
+                  {uploadedFiles.map((uf, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                      <div className="flex-1 min-w-0 mr-4">
+                        <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
+                        {uf.isUploading ? (
+                          <div className="mt-2 flex items-center gap-2">
+                            <Progress value={uf.progress} className="h-1.5 flex-1" />
+                            <span className="text-xs text-muted-foreground">{uf.progress}%</span>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-green-500 mt-1">Téléversé avec succès</p>
+                        )}
+                      </div>
+                      <button
+                        className="p-2 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
+                        onClick={async () => {
+                          if (uf.path) {
+                            await deleteFileFromR2(uf.path, false);
+                          }
+                          setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
+                        }}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-              <input
-                id="download-input"
-                type="file"
-                className="hidden"
-                accept="image/*,.pdf,.zip,.rar"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
-                      toast({
-                        title: "Format non autorisé",
-                        description: "Les fichiers vidéo et audio ne sont pas autorisés pour le moment en raison des limites de stockage. Utilisez un fichier ZIP ou PDF contenant un lien externe.",
-                        variant: "destructive"
-                      });
-                      e.target.value = ""; // Reset input
-                      return;
-                    }
-                    if (file.size > 30 * 1024 * 1024) {
-                      toast({
-                        title: "Fichier trop volumineux",
-                        description: "La taille limite est de 30 MB. Veuillez héberger votre fichier sur Google Drive, créer un document avec le lien, et importer ce document ici.",
-                        variant: "destructive"
-                      });
-                      e.target.value = ""; // Reset input
-                      return;
-                    }
-                    setDownloadFile(file);
-                  } else {
-                    setDownloadFile(null);
-                  }
-                }}
-              />
             </div>
             <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
               <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
@@ -494,27 +498,86 @@ const CreateProduct = () => {
                 <label className="text-sm font-medium text-foreground mb-3 block">
                   Fichier associé (optionnel)
                 </label>
-                <div
-                  className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => document.getElementById("download-input")?.click()}
-                >
-                  <Button variant="outline" size="sm" className="gap-2 rounded-full pointer-events-none">
-                    <Upload className="h-4 w-4" /> Ajouter un fichier
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Logiciel, documentation, etc.
-                  </p>
-                  {downloadFile && (
-                    <p className="text-sm font-medium text-foreground mt-3">
-                      📎 {downloadFile.name}
+                <div className="space-y-4">
+                  <div
+                    className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => document.getElementById("license-download-input")?.click()}
+                  >
+                    <Button variant="outline" size="sm" className="gap-2 rounded-full pointer-events-none">
+                      <Upload className="h-4 w-4" /> Ajouter un fichier (Max 5)
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Logiciel, documentation, etc.
                     </p>
+                    <input
+                      id="license-download-input"
+                      type="file"
+                      multiple
+                      className="hidden"
+                      accept="image/*,.pdf,.zip,.rar"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files || []);
+                        if (files.length === 0) return;
+                        
+                        if (uploadedFiles.length + files.length > 5) {
+                          toast.error("Vous ne pouvez ajouter que 5 fichiers maximum.");
+                          e.target.value = "";
+                          return;
+                        }
+
+                        for (const f of files) {
+                          if (f.size > 30 * 1024 * 1024) {
+                            toast.error("La taille limite est de 30 MB par fichier.");
+                            continue;
+                          }
+
+                          const newFile: UploadedFile = { name: f.name, progress: 0, isUploading: true };
+                          setUploadedFiles(prev => [...prev, newFile]);
+                          
+                          uploadFile(f, "downloads", (p) => {
+                            setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: p } : pf));
+                          }).then(res => {
+                            if (res) {
+                              setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: 100, isUploading: false, url: res.url, path: res.path } : pf));
+                            } else {
+                              setUploadedFiles(prev => prev.filter(pf => pf.name !== f.name));
+                            }
+                          });
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+                  {uploadedFiles.length > 0 && (
+                    <div className="space-y-3">
+                      {uploadedFiles.map((uf, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                          <div className="flex-1 min-w-0 mr-4">
+                            <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
+                            {uf.isUploading ? (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Progress value={uf.progress} className="h-1.5 flex-1" />
+                                <span className="text-xs text-muted-foreground">{uf.progress}%</span>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-green-500 mt-1">Téléversé avec succès</p>
+                            )}
+                          </div>
+                          <button
+                            className="p-2 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
+                            onClick={async () => {
+                              if (uf.path) {
+                                await deleteFileFromR2(uf.path, false);
+                              }
+                              setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  <input
-                    id="download-input"
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => setDownloadFile(e.target.files?.[0] || null)}
-                  />
                 </div>
               </div>
 
@@ -828,34 +891,66 @@ const CreateProduct = () => {
                     <label className="text-sm font-medium text-foreground mb-3 block">
                       Ajouter une vignette
                     </label>
-                    <div
-                      className="relative w-48 h-48 rounded-xl bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center overflow-hidden"
-                      onClick={() => document.getElementById("thumbnail-input")?.click()}
-                    >
-                      {thumbnailPreview ? (
-                        <img src={thumbnailPreview} alt="Vignette" className="h-full w-full object-cover" />
+                    <div className="relative w-48 h-48 rounded-xl bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors flex items-center justify-center overflow-hidden">
+                      {thumbnailData ? (
+                        <>
+                          <img src={thumbnailData.previewUrl || thumbnailData.url} alt="Vignette" className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                            {thumbnailData.isUploading ? (
+                              <div className="w-3/4 text-center">
+                                <Progress value={thumbnailData.progress} className="h-2 mb-2" />
+                                <span className="text-xs text-white">{thumbnailData.progress}%</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (thumbnailData.path) {
+                                    await deleteFileFromR2(thumbnailData.path, true);
+                                  }
+                                  setThumbnailData(null);
+                                }}
+                                className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              </button>
+                            )}
+                          </div>
+                        </>
                       ) : (
-                        <Package className="h-12 w-12 text-muted-foreground/30" />
+                        <div
+                          className="h-full w-full flex flex-col items-center justify-center cursor-pointer"
+                          onClick={() => document.getElementById("thumbnail-input")?.click()}
+                        >
+                          <Package className="h-12 w-12 text-muted-foreground/30" />
+                        </div>
                       )}
                       <input
                         id="thumbnail-input"
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const f = e.target.files?.[0];
                           if (f) {
                             if (f.size > 2 * 1024 * 1024) {
-                              toast({
-                                title: "Image trop lourde",
-                                description: "La taille de la vignette ne doit pas dépasser 2 MB.",
-                                variant: "destructive"
-                              });
+                              toast.error("La taille de la vignette ne doit pas dépasser 2 MB.");
                               e.target.value = "";
                               return;
                             }
-                            setThumbnailFile(f);
-                            handleFilePreview(f, setThumbnailPreview);
+                            const preview = URL.createObjectURL(f);
+                            setThumbnailData({ name: f.name, progress: 0, isUploading: true, previewUrl: preview });
+                            
+                            const res = await uploadFile(f, "thumbnails", (p) => {
+                              setThumbnailData(prev => prev ? { ...prev, progress: p } : null);
+                            });
+                            
+                            if (res) {
+                              setThumbnailData({ name: f.name, progress: 100, isUploading: false, previewUrl: preview, url: res.url, path: res.path });
+                            } else {
+                              setThumbnailData(null);
+                            }
+                            e.target.value = "";
                           }
                         }}
                       />
@@ -872,17 +967,6 @@ const CreateProduct = () => {
             {step === 5 && getStep5Content()}
           </motion.div>
         </AnimatePresence>
-
-        {/* Upload Progress Bar */}
-        {isUploading && uploadProgress > 0 && uploadProgress < 100 && (
-          <div className="w-full max-w-md mx-auto mt-6 px-4 space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground font-medium">
-              <span>Téléversement du fichier...</span>
-              <span>{uploadProgress}%</span>
-            </div>
-            <Progress value={uploadProgress} className="h-2.5 w-full bg-primary/20" />
-          </div>
-        )}
 
         {/* Navigation buttons */}
         <div className="flex items-center justify-center gap-3 mt-10">
@@ -905,22 +989,12 @@ const CreateProduct = () => {
               disabled={saving}
               onClick={handleSubmit}
             >
-              {saving ? "Analyse en cours..." : "Analyser et publier"}
+              {saving ? "Enregistrement..." : "Publier"}
             </Button>
           )}
         </div>
       </div>
 
-      <ProductModerationDialog
-        open={moderationDialogOpen}
-        onOpenChange={(open) => {
-          setModerationDialogOpen(open);
-          if (!open && moderationRedirectPath) {
-            navigate(moderationRedirectPath);
-          }
-        }}
-        review={moderationReview}
-      />
     </DashboardLayout>
   );
 };

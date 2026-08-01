@@ -18,7 +18,6 @@ import { Progress } from "@/components/ui/progress";
 import axios from "axios";
 import RichTextEditor from "@/components/RichTextEditor";
 import CourseLessonsManager, { type Lesson } from "@/components/dashboard/CourseLessonsManager";
-import ProductModerationDialog, { type ProductModerationReview } from "@/components/dashboard/ProductModerationDialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,6 +36,16 @@ const tabs: { key: TabKey; label: string; icon: React.ElementType }[] = [
   { key: "seo", label: "SEO", icon: Search },
   { key: "advanced", label: "Avancé", icon: Settings },
 ];
+
+type UploadedFile = {
+  name: string;
+  url?: string;
+  path?: string;
+  progress: number;
+  isUploading: boolean;
+  error?: string;
+  previewUrl?: string;
+};
 
 const EditProduct = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,9 +80,8 @@ const EditProduct = () => {
 
 
   // Upload states
-  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [downloadFile, setDownloadFile] = useState<File | null>(null);
+  const [thumbnailData, setThumbnailData] = useState<UploadedFile | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   // FAQ
   const [faqs, setFaqs] = useState<{ id?: string; question: string; answer: string; position: number }[]>([]);
@@ -106,9 +114,7 @@ const EditProduct = () => {
   // AI rewriting
   const [aiRewriting, setAiRewriting] = useState(false);
 
-  // Moderation
-  const [moderationDialogOpen, setModerationDialogOpen] = useState(false);
-  const [moderationReview, setModerationReview] = useState<ProductModerationReview | null>(null);
+
 
   useEffect(() => {
     if (!id || !user) return;
@@ -130,9 +136,35 @@ const EditProduct = () => {
       setOriginalPrice(data.original_price ? String(data.original_price) : "");
       setType(data.type);
       setIsPublished(data.is_published);
-      setThumbnailUrl(data.thumbnail_url);
-      setThumbnailPreview(data.thumbnail_url);
-      setDownloadUrl(data.download_url);
+      
+      if (data.thumbnail_url) {
+        setThumbnailData({
+          name: data.thumbnail_url.split('/').pop() || 'vignette',
+          url: data.thumbnail_url,
+          path: data.thumbnail_url.replace(/^https?:\/\/[^\/]+\//, ''),
+          progress: 100,
+          isUploading: false,
+          previewUrl: data.thumbnail_url
+        });
+      }
+
+      if (data.download_url) {
+        let parsedUrls: string[] = [];
+        if (data.download_url.startsWith('[') && data.download_url.endsWith(']')) {
+          try {
+            parsedUrls = JSON.parse(data.download_url);
+          } catch(e) { parsedUrls = [data.download_url]; }
+        } else {
+          parsedUrls = [data.download_url];
+        }
+        setUploadedFiles(parsedUrls.map(url => ({
+          name: url.split('/').pop() || 'fichier',
+          url: url,
+          path: url.replace(/^https?:\/\/[^\/]+\//, ''),
+          progress: 100,
+          isUploading: false
+        })));
+      }
       setLicenseMaxActivations(data.license_max_activations ? String(data.license_max_activations) : "");
       setLicenseValidityDays(data.license_validity_days ? String(data.license_validity_days) : "");
       setCourseContentType(data.course_content_type || "mixed");
@@ -199,40 +231,50 @@ const EditProduct = () => {
     fetchProduct();
   }, [id, user]);
 
-  const uploadFile = async (file: File, folder: string): Promise<string | null> => {
+  const deleteFileFromR2 = async (path: string, isPublic: boolean) => {
+    try {
+      const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
+      await supabase.functions.invoke("r2-storage", {
+        body: { action: "delete", bucket: bucketName, key: path }
+      });
+    } catch (e) {
+      console.error("Failed to delete", e);
+    }
+  };
+
+  const uploadFile = async (
+    file: File,
+    folder: string,
+    onProgress: (progress: number) => void
+  ): Promise<{ url: string; path: string } | null> => {
     const ext = file.name.split(".").pop();
     const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
-    const isPublic = folder === "thumbnails" || folder === "banners";
+    const isPublic = folder === "thumbnails" || folder === "banners" || folder === "seo-images";
     const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
 
     try {
-      setIsUploading(true);
       const { data, error } = await supabase.functions.invoke("r2-storage", {
         body: { action: "upload", bucket: bucketName, key: path, contentType: file.type }
       });
       if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
-      
+
       const uploadRes = await axios.put(data.url, file, {
         headers: { "Content-Type": file.type },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
+            onProgress(percentCompleted);
           }
         }
       });
-      
+
       if (uploadRes.status !== 200) throw new Error("Échec de l'upload vers Cloudflare");
-      
-      if (isPublic) {
-        return `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}`;
-      }
-      return path; 
+
+      const url = isPublic ? `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}` : path;
+      return { url, path };
     } catch (err: any) {
       toast.error(`Erreur upload: ${err.message}`);
       return null;
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -247,21 +289,12 @@ const EditProduct = () => {
     if (manageSaving) setSaving(true);
 
     try {
-      let newThumbnailUrl = thumbnailUrl;
-      let newDownloadUrl = downloadUrl;
-
-      if (thumbnailFile) {
-        newThumbnailUrl = await uploadFile(thumbnailFile, "thumbnails");
-        if (!newThumbnailUrl) throw new Error("L'upload de la vignette a échoué.");
-      }
-      if (downloadFile) {
-        newDownloadUrl = await uploadFile(downloadFile, "downloads");
-        if (!newDownloadUrl) throw new Error("L'upload du fichier a échoué.");
-      }
+      const downloadUrls = uploadedFiles.filter(f => f.url).map(f => f.url);
 
       let newSeoImageUrl = seoImageUrl;
       if (seoImageFile) {
-        newSeoImageUrl = await uploadFile(seoImageFile, "seo-images");
+        const seoUploaded = await uploadFile(seoImageFile, "seo-images", () => {});
+        if (seoUploaded?.url) newSeoImageUrl = seoUploaded.url;
       }
 
       const updateData: Record<string, unknown> = {
@@ -269,8 +302,8 @@ const EditProduct = () => {
         description: description.trim() || null,
         price: parseFloat(price) || 0,
         original_price: originalPrice ? parseFloat(originalPrice) : null,
-        thumbnail_url: newThumbnailUrl,
-        download_url: newDownloadUrl,
+        thumbnail_url: thumbnailData?.url || null,
+        download_url: downloadUrls.length > 0 ? JSON.stringify(downloadUrls) : null,
         seo_title: seoTitle.trim() || null,
         seo_description: seoDescription.trim() || null,
         seo_keywords: seoKeywords.trim() || null,
@@ -301,8 +334,8 @@ const EditProduct = () => {
           for (const lesson of courseLessons) {
             let videoUrl = lesson.video_url;
             if (lesson.video_type === "upload" && lesson.file) {
-              const uploaded = await uploadFile(lesson.file, "course-videos");
-              if (uploaded) videoUrl = uploaded;
+              const uploaded = await uploadFile(lesson.file, "course-videos", () => {});
+              if (uploaded?.url) videoUrl = uploaded.url;
             }
             lessonsToInsert.push({
               product_id: id,
@@ -365,30 +398,13 @@ const EditProduct = () => {
       const saved = await persistProduct({ showToast: false, manageSaving: false });
       if (!saved) return;
 
-      const { data, error } = await supabase.functions.invoke("analyze-product-moderation", {
-        body: { productId: id },
-      });
-
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      const review = data?.review as ProductModerationReview;
-      setModerationReview(review);
-
-      if (review?.status === "rejected") {
-        setModerationDialogOpen(true);
-        toast.error("Publication bloquée par la modération.");
-      } else {
-        const { error: publishError } = await supabase.from("products").update({ is_published: true }).eq("id", id);
-        if (publishError) throw publishError;
-        setIsPublished(true);
-        if (review?.status === "approved") {
-          setModerationDialogOpen(true);
-        }
-        toast.success("Produit publié avec succès !");
-      }
+      const { error: publishError } = await supabase.from("products").update({ is_published: true }).eq("id", id);
+      if (publishError) throw publishError;
+      
+      setIsPublished(true);
+      toast.success("Produit publié avec succès !");
     } catch (error: any) {
-      toast.error(error.message || "Impossible d'analyser le produit");
+      toast.error(error.message || "Impossible de publier le produit");
     } finally {
       setSaving(false);
     }
@@ -721,57 +737,94 @@ const EditProduct = () => {
                     />
                   ) : (
                     <>
-                      {downloadUrl && !downloadFile && (
-                        <div className="p-4 rounded-lg border border-border bg-secondary/30 flex items-center gap-3">
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate">Fichier actuel</p>
-                            <a href={downloadUrl} target="_blank" rel="noreferrer" className="text-xs text-primary hover:underline truncate block">
-                              {downloadUrl.split("/").pop()}
-                            </a>
+                      <div className="space-y-4">
+                        <div
+                          className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                          onClick={() => document.getElementById("edit-download-input")?.click()}
+                        >
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Upload className="h-6 w-6 text-primary" />
+                            </div>
+                            <Button variant="outline" className="gap-2 rounded-full pointer-events-none">
+                              <Upload className="h-4 w-4" /> Ajouter un fichier (Max 5)
+                            </Button>
+                            <p className="text-xs text-muted-foreground">Images, PDF, ZIP uniquement. Taille max: 30 MB par fichier.</p>
                           </div>
+                          <input
+                            id="edit-download-input"
+                            type="file"
+                            multiple
+                            className="hidden"
+                            accept="image/*,.pdf,.zip,.rar"
+                            onChange={async (e) => {
+                              const files = Array.from(e.target.files || []);
+                              if (files.length === 0) return;
+                              
+                              if (uploadedFiles.length + files.length > 5) {
+                                toast.error("Vous ne pouvez ajouter que 5 fichiers maximum.");
+                                e.target.value = "";
+                                return;
+                              }
+
+                              for (const f of files) {
+                                if (f.type.startsWith("video/") || f.type.startsWith("audio/")) {
+                                  toast.error("Les fichiers vidéo et audio ne sont pas autorisés.");
+                                  continue;
+                                }
+                                if (f.size > 30 * 1024 * 1024) {
+                                  toast.error("La taille limite est de 30 MB par fichier.");
+                                  continue;
+                                }
+
+                                const newFile: UploadedFile = { name: f.name, progress: 0, isUploading: true };
+                                setUploadedFiles(prev => [...prev, newFile]);
+                                
+                                uploadFile(f, "downloads", (p) => {
+                                  setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: p } : pf));
+                                }).then(res => {
+                                  if (res) {
+                                    setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: 100, isUploading: false, url: res.url, path: res.path } : pf));
+                                  } else {
+                                    setUploadedFiles(prev => prev.filter(pf => pf.name !== f.name));
+                                  }
+                                });
+                              }
+                              e.target.value = "";
+                            }}
+                          />
                         </div>
-                      )}
-                      <div
-                        className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-12 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => document.getElementById("edit-download-input")?.click()}
-                      >
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Upload className="h-6 w-6 text-primary" />
+
+                        {uploadedFiles.length > 0 && (
+                          <div className="space-y-3">
+                            {uploadedFiles.map((uf, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                                <div className="flex-1 min-w-0 mr-4">
+                                  <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
+                                  {uf.isUploading ? (
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <Progress value={uf.progress} className="h-1.5 flex-1" />
+                                      <span className="text-xs text-muted-foreground">{uf.progress}%</span>
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-green-500 mt-1">Téléversé avec succès</p>
+                                  )}
+                                </div>
+                                <button
+                                  className="p-2 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
+                                  onClick={async () => {
+                                    if (uf.path) {
+                                      await deleteFileFromR2(uf.path, false);
+                                    }
+                                    setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
+                                  }}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                          <Button variant="outline" className="gap-2 rounded-full pointer-events-none">
-                            <Upload className="h-4 w-4" /> {downloadUrl ? "Remplacer le fichier" : "Choisir un fichier"}
-                          </Button>
-                          <p className="text-xs text-muted-foreground">Images, PDF, ZIP uniquement. Taille max: 30 MB</p>
-                        </div>
-                        {downloadFile && (
-                          <p className="text-sm font-medium text-foreground mt-4">📎 {downloadFile.name}</p>
                         )}
-                        <input
-                          id="edit-download-input"
-                          type="file"
-                          className="hidden"
-                          accept="image/*,.pdf,.zip,.rar"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
-                                toast.error("Les fichiers vidéo et audio ne sont pas autorisés pour le moment en raison des limites de stockage.");
-                                e.target.value = ""; // Reset input
-                                return;
-                              }
-                              if (file.size > 30 * 1024 * 1024) {
-                                toast.error("Fichier trop volumineux (> 30 MB). Veuillez héberger votre fichier sur Google Drive, créer un document avec le lien, et l'importer ici.");
-                                e.target.value = ""; // Reset input
-                                return;
-                              }
-                              setDownloadFile(file);
-                            } else {
-                              setDownloadFile(null);
-                            }
-                          }}
-                        />
                       </div>
                     </>
                   )}
@@ -821,21 +874,46 @@ const EditProduct = () => {
                   <h2 className="text-lg font-bold text-foreground">Visuel & Design</h2>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-3 block">Vignette du produit</label>
-                    <div
-                      className="relative w-48 h-48 rounded-xl bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center overflow-hidden"
-                      onClick={() => document.getElementById("edit-thumb-input")?.click()}
-                    >
-                      {thumbnailPreview ? (
-                        <img src={thumbnailPreview} alt="Vignette" className="h-full w-full object-cover" />
+                    <div className="relative w-48 h-48 rounded-xl bg-secondary border-2 border-dashed border-border hover:border-primary/50 transition-colors flex items-center justify-center overflow-hidden">
+                      {thumbnailData ? (
+                        <>
+                          <img src={thumbnailData.previewUrl || thumbnailData.url} alt="Vignette" className="h-full w-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                            {thumbnailData.isUploading ? (
+                              <div className="w-3/4 text-center">
+                                <Progress value={thumbnailData.progress} className="h-2 mb-2" />
+                                <span className="text-xs text-white">{thumbnailData.progress}%</span>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (thumbnailData.path) {
+                                    await deleteFileFromR2(thumbnailData.path, true);
+                                  }
+                                  setThumbnailData(null);
+                                }}
+                                className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                              </button>
+                            )}
+                          </div>
+                        </>
                       ) : (
-                        <Package className="h-12 w-12 text-muted-foreground/30" />
+                        <div
+                          className="h-full w-full flex flex-col items-center justify-center cursor-pointer"
+                          onClick={() => document.getElementById("edit-thumb-input")?.click()}
+                        >
+                          <Package className="h-12 w-12 text-muted-foreground/30" />
+                        </div>
                       )}
                       <input
                         id="edit-thumb-input"
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const f = e.target.files?.[0];
                           if (f) {
                             if (f.size > 2 * 1024 * 1024) {
@@ -843,10 +921,19 @@ const EditProduct = () => {
                               e.target.value = "";
                               return;
                             }
-                            setThumbnailFile(f);
-                            const reader = new FileReader();
-                            reader.onload = (ev) => setThumbnailPreview(ev.target?.result as string);
-                            reader.readAsDataURL(f);
+                            const preview = URL.createObjectURL(f);
+                            setThumbnailData({ name: f.name, progress: 0, isUploading: true, previewUrl: preview });
+                            
+                            const res = await uploadFile(f, "thumbnails", (p) => {
+                              setThumbnailData(prev => prev ? { ...prev, progress: p } : null);
+                            });
+                            
+                            if (res) {
+                              setThumbnailData({ name: f.name, progress: 100, isUploading: false, previewUrl: preview, url: res.url, path: res.path });
+                            } else {
+                              setThumbnailData(null);
+                            }
+                            e.target.value = "";
                           }
                         }}
                       />
@@ -1047,16 +1134,6 @@ const EditProduct = () => {
               )}
             </div>
 
-            {/* Upload Progress Bar */}
-            {isUploading && uploadProgress > 0 && uploadProgress < 100 && (
-              <div className="w-full max-w-md mx-auto mt-6 px-4 space-y-2">
-                <div className="flex justify-between text-sm text-muted-foreground font-medium">
-                  <span>Téléversement du fichier...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2.5 w-full bg-primary/20" />
-              </div>
-            )}
 
             {/* Save button */}
             <div className="flex justify-end mt-4">
@@ -1068,12 +1145,6 @@ const EditProduct = () => {
           </div>
         </div>
       </div>
-
-      <ProductModerationDialog
-        open={moderationDialogOpen}
-        onOpenChange={setModerationDialogOpen}
-        review={moderationReview}
-      />
     </DashboardLayout>
   );
 };

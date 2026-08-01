@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "npm:@aws-sdk/client-s3@3.504.0";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "npm:@aws-sdk/client-s3@3.504.0";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.504.0";
 
 const corsHeaders = {
@@ -60,7 +60,18 @@ serve(async (req) => {
 
       const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
       
-      return new Response(JSON.stringify({ url }), {
+      return new Response(JSON.stringify({ url, method: 'GET' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'delete') {
+      const command = new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key,
+      });
+      await s3Client.send(command);
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
