@@ -20,6 +20,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import CourseLessonsManager, { type Lesson } from "@/components/dashboard/CourseLessonsManager";
 import { FileSizeLimitDialog } from "@/components/dashboard/FileSizeLimitDialog";
 import { ConfirmDeleteDialog } from "@/components/dashboard/ConfirmDeleteDialog";
+import { NoFilesWarningDialog } from "@/components/dashboard/NoFilesWarningDialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,6 +67,9 @@ const EditProduct = () => {
   // Delete confirm dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingDeleteAction, setPendingDeleteAction] = useState<{ name: string; action: () => void } | null>(null);
+
+  // Missing files warning state
+  const [noFilesWarningOpen, setNoFilesWarningOpen] = useState(false);
 
   // Product fields
   const [title, setTitle] = useState("");
@@ -296,6 +300,12 @@ const EditProduct = () => {
     manageSaving?: boolean;
   } = {}) => {
     if (!id || !user) return false;
+
+    if (type === "file" && uploadedFiles.length === 0) {
+      setNoFilesWarningOpen(true);
+      return false;
+    }
+
     if (manageSaving) setSaving(true);
 
     try {
@@ -1203,6 +1213,21 @@ const EditProduct = () => {
         itemName={pendingDeleteAction?.name}
         onConfirm={() => {
           if (pendingDeleteAction) pendingDeleteAction.action();
+        }}
+      />
+
+      <NoFilesWarningDialog 
+        open={noFilesWarningOpen} 
+        onOpenChange={setNoFilesWarningOpen} 
+        onUnpublish={async () => {
+          if (!id) return;
+          const { error } = await supabase.from("products").update({ is_published: false }).eq("id", id);
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+          setIsPublished(false);
+          toast.success("Produit dépublié. Vous pouvez le modifier en tant que brouillon.");
         }}
       />
     </DashboardLayout>
