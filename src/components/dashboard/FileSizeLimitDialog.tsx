@@ -12,7 +12,7 @@ interface FileSizeLimitDialogProps {
 export function FileSizeLimitDialog({ open, onOpenChange, maxSizeMB }: FileSizeLimitDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-background/40 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-background/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl">
         <AnimatePresence>
           {open && (
             <motion.div
@@ -29,9 +29,9 @@ export function FileSizeLimitDialog({ open, onOpenChange, maxSizeMB }: FileSizeL
                   <AlertCircle className="h-8 w-8 text-red-500" />
                 </div>
                 <div>
-                  <DialogTitle className="text-2xl font-bold tracking-tight mb-2">Fichier trop volumineux</DialogTitle>
-                  <DialogDescription className="text-base text-muted-foreground">
-                    La taille de votre fichier dépasse la limite autorisée. Veuillez sélectionner un fichier de <span className="font-semibold text-foreground">moins de {maxSizeMB} Mo</span>.
+                  <DialogTitle className="text-2xl font-bold tracking-tight mb-2 text-foreground">Fichier trop volumineux</DialogTitle>
+                  <DialogDescription className="text-base text-foreground/80">
+                    La taille de votre fichier dépasse la limite autorisée. Veuillez sélectionner un fichier de <span className="font-bold text-foreground">moins de {maxSizeMB} Mo</span>.
                   </DialogDescription>
                 </div>
               </DialogHeader>
