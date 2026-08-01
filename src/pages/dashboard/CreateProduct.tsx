@@ -202,9 +202,11 @@ const CreateProduct = () => {
 
       if (thumbnailFile) {
         thumbnailUrl = await uploadFile(thumbnailFile, "thumbnails");
+        if (!thumbnailUrl) throw new Error("L'upload de la vignette a échoué. Le produit n'a pas été créé.");
       }
       if (downloadFile) {
         downloadUrl = await uploadFile(downloadFile, "downloads");
+        if (!downloadUrl) throw new Error("L'upload du fichier a échoué. Le produit n'a pas été créé.");
       }
 
       const effectivePrice = parseFloat(price);

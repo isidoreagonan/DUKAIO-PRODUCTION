@@ -239,9 +239,11 @@ const EditProduct = () => {
 
       if (thumbnailFile) {
         newThumbnailUrl = await uploadFile(thumbnailFile, "thumbnails");
+        if (!newThumbnailUrl) throw new Error("L'upload de la vignette a échoué.");
       }
       if (downloadFile) {
         newDownloadUrl = await uploadFile(downloadFile, "downloads");
+        if (!newDownloadUrl) throw new Error("L'upload du fichier a échoué.");
       }
 
       let newSeoImageUrl = seoImageUrl;
