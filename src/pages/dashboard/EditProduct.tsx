@@ -19,6 +19,7 @@ import axios from "axios";
 import RichTextEditor from "@/components/RichTextEditor";
 import CourseLessonsManager, { type Lesson } from "@/components/dashboard/CourseLessonsManager";
 import { FileSizeLimitDialog } from "@/components/dashboard/FileSizeLimitDialog";
+import { ConfirmDeleteDialog } from "@/components/dashboard/ConfirmDeleteDialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -61,6 +62,10 @@ const EditProduct = () => {
   // Size limit dialog state
   const [sizeLimitDialogOpen, setSizeLimitDialogOpen] = useState(false);
   const [sizeLimitMaxMB, setSizeLimitMaxMB] = useState(2);
+
+  // Delete confirm dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pendingDeleteAction, setPendingDeleteAction] = useState<{ name: string; action: () => void } | null>(null);
 
   // Product fields
   const [title, setTitle] = useState("");
@@ -818,11 +823,18 @@ const EditProduct = () => {
                                 </div>
                                 <button
                                   className="p-2 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
-                                  onClick={async () => {
-                                    if (uf.path) {
-                                      await deleteFileFromR2(uf.path, false);
-                                    }
-                                    setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPendingDeleteAction({
+                                      name: uf.name,
+                                      action: async () => {
+                                        if (uf.path) {
+                                          await deleteFileFromR2(uf.path, false);
+                                        }
+                                        setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
+                                      }
+                                    });
+                                    setDeleteDialogOpen(true);
                                   }}
                                 >
                                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -905,12 +917,18 @@ const EditProduct = () => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={async (e) => {
+                                  onClick={(e) => {
                                     e.stopPropagation();
-                                    if (thumbnailData.path) {
-                                      await deleteFileFromR2(thumbnailData.path, true);
-                                    }
-                                    setThumbnailData(null);
+                                    setPendingDeleteAction({
+                                      name: "la vignette",
+                                      action: async () => {
+                                        if (thumbnailData.path) {
+                                          await deleteFileFromR2(thumbnailData.path, true);
+                                        }
+                                        setThumbnailData(null);
+                                      }
+                                    });
+                                    setDeleteDialogOpen(true);
                                   }}
                                   className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg"
                                   title="Supprimer"
@@ -1177,6 +1195,15 @@ const EditProduct = () => {
         open={sizeLimitDialogOpen} 
         onOpenChange={setSizeLimitDialogOpen} 
         maxSizeMB={sizeLimitMaxMB} 
+      />
+
+      <ConfirmDeleteDialog 
+        open={deleteDialogOpen} 
+        onOpenChange={setDeleteDialogOpen} 
+        itemName={pendingDeleteAction?.name}
+        onConfirm={() => {
+          if (pendingDeleteAction) pendingDeleteAction.action();
+        }}
       />
     </DashboardLayout>
   );
