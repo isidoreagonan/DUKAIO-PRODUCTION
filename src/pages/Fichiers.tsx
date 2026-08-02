@@ -8,6 +8,7 @@ import { FAQ } from "@/components/marketing/FAQ";
 import SEOHead from "@/components/SEOHead";
 import fichiersDashboard from "@/assets/fichiers-dashboard.png";
 import fichiersUpload from "@/assets/fichiers-upload.png";
+import fichiersLivraison from "@/assets/fichiers-livraison.png";
 import fichiersProtection from "@/assets/fichiers-protection.png";
 import fichiersStep1 from "@/assets/fichiers-step-1.png";
 import fichiersStep2 from "@/assets/fichiers-step-2.png";
@@ -143,55 +144,13 @@ export default function Fichiers() {
 
             {/* Block 2: Image Left, Text Right */}
             <div className="flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-20">
-              <div className="flex-1 w-full relative group">
-                <div className="absolute inset-0 bg-blue/5 rounded-[2.5rem] transform lg:-translate-x-6 lg:translate-y-6 -z-10 transition-transform duration-500 group-hover:translate-x-0 group-hover:translate-y-0"></div>
-                
-                {/* Coded UI Mockup */}
-                <div className="w-full bg-gradient-to-br from-[#85A1E5] to-[#6A82C7] rounded-[2rem] p-8 sm:py-12 flex items-center justify-center shadow-2xl relative overflow-hidden">
-                  
-                  {/* Inner White Card */}
-                  <div className="bg-white w-full max-w-sm rounded-2xl p-6 sm:p-8 shadow-2xl relative z-10 transform transition-transform duration-500 group-hover:scale-[1.02]">
-                    {/* Success Header */}
-                    <div className="flex flex-col items-center text-center mb-6">
-                      <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4 shadow-inner">
-                        <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
-                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-                      <h3 className="font-bold text-ink text-xl">Paiement validé !</h3>
-                      <p className="text-sm text-slate mt-1">Transaction Mobile Money réussie.</p>
-                    </div>
-
-                    <div className="border-t border-dashed border-slate-200 my-5"></div>
-
-                    {/* File Info */}
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 rounded-lg bg-blue/10 flex items-center justify-center text-blue shrink-0">
-                        <FileText className="w-6 h-6" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-ink text-sm truncate">Guide Ultime E-commerce.pdf</h4>
-                        <p className="text-xs text-slate mt-0.5">2.4 MB • Sécurisé</p>
-                      </div>
-                    </div>
-
-                    {/* Download Button */}
-                    <button className="w-full py-3.5 bg-blue hover:bg-blueDeep text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                      <Download className="w-4 h-4" />
-                      Télécharger maintenant
-                    </button>
-                    
-                    <p className="text-[11px] text-slate/70 text-center mt-4">
-                      Lien unique et chiffré, envoyé instantanément.
-                    </p>
-                  </div>
-                  
-                  {/* Decorative Elements */}
-                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/20 rounded-full blur-3xl"></div>
-                  <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-900/20 rounded-full blur-3xl"></div>
-                </div>
+              <div className="flex-1 w-full relative">
+                <div className="absolute inset-0 bg-blue/5 rounded-3xl transform lg:-translate-x-6 lg:translate-y-6 -z-10"></div>
+                <img 
+                  src={fichiersLivraison} 
+                  alt="Livraison 100% automatisée" 
+                  className="w-full h-auto object-cover relative z-10"
+                />
               </div>
               <div className="flex-1 space-y-6">
                 <h3 className="font-serif text-3xl font-medium text-ink">Livraison 100% automatisée</h3>

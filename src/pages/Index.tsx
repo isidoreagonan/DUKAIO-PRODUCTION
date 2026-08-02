@@ -4,25 +4,18 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { SEOHead } from "@/components/SEOHead";
 import { Hero } from '../components/marketing/Hero';
-import { HeroFeature } from '../components/marketing/HeroFeature';
-import { TrustBar } from '../components/marketing/TrustBar';
 import { StatsBar } from '../components/marketing/StatsBar';
 import { MarketplaceGrid } from '../components/marketing/MarketplaceGrid';
 import { CategoryTicker } from '../components/marketing/CategoryTicker';
 import { Benefits } from '../components/marketing/Benefits';
-import { HowItWorks } from '../components/marketing/HowItWorks';
-import { Features } from '../components/marketing/Features';
 import ProductShowcase from "@/components/ProductShowcase";
 import { UseCases } from '../components/marketing/UseCases';
-import { CreatorJourney } from '../components/marketing/CreatorJourney';
 import { PaymentMethodsOverview } from '../components/marketing/PaymentMethodsOverview';
 import { GlobalReach } from '../components/marketing/GlobalReach';
-import { ROICalculator } from '../components/marketing/ROICalculator';
-import { Community } from '../components/marketing/Community';
+import { HowItWorksTabs } from '../components/marketing/HowItWorksTabs';
 import { Security } from '../components/marketing/Security';
-import { FounderQuote } from '../components/marketing/FounderQuote';
-import { Testimonials } from '../components/marketing/Testimonials';
-import { TractionStats } from '../components/marketing/TractionStats';
+import { DukaioReviewsBento } from '../components/marketing/DukaioReviewsBento';
+import { PricingSection } from '../components/marketing/PricingSection';
 import { FAQ } from '../components/marketing/FAQ';
 import { FinalCTA } from '../components/marketing/FinalCTA';
 
@@ -99,8 +92,6 @@ export default function Index() {
 
       <main className="pt-20">
         <Hero onOpenAuthModal={handleOpenAuth} onOpenDemoModal={handleOpenDemo} />
-        <HeroFeature onLearnMore={() => navigate('/about')} />
-        <TrustBar />
         <StatsBar stats={heroStats} columns={4} />
         
         {/* L'accroche : pour qui, et que peut-on vendre */}
@@ -111,32 +102,27 @@ export default function Index() {
         <MarketplaceGrid onSelectProduct={handleSelectProduct} products={dynamicProducts || undefined} />
         <CategoryTicker />
 
-        {/* Pourquoi Dukaio ? L'argument financier et local */}
-        <ROICalculator />
+        {/* Comment ça marche : 3 étapes interactives Dukaio */}
+        <HowItWorksTabs onOpenAuthModal={handleOpenAuth} />
         <PaymentMethodsOverview />
         <GlobalReach />
 
         {/* Le produit technique */}
-        <Features />
         <Benefits />
+        {/* Security & Preuve sociale */}
         <Security />
 
-        {/* Comment ça marche & Parcours */}
-        <CreatorJourney />
-        <HowItWorks />
+        {/* Preuve sociale ultime & Impact (Bento Grid) */}
+        <DukaioReviewsBento onOpenAuthModal={handleOpenAuth} />
 
-        {/* Preuve sociale ultime & Mission */}
-        <Testimonials />
-        <TractionStats />
-        <FounderQuote />
-        <Community />
+        {/* Tarification claire 10% */}
+        <PricingSection onOpenAuthModal={handleOpenAuth} />
 
         <FAQ />
-        <FinalCTA onOpenAuthModal={handleOpenAuth} />
       </main>
 
-      {/* 17. Footer */}
-      <Footer />
+      {/* Footer unifié Dukaio */}
+      <Footer onOpenAuthModal={handleOpenAuth} />
 
       {/* Interactive Modals */}
       <ProductCheckoutModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />

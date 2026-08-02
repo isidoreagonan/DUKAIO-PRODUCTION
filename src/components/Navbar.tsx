@@ -16,7 +16,7 @@ const productLinks = [
 
 const mainLinks = [
   { label: "Marketplace", href: "/marketplace", icon: ShoppingCart },
-  { label: "Tarifs", href: "/pricing", icon: Tag },
+  { label: "Tarifs", href: "/#pricing", icon: Tag },
 ];
 
 const moreLinks = [
