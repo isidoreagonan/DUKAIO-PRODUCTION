@@ -1,6 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Check, Sparkles, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { ShoppingBag, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface PricingSectionProps {
@@ -18,94 +17,84 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onOpenAuthModal 
     }
   };
 
-  const features = [
-    "Création de boutique et catalogue produits illimités",
-    "Tous les modes de paiement Mobile Money (Wave, Orange, MTN, M-Pesa, Airtel) & Cartes",
-    "Stockage et hébergement sécurisé de vos fichiers & cours",
-    "Protection anti-piratage avec tatouage numérique (watermarking) dynamique",
-    "Livraison automatique instantanée 24/7 par e-mail",
-    "Tableau de bord financier et suivi analytique en temps réel",
+  const advantages = [
+    "Aucun abonnement, vous ne payez que si vous réalisez des ventes",
+    "90% de vos ventes directement dans votre poche",
+    "Accès à la première marketplace & aux outils de vente automatisés",
+    "Paiements rapides, simples et transparents par Mobile Money & Cartes"
   ];
 
   return (
-    <section id="pricing" className="py-24 sm:py-32 bg-slate-50 relative overflow-hidden text-ink border-b border-hair">
-      
-      {/* Background Decorative Lighting */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl h-96 bg-gradient-to-tr from-blue-300/15 via-indigo-200/20 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-16">
+    <section id="pricing" className="py-20 sm:py-28 bg-white text-ink border-b border-hair relative overflow-hidden">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-widest shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-blue" />
-            <span>TARIFICATION TRANSPARENTE</span>
-          </div>
+        <div className="text-center max-w-2xl mx-auto space-y-4">
+          <span className="text-xs font-mono font-bold uppercase tracking-widest text-blue block">
+            TARIFICATION
+          </span>
 
           <h2 className="font-serif text-3xl sm:text-5xl font-normal tracking-tight text-ink leading-tight">
-            Payez uniquement quand <span className="font-serif italic text-blue">vous vendez</span>
+            Une tarification simple et transparente
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-600 font-sans leading-relaxed max-w-2xl mx-auto">
-            Pas d'abonnement mensuel. Pas de frais fixes. Dukaio prélève simplement une commission fixe de 10% sur chaque transaction réussie.
+          <p className="text-base sm:text-lg text-slate-500 font-sans leading-relaxed">
+            Avec Dukaio, pas d'abonnement ni de frais cachés. Vous ne payez que 10% sur vos ventes et vous gardez 90% de vos revenus.
           </p>
         </div>
 
-        {/* Pricing Card Centered */}
-        <div className="max-w-2xl mx-auto bg-white border border-slate-200 rounded-3xl p-8 sm:p-12 shadow-xl relative overflow-hidden group">
+        {/* Vibrant Blue Card (Maketou / Dukaio Style) */}
+        <div className="bg-[#3B46F6] rounded-[28px] p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden">
           
-          {/* Top Tag Header */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-8 border-b border-slate-100">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold font-mono uppercase tracking-wider mb-2">
-                <Zap className="w-3.5 h-3.5 text-emerald-600" />
-                <span>0 FCFA / MOIS</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            
+            {/* Left Side: Brand & 10% Highlight + CTA */}
+            <div className="lg:col-span-6 space-y-6">
+              <div>
+                <h3 className="font-serif text-3xl font-bold tracking-tight text-white mb-1">
+                  Dukaio
+                </h3>
+                <p className="text-sm text-white/80 font-sans font-medium">
+                  Gagnez plus, gardez vos revenus.
+                </p>
               </div>
-              <h3 className="font-serif text-2xl font-bold text-ink">Formule Unique & Sans Engager</h3>
+
+              <div className="flex items-baseline gap-2 pt-2 pb-4">
+                <span className="font-sans font-black text-5xl sm:text-6xl tracking-tight text-white">
+                  10%
+                </span>
+                <span className="text-sm font-medium text-white/90">
+                  seulement de commission
+                </span>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={handleAction}
+                  className="w-full bg-white hover:bg-slate-100 text-[#3B46F6] font-bold text-sm sm:text-base py-3.5 px-6 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 group"
+                >
+                  <span>Créer ma boutique gratuite</span>
+                  <ShoppingBag className="w-4 h-4 text-[#3B46F6]" />
+                </button>
+              </div>
             </div>
 
-            <div className="text-center sm:text-right shrink-0">
-              <div className="font-sans font-black text-4xl sm:text-5xl text-blue tracking-tight">
-                10%
-              </div>
-              <div className="text-xs text-slate-500 font-sans font-medium">
-                par vente réalisée
-              </div>
+            {/* Right Side: Advantages List */}
+            <div className="lg:col-span-6 lg:border-l lg:border-white/20 lg:pl-10 pt-6 lg:pt-0 space-y-6">
+              <span className="font-mono text-xs uppercase tracking-widest text-white/80 font-bold block">
+                AVANTAGES
+              </span>
+
+              <ul className="space-y-4">
+                {advantages.map((text, idx) => (
+                  <li key={idx} className="flex items-start gap-3 text-sm sm:text-base font-sans text-white/95 leading-snug">
+                    <Check className="w-5 h-5 text-white shrink-0 mt-0.5" />
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
 
-          {/* Included Features List */}
-          <div className="py-8 space-y-4">
-            <h4 className="font-mono text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">
-              TOUT CE QUI EST INCLUS SANS FRAIS CACHÉS :
-            </h4>
-
-            <ul className="space-y-3.5">
-              {features.map((item, index) => (
-                <li key={index} className="flex items-start gap-3 text-slate-700 font-sans text-sm sm:text-base leading-snug">
-                  <span className="w-5 h-5 rounded-full bg-blue-50 text-blue flex items-center justify-center shrink-0 mt-0.5">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Action Button */}
-          <div className="pt-6 border-t border-slate-100 text-center space-y-4">
-            <button
-              onClick={handleAction}
-              className="w-full inline-flex items-center justify-center px-8 py-4 rounded-xl bg-blue hover:bg-blue-600 text-white font-bold text-base shadow-lg shadow-blue/25 transition-all duration-300 gap-2.5 hover:scale-[1.02]"
-            >
-              <span>Créer ma boutique gratuitement</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
-
-            <p className="text-xs text-slate-400 font-sans flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Aucune carte bancaire requise. Vous ne payez que si vous réalisez des ventes.</span>
-            </p>
           </div>
 
         </div>
