@@ -41,12 +41,12 @@ const Navbar = () => {
     <motion.nav
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="sticky top-0 z-50 glass"
+      className="fixed top-0 left-0 right-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-hair"
     >
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2.5">
           <img src={logo} alt="Dukaio" className="h-8 w-8 rounded-lg object-contain" />
-          <span className="text-lg font-bold text-foreground tracking-tight">Dukaio</span>
+          <span className="text-2xl font-semibold font-serif text-ink tracking-tight">Duka<span className="text-blue">io</span></span>
         </Link>
 
         {/* Desktop */}

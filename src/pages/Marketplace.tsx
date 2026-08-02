@@ -116,7 +116,7 @@ const Marketplace = () => {
             <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold text-accent backdrop-blur sm:text-xs">
               <Sparkles className="h-3 w-3" /> Marketplace #1 de produits numériques en Afrique
             </span>
-            <h1 className="mb-3 text-3xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+            <h1 className="mb-3 text-3xl font-serif font-normal leading-[1.05] tracking-tight text-ink sm:text-5xl md:text-6xl">
               Achetez en confiance.{" "}
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                 Vendez sans limite.
@@ -223,9 +223,9 @@ const Marketplace = () => {
         <div className="container mx-auto px-4">
           <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
             <div className="min-w-0">
-              <h2 className="text-base font-bold text-foreground sm:text-lg md:text-xl">
-                Explorez par catégorie
-              </h2>
+              <h2 className="mb-2 text-2xl font-serif text-ink tracking-tight sm:text-3xl">
+              Explorer par catégories
+            </h2>
               <p className="line-clamp-1 text-[11px] text-muted-foreground sm:text-xs">
                 Trouvez exactement ce dont vous avez besoin
               </p>
@@ -451,8 +451,8 @@ const ProductSection = ({
           <div className="min-w-0">
             <div className="mb-0.5 flex items-center gap-2 sm:mb-1">
               {icon}
-              <h2 className="text-lg font-bold text-foreground sm:text-xl md:text-2xl">
-                {title}
+              <h2 className="text-xl font-serif text-ink sm:text-2xl">
+                Tendances
               </h2>
             </div>
             <p className="line-clamp-1 text-xs text-muted-foreground sm:text-sm">

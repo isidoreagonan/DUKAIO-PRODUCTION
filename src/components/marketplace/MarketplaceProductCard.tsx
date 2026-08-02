@@ -61,7 +61,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.03, 0.3) }}
       whileHover={{ y: -4 }}
-      className={`group relative flex flex-col overflow-hidden rounded-[14px] bg-card border border-border/50 shadow-sm transition-all hover:shadow-md ${
+      className={`group relative flex flex-col overflow-hidden rounded-[14px] bg-white border border-hair shadow-sm transition-colors duration-200 hover:border-blue ${
         fixedWidth ? "w-[220px] shrink-0 sm:w-auto" : "w-full"
       }`}
     >
@@ -83,7 +83,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
 
           {/* Discount badge */}
           {hasDiscount && (
-            <span className="absolute left-3 top-3 rounded-md bg-[#3f48cc] px-2 py-1 text-[10px] font-bold text-white shadow-sm">
+            <span className="absolute left-3 top-3 rounded-md bg-blue px-2 py-1 text-[10px] font-bold text-white shadow-sm">
               -{discountPct}%
             </span>
           )}
@@ -108,7 +108,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
 
         {/* Content */}
         <div className="flex flex-col flex-1 p-3.5 sm:p-4">
-          <h3 className="line-clamp-2 text-[13px] font-bold leading-tight text-slate-800 transition-colors group-hover:text-[#3f48cc] sm:text-sm mb-1.5 min-h-[38px]">
+          <h3 className="line-clamp-2 text-lg font-serif font-medium leading-tight text-ink transition-colors group-hover:text-blue mb-1.5 min-h-[38px]">
             {product.title}
           </h3>
           
@@ -122,13 +122,13 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
                   className="w-4 h-4 rounded-full object-cover bg-slate-100"
                 />
               ) : null}
-              <span className="font-medium text-slate-700 truncate">{product.store.display_name}</span>
+              <span className="font-sans font-medium text-slate-700 truncate">{product.store.display_name}</span>
               {grade && <VerifiedBadge grade={grade} size="xs" />}
             </p>
           )}
 
           <div className="flex items-end gap-2 mt-auto mb-3.5">
-            <span className="text-[15px] font-extrabold text-[#3f48cc]">
+            <span className="font-serif text-[17px] font-medium text-ink">
               {Number(product.price).toLocaleString()} FCFA
             </span>
             {hasDiscount && (
@@ -138,7 +138,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
             )}
           </div>
 
-          <div className="w-full bg-[#3f48cc]/90 text-white hover:bg-[#3f48cc] py-2 rounded-lg text-[13px] font-semibold text-center transition-colors">
+          <div className="w-full bg-blue text-white hover:bg-blueDeep py-2 rounded-lg text-sm font-sans font-semibold text-center transition-colors">
             Acheter maintenant
           </div>
         </div>

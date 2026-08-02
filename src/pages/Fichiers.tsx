@@ -1,63 +1,351 @@
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ArrowRight, CloudUpload, Link as LinkIcon, Download, ShieldCheck, Zap, Globe, BarChart3, HeadphonesIcon, FolderKey, FileText } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { motion } from "framer-motion";
-import { FileText, Download, Shield, Zap, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { FAQ } from "@/components/marketing/FAQ";
 import SEOHead from "@/components/SEOHead";
+import fichiersDashboard from "@/assets/fichiers-dashboard.png";
+import fichiersUpload from "@/assets/fichiers-upload.png";
+import fichiersProtection from "@/assets/fichiers-protection.png";
+import fichiersStep1 from "@/assets/fichiers-step-1.png";
+import fichiersStep2 from "@/assets/fichiers-step-2.png";
+import fichiersStep3 from "@/assets/fichiers-step-3.png";
 
-const features = [
-  { icon: FileText, title: "Tous les formats", desc: "PDFs, e-books, templates, presets, fichiers audio, vidéo, ZIP et plus encore." },
-  { icon: Download, title: "Livraison instantanée", desc: "Vos clients reçoivent leur fichier immédiatement après le paiement." },
-  { icon: Shield, title: "Protection DRM", desc: "Protégez vos fichiers contre le piratage avec nos systèmes de sécurité." },
-  { icon: Zap, title: "Upload rapide", desc: "Uploadez des fichiers jusqu'à 5 Go en quelques secondes." },
-];
+export default function Fichiers() {
+  const [activeStep, setActiveStep] = useState(0);
 
-const Fichiers = () => {
   return (
-    <div className="min-h-screen bg-background">
-      <SEOHead title="Vendre des fichiers digitaux" description="Vendez vos fichiers digitaux : PDFs, e-books, templates, presets. Livraison instantanée, protection DRM et paiement Mobile Money." canonicalPath="/fichiers" keywords="vendre fichiers digitaux, ebook, template, preset, PDF, afrique" />
+    <div className="min-h-screen bg-white text-ink font-sans selection:bg-blueTint selection:text-blueDeep overflow-x-hidden">
+      <SEOHead 
+        title="Vendre des Fichiers Digitaux" 
+        description="Vendez vos e-books, PDF, templates et fichiers numériques instantanément. Dukaio s'occupe de la livraison et des paiements en Afrique." 
+        canonicalPath="/fichiers" 
+      />
       <Navbar />
-      <section className="py-24 md:py-32 bg-mesh">
-        <div className="container mx-auto px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background/80 px-4 py-1.5 text-xs font-medium text-muted-foreground mb-6">
-              📁 Fichiers digitaux
-            </span>
-            <h1 className="text-4xl md:text-6xl font-extrabold text-foreground mb-6">
-              Vendez vos <span className="text-gradient">fichiers digitaux</span> sans limites
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
-              E-books, templates, presets, musiques — uploadez et vendez n'importe quel type de fichier digital à travers le monde.
-            </p>
-            <Link to="/register">
-              <Button size="lg" className="px-8 py-6 text-base font-semibold shadow-lg shadow-primary/25">
-                Commencer à vendre <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
 
-      <section className="py-24 bg-background">
-        <div className="container mx-auto px-6">
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            {features.map((f, i) => (
-              <motion.div key={f.title} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="rounded-2xl border border-border bg-card p-6 hover:shadow-lg hover:border-primary/20 transition-all">
-                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
-                  <f.icon className="h-5 w-5 text-primary" />
-                </div>
-                <h3 className="mb-2 text-base font-semibold text-card-foreground">{f.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-              </motion.div>
+      <main className="pt-24 md:pt-32">
+        {/* 1. HERO SECTION */}
+        <section className="text-center mb-20">
+          <div className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue/10 text-blue mb-8"
+            >
+              <span className="w-2 h-2 rounded-full bg-blue animate-pulse" />
+              <span className="text-xs font-semibold tracking-wide uppercase">Dukaio Fichiers</span>
+            </motion.div>
+            
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="font-serif text-5xl sm:text-6xl lg:text-7xl font-normal text-ink tracking-tight leading-[1.05] mb-6"
+            >
+              Vendez vos <span className="font-serif italic text-blue">Fichiers Numériques</span> Instantanément.
+            </motion.h1>
+
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg sm:text-xl text-slate max-w-2xl mx-auto leading-relaxed font-sans mb-10"
+            >
+              Uploadez vos e-books, PDF, musiques et templates en quelques secondes. Dukaio gère la livraison sécurisée, les paiements Mobile Money et vos clients.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Link 
+                to="/register" 
+                className="inline-flex items-center justify-center px-8 py-4 rounded-xl text-base font-semibold text-white bg-blue hover:bg-blueDeep transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                Créer une boutique gratuite
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+            </motion.div>
+          </div>
+
+          {/* Dashboard Mockup */}
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-20 w-full max-w-[1400px] mx-auto flex items-center justify-center relative px-4 sm:px-6 lg:px-8"
+          >
+            <img 
+              src={fichiersDashboard} 
+              alt="Tableau de bord Fichiers" 
+              className="w-full h-auto object-cover"
+            />
+          </motion.div>
+        </section>
+
+        {/* 2. STATS BAR */}
+        <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto mb-32">
+          <div className="bg-white border border-hair rounded-2xl shadow-sm p-8 grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-hair/0 md:divide-hair">
+            {[
+              { value: "+5 000", label: "Fichiers vendus" },
+              { value: "0%", label: "Frais fixes" },
+              { value: "Instant", label: "Livraison" },
+              { value: "256-bit", label: "Sécurité SSL" }
+            ].map((stat, i) => (
+              <div key={i} className="text-center px-4">
+                <p className="font-serif text-3xl text-ink mb-1">{stat.value}</p>
+                <p className="font-sans text-xs font-medium text-slate uppercase tracking-wider">{stat.label}</p>
+              </div>
             ))}
           </div>
+        </section>
+
+        {/* 3. ZIG-ZAG SECTION */}
+        <section className="px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto mb-32">
+          <div className="text-center mb-20">
+            <h2 className="font-serif text-4xl sm:text-5xl font-normal text-ink tracking-tight mb-4">
+              Tout ce dont vous avez besoin <br className="hidden sm:inline" />
+              pour vendre vos fichiers
+            </h2>
+          </div>
+
+          <div className="space-y-24 md:space-y-32">
+            {/* Block 1: Text Left, Image Right */}
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+              <div className="flex-1 space-y-6">
+                <h3 className="font-serif text-3xl font-medium text-ink">Acceptez des paiements du monde entier</h3>
+                <p className="text-slate text-lg leading-relaxed">
+                  Laissez vos clients payer avec leur méthode préférée. Que ce soit par Mobile Money en Afrique ou par carte bancaire à l'international, encaissez vos ventes sans aucune frontière.
+                </p>
+                <ul className="space-y-3 pt-2">
+                  {["Mobile Money & Cartes bancaires", "Ventes à l'international", "Paiements sécurisés"].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-ink font-medium">
+                      <div className="w-5 h-5 rounded-full bg-blue/10 flex items-center justify-center">
+                        <Globe className="w-3 h-3 text-blue" />
+                      </div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex-1 w-full relative">
+                <div className="absolute inset-0 bg-blue/5 rounded-3xl transform lg:translate-x-6 lg:translate-y-6 -z-10"></div>
+                <img 
+                  src={fichiersUpload} 
+                  alt="Interface d'upload de fichiers" 
+                  className="w-full h-auto object-cover relative z-10"
+                />
+              </div>
+            </div>
+
+            {/* Block 2: Image Left, Text Right */}
+            <div className="flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-20">
+              <div className="flex-1 w-full relative group">
+                <div className="absolute inset-0 bg-blue/5 rounded-[2.5rem] transform lg:-translate-x-6 lg:translate-y-6 -z-10 transition-transform duration-500 group-hover:translate-x-0 group-hover:translate-y-0"></div>
+                
+                {/* Coded UI Mockup */}
+                <div className="w-full bg-gradient-to-br from-[#85A1E5] to-[#6A82C7] rounded-[2rem] p-8 sm:py-12 flex items-center justify-center shadow-2xl relative overflow-hidden">
+                  
+                  {/* Inner White Card */}
+                  <div className="bg-white w-full max-w-sm rounded-2xl p-6 sm:p-8 shadow-2xl relative z-10 transform transition-transform duration-500 group-hover:scale-[1.02]">
+                    {/* Success Header */}
+                    <div className="flex flex-col items-center text-center mb-6">
+                      <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4 shadow-inner">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                      <h3 className="font-bold text-ink text-xl">Paiement validé !</h3>
+                      <p className="text-sm text-slate mt-1">Transaction Mobile Money réussie.</p>
+                    </div>
+
+                    <div className="border-t border-dashed border-slate-200 my-5"></div>
+
+                    {/* File Info */}
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 rounded-lg bg-blue/10 flex items-center justify-center text-blue shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-ink text-sm truncate">Guide Ultime E-commerce.pdf</h4>
+                        <p className="text-xs text-slate mt-0.5">2.4 MB • Sécurisé</p>
+                      </div>
+                    </div>
+
+                    {/* Download Button */}
+                    <button className="w-full py-3.5 bg-blue hover:bg-blueDeep text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                      <Download className="w-4 h-4" />
+                      Télécharger maintenant
+                    </button>
+                    
+                    <p className="text-[11px] text-slate/70 text-center mt-4">
+                      Lien unique et chiffré, envoyé instantanément.
+                    </p>
+                  </div>
+                  
+                  {/* Decorative Elements */}
+                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-white/20 rounded-full blur-3xl"></div>
+                  <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-900/20 rounded-full blur-3xl"></div>
+                </div>
+              </div>
+              <div className="flex-1 space-y-6">
+                <h3 className="font-serif text-3xl font-medium text-ink">Livraison 100% automatisée</h3>
+                <p className="text-slate text-lg leading-relaxed">
+                  Une fois le paiement Mobile Money ou Carte bancaire validé, votre client reçoit instantanément un lien de téléchargement sécurisé et unique. Vous dormez, Dukaio livre.
+                </p>
+                <Link to="/register" className="inline-flex items-center text-blue font-semibold hover:text-blueDeep">
+                  En savoir plus <ArrowRight className="ml-1 w-4 h-4" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Block 3: Text Left, Image Right */}
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+              <div className="flex-1 space-y-6">
+                <h3 className="font-serif text-3xl font-medium text-ink">Protection anti-piratage</h3>
+                <p className="text-slate text-lg leading-relaxed">
+                  Gardez le contrôle sur vos œuvres. Limitez le nombre de téléchargements par client, mettez en place des expirations de liens, ou appliquez des filigranes sur vos PDF automatiquement.
+                </p>
+                <Link to="/register" className="inline-flex items-center text-blue font-semibold hover:text-blueDeep">
+                  En savoir plus <ArrowRight className="ml-1 w-4 h-4" />
+                </Link>
+              </div>
+              <div className="flex-1 w-full relative">
+                <div className="absolute inset-0 bg-amber-500/5 rounded-3xl transform lg:translate-x-6 lg:translate-y-6 -z-10"></div>
+                <img 
+                  src={fichiersProtection} 
+                  alt="Protection anti-piratage" 
+                  className="w-full h-auto object-cover relative z-10"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. FEATURES GRID */}
+        <section className="bg-slate-50 py-24 md:py-32 border-y border-hair mb-32">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="font-serif text-3xl sm:text-4xl font-medium text-ink">Tout pour réussir</h2>
+              <p className="text-slate mt-4 text-lg">Des outils pensés pour les créateurs exigeants.</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[
+                { icon: Globe, color: "text-blue", bg: "bg-blue/10", title: "Paiements mondiaux & locaux", desc: "Acceptez Mobile Money (Wave, Orange, MTN) et les cartes Visa/Mastercard mondiales." },
+                { icon: BarChart3, color: "text-emerald-500", bg: "bg-emerald-500/10", title: "Analytics poussés", desc: "Suivez vos vues, conversions et sources de trafic en temps réel depuis le dashboard." },
+                { icon: Zap, color: "text-amber-500", bg: "bg-amber-500/10", title: "Paiements rapides", desc: "Retirez vos gains directement sur votre compte Mobile Money ou bancaire rapidement." },
+                { icon: LinkIcon, color: "text-purple-500", bg: "bg-purple-500/10", title: "Liens de vente directs", desc: "Partagez le lien de votre fichier sur Instagram, TikTok ou WhatsApp pour vendre." },
+                { icon: Download, color: "text-sky-500", bg: "bg-sky-500/10", title: "Limites de téléchargement", desc: "Définissez un nombre maximum de téléchargements par fichier pour plus de sécurité." },
+                { icon: HeadphonesIcon, color: "text-rose-500", bg: "bg-rose-500/10", title: "Support client intégré", desc: "Gérez les questions et les remboursements de vos clients au même endroit." },
+              ].map((feat, i) => (
+                <div key={i} className="bg-white border border-hair rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${feat.bg} ${feat.color}`}>
+                    <feat.icon className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-sans font-bold text-ink text-lg mb-2">{feat.title}</h4>
+                  <p className="text-slate leading-relaxed text-sm">{feat.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 5. HOW IT WORKS */}
+        <section className="px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto mb-32">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <div className="flex-1 space-y-10">
+              <h2 className="font-serif text-4xl sm:text-5xl font-medium text-ink">Comment ça marche ?</h2>
+              
+              <div className="space-y-8">
+                {[
+                  { step: "1", title: "Créez votre boutique", desc: "Inscrivez-vous gratuitement et personnalisez votre boutique Dukaio en 2 minutes." },
+                  { step: "2", title: "Ajoutez vos fichiers", desc: "Uploadez vos PDF, ZIP, ou vidéos, définissez un prix et ajoutez une description engageante." },
+                  { step: "3", title: "Partagez et encaissez", desc: "Partagez le lien à votre audience. Les clients paient, ils reçoivent le fichier, vous touchez l'argent." },
+                ].map((item, i) => (
+                  <div 
+                    key={i} 
+                    onClick={() => setActiveStep(i)}
+                    className={`flex gap-4 cursor-pointer transition-all duration-300 p-4 rounded-xl hover:bg-slate-50 ${activeStep === i ? 'bg-slate-50 border border-blue/10 shadow-sm' : 'opacity-60'}`}
+                  >
+                    <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm transition-colors ${activeStep === i ? 'bg-blue text-white' : 'bg-slate-200 text-slate-500'}`}>
+                      {item.step}
+                    </div>
+                    <div>
+                      <h4 className={`font-sans font-bold text-xl mb-2 transition-colors ${activeStep === i ? 'text-blue' : 'text-ink'}`}>{item.title}</h4>
+                      <p className="text-slate leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 w-full">
+              {/* Interactive Mockup based on active step */}
+              {activeStep === 0 && (
+                <div className="w-full max-w-lg mx-auto relative">
+                  <img 
+                    src={fichiersStep1} 
+                    alt="Création de boutique" 
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              )}
+              {activeStep === 1 && (
+                <div className="w-full max-w-lg mx-auto relative">
+                  <img 
+                    src={fichiersStep2} 
+                    alt="Ajoutez vos fichiers" 
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              )}
+              {activeStep === 2 && (
+                <div className="w-full max-w-lg mx-auto relative">
+                  <img 
+                    src={fichiersStep3} 
+                    alt="Partagez et encaissez" 
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* 6. FAQ */}
+        <div className="bg-slate-50 py-1 border-t border-hair">
+          <FAQ />
         </div>
-      </section>
+
+        {/* 7. FINAL CTA */}
+        <section className="bg-ink py-24 px-4 sm:px-6 lg:px-8 text-center border-b border-white/10">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <h2 className="font-serif text-4xl sm:text-5xl font-normal text-white">
+              Prêt à vendre vos <span className="italic text-blueTint">produits digitaux ?</span>
+            </h2>
+            <p className="text-slate-300 text-lg">
+              Rejoignez les créateurs qui monétisent leur savoir-faire chaque jour sur Dukaio. Pas de frais cachés, pas d'engagement.
+            </p>
+            <div className="pt-4">
+              <Link 
+                to="/register" 
+                className="inline-flex items-center justify-center px-8 py-4 rounded-xl text-base font-semibold text-ink bg-white hover:bg-slate-100 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                Créer une boutique gratuite
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+      </main>
+
       <Footer />
     </div>
   );
-};
-
-export default Fichiers;
+}

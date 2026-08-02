@@ -33,7 +33,7 @@ const FilesMockup = () => {
             <div
               key={item}
               className={`rounded-md px-2 py-1.5 text-[9px] font-medium truncate ${
-                i === 1 ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                i === 1 ? "bg-blue/10 text-blue" : "text-slate"
               }`}
             >
               {item}
@@ -48,12 +48,12 @@ const FilesMockup = () => {
             {["Upload", "Détails", "Publier"].map((s, i) => (
               <div key={s} className="flex items-center gap-1.5">
                 <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold ${
-                  i <= step ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  i <= step ? "bg-blue text-blue-foreground" : "bg-slate-200 text-slate"
                 }`}>
                   {i < step ? "✓" : i + 1}
                 </div>
-                <span className={`text-[9px] font-medium ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
-                {i < 2 && <div className={`w-6 h-px ${i < step ? "bg-primary" : "bg-border"}`} />}
+                <span className={`text-[9px] font-medium ${i <= step ? "text-ink" : "text-slate"}`}>{s}</span>
+                {i < 2 && <div className={`w-6 h-px ${i < step ? "bg-blue" : "bg-border"}`} />}
               </div>
             ))}
           </div>
@@ -61,10 +61,10 @@ const FilesMockup = () => {
           <AnimatePresence mode="wait">
             {step === 0 && (
               <motion.div key="upload" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                <div className="rounded-lg border-2 border-dashed border-primary/30 bg-primary/5 p-4 text-center">
-                  <Upload className="h-6 w-6 text-primary mx-auto mb-1.5" />
-                  <p className="text-[10px] font-semibold text-foreground">Glissez vos fichiers ici</p>
-                  <p className="text-[8px] text-muted-foreground mt-0.5">PDF, ZIP, MP4, MP3… jusqu'à 500 MB</p>
+                <div className="rounded-lg border-2 border-dashed border-blue/30 bg-blue/5 p-4 text-center">
+                  <Upload className="h-6 w-6 text-blue mx-auto mb-1.5" />
+                  <p className="text-[10px] font-semibold text-ink">Glissez vos fichiers ici</p>
+                  <p className="text-[8px] text-slate mt-0.5">PDF, ZIP, MP4, MP3… jusqu'à 500 MB</p>
                 </div>
                 <div className="mt-2 space-y-1.5">
                   {[
@@ -76,24 +76,24 @@ const FilesMockup = () => {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.15 }}
-                      className="flex items-center gap-2 rounded-md border border-border bg-card p-2"
+                      className="flex items-center gap-2 rounded-md border border-hair bg-slate-50 p-2"
                     >
-                      <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <FileText className="h-3.5 w-3.5 text-blue shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-semibold text-foreground truncate">{f.name}</p>
+                        <p className="text-[9px] font-semibold text-ink truncate">{f.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                          <div className="flex-1 h-1 rounded-full bg-slate-200 overflow-hidden">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${f.progress}%` }}
                               transition={{ duration: 1.5, delay: i * 0.3 }}
-                              className="h-full bg-primary rounded-full"
+                              className="h-full bg-blue rounded-full"
                             />
                           </div>
-                          <span className="text-[8px] text-muted-foreground">{f.size}</span>
+                          <span className="text-[8px] text-slate">{f.size}</span>
                         </div>
                       </div>
-                      {f.progress === 100 && <CheckCircle className="h-3 w-3 text-primary shrink-0" />}
+                      {f.progress === 100 && <CheckCircle className="h-3 w-3 text-blue shrink-0" />}
                     </motion.div>
                   ))}
                 </div>
@@ -103,28 +103,28 @@ const FilesMockup = () => {
             {step === 1 && (
               <motion.div key="details" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-2">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-semibold text-foreground">Titre du produit</label>
-                  <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-[10px] text-foreground">
+                  <label className="text-[9px] font-semibold text-ink">Titre du produit</label>
+                  <div className="rounded-md border border-hair bg-white px-2.5 py-1.5 text-[10px] text-ink">
                     Formation Marketing Digital Complète
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className="text-[9px] font-semibold text-foreground">Prix</label>
-                    <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-[10px] font-bold text-primary">
+                    <label className="text-[9px] font-semibold text-ink">Prix</label>
+                    <div className="rounded-md border border-hair bg-white px-2.5 py-1.5 text-[10px] font-bold text-blue">
                       15 000 FCFA
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[9px] font-semibold text-foreground">Prix barré</label>
-                    <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-[10px] text-muted-foreground line-through">
+                    <label className="text-[9px] font-semibold text-ink">Prix barré</label>
+                    <div className="rounded-md border border-hair bg-white px-2.5 py-1.5 text-[10px] text-slate line-through">
                       25 000 FCFA
                     </div>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-semibold text-foreground">Description</label>
-                  <div className="rounded-md border border-border bg-background px-2.5 py-2 text-[9px] text-muted-foreground leading-relaxed h-12">
+                  <label className="text-[9px] font-semibold text-ink">Description</label>
+                  <div className="rounded-md border border-hair bg-white px-2.5 py-2 text-[9px] text-slate leading-relaxed h-12">
                     Apprenez les stratégies marketing les plus efficaces pour développer votre audience...
                   </div>
                 </div>
@@ -133,16 +133,16 @@ const FilesMockup = () => {
 
             {step === 2 && (
               <motion.div key="publish" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">
-                <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-center">
+                <div className="rounded-lg bg-blue/5 border border-blue/20 p-3 text-center">
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ type: "spring", delay: 0.2 }}
                   >
-                    <CheckCircle className="h-8 w-8 text-primary mx-auto mb-1.5" />
+                    <CheckCircle className="h-8 w-8 text-blue mx-auto mb-1.5" />
                   </motion.div>
-                  <p className="text-xs font-bold text-foreground">Produit publié ! 🎉</p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">Votre fichier est maintenant en vente</p>
+                  <p className="text-xs font-bold text-ink">Produit publié ! 🎉</p>
+                  <p className="text-[9px] text-slate mt-0.5">Votre fichier est maintenant en vente</p>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {[
@@ -150,10 +150,10 @@ const FilesMockup = () => {
                     { label: "Ventes", value: "0", icon: DollarSign },
                     { label: "Revenus", value: "0 F", icon: TrendingUp },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-md border border-border bg-card p-2 text-center">
-                      <s.icon className="h-3 w-3 text-primary mx-auto mb-0.5" />
-                      <p className="text-[10px] font-bold text-foreground">{s.value}</p>
-                      <p className="text-[7px] text-muted-foreground">{s.label}</p>
+                    <div key={s.label} className="rounded-md border border-hair bg-slate-50 p-2 text-center">
+                      <s.icon className="h-3 w-3 text-blue mx-auto mb-0.5" />
+                      <p className="text-[10px] font-bold text-ink">{s.value}</p>
+                      <p className="text-[7px] text-slate">{s.label}</p>
                     </div>
                   ))}
                 </div>
@@ -195,18 +195,18 @@ const CoursesMockup = () => {
           <motion.div
             animate={isPlaying ? { scale: [1, 1.2, 0], opacity: [1, 0.8, 0] } : { scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="h-10 w-10 rounded-full bg-primary/90 flex items-center justify-center cursor-pointer"
+            className="h-10 w-10 rounded-full bg-blue/90 flex items-center justify-center cursor-pointer"
           >
-            <Play className="h-4 w-4 text-primary-foreground ml-0.5" />
+            <Play className="h-4 w-4 text-blue-foreground ml-0.5" />
           </motion.div>
         </div>
         {/* Progress bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/30">
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-200/30">
           <motion.div
             initial={{ width: "0%" }}
             animate={{ width: isPlaying ? "35%" : "0%" }}
             transition={{ duration: 2 }}
-            className="h-full bg-primary"
+            className="h-full bg-blue"
           />
         </div>
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
@@ -220,8 +220,8 @@ const CoursesMockup = () => {
       {/* Lesson list with drag handles */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold text-foreground">Modules • 4 leçons</p>
-          <span className="text-[8px] text-primary font-semibold">50% complété</span>
+          <p className="text-[10px] font-bold text-ink">Modules • 4 leçons</p>
+          <span className="text-[8px] text-blue font-semibold">50% complété</span>
         </div>
         {lessons.map((lesson, i) => (
           <motion.div
@@ -231,18 +231,18 @@ const CoursesMockup = () => {
             transition={{ delay: i * 0.08 }}
             className={`flex items-center gap-2 rounded-md border p-2 cursor-pointer transition-all ${
               i === activeLesson
-                ? "border-primary bg-primary/5"
-                : "border-border bg-card hover:border-primary/20"
+                ? "border-blue bg-blue/5"
+                : "border-hair bg-slate-50 hover:border-blue/20"
             }`}
             onClick={() => setActiveLesson(i)}
           >
-            <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0" />
+            <GripVertical className="h-3 w-3 text-slate/40 shrink-0" />
             <div className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 ${
               lesson.completed
-                ? "bg-primary text-primary-foreground"
+                ? "bg-blue text-blue-foreground"
                 : i === activeLesson
-                  ? "bg-primary/20 text-primary"
-                  : "bg-muted text-muted-foreground"
+                  ? "bg-blue/20 text-blue"
+                  : "bg-slate-200 text-slate"
             }`}>
               {lesson.completed ? (
                 <CheckCircle className="h-3 w-3" />
@@ -251,8 +251,8 @@ const CoursesMockup = () => {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-semibold text-foreground truncate">{lesson.title}</p>
-              <p className="text-[8px] text-muted-foreground flex items-center gap-1">
+              <p className="text-[9px] font-semibold text-ink truncate">{lesson.title}</p>
+              <p className="text-[8px] text-slate flex items-center gap-1">
                 <Clock className="h-2.5 w-2.5" /> {lesson.duration}
               </p>
             </div>
@@ -260,7 +260,7 @@ const CoursesMockup = () => {
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="h-1.5 w-1.5 rounded-full bg-primary"
+                className="h-1.5 w-1.5 rounded-full bg-blue"
               />
             )}
           </motion.div>
@@ -296,25 +296,25 @@ const LicensesMockup = () => {
           { label: "Activations", value: "67/120", trend: "56%", icon: Monitor },
           { label: "Revenus", value: "360K", trend: "+12%", icon: TrendingUp },
         ].map((s) => (
-          <div key={s.label} className="rounded-md border border-border bg-card p-2">
+          <div key={s.label} className="rounded-md border border-hair bg-slate-50 p-2">
             <div className="flex items-center gap-1 mb-1">
-              <s.icon className="h-2.5 w-2.5 text-primary" />
-              <span className="text-[7px] text-muted-foreground">{s.label}</span>
+              <s.icon className="h-2.5 w-2.5 text-blue" />
+              <span className="text-[7px] text-slate">{s.label}</span>
             </div>
-            <p className="text-[11px] font-extrabold text-foreground">{s.value}</p>
-            <span className="text-[8px] font-semibold text-primary">{s.trend}</span>
+            <p className="text-[11px] font-extrabold text-ink">{s.value}</p>
+            <span className="text-[8px] font-semibold text-blue">{s.trend}</span>
           </div>
         ))}
       </div>
 
       {/* License keys table */}
-      <div className="rounded-lg border border-border overflow-hidden">
-        <div className="flex items-center justify-between px-2.5 py-1.5 bg-secondary/50 border-b border-border">
-          <span className="text-[9px] font-bold text-foreground">Clés de licence</span>
+      <div className="rounded-lg border border-hair overflow-hidden">
+        <div className="flex items-center justify-between px-2.5 py-1.5 bg-secondary/50 border-b border-hair">
+          <span className="text-[9px] font-bold text-ink">Clés de licence</span>
           <motion.button
             animate={generatingKey ? { rotate: 360 } : {}}
             transition={{ duration: 1, repeat: generatingKey ? Infinity : 0, ease: "linear" }}
-            className="flex items-center gap-1 text-[8px] font-semibold text-primary"
+            className="flex items-center gap-1 text-[8px] font-semibold text-blue"
           >
             <RefreshCw className="h-2.5 w-2.5" />
             {generatingKey ? "Génération..." : "Nouvelle clé"}
@@ -328,28 +328,28 @@ const LicensesMockup = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.1 }}
-              className="flex items-center gap-2 px-2.5 py-2 bg-card hover:bg-secondary/30 transition-colors"
+              className="flex items-center gap-2 px-2.5 py-2 bg-slate-50 hover:bg-secondary/30 transition-colors"
             >
               <Lock className={`h-3 w-3 shrink-0 ${
-                license.status === "active" ? "text-primary" : "text-muted-foreground"
+                license.status === "active" ? "text-blue" : "text-slate"
               }`} />
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-mono font-bold text-foreground truncate">{license.key}</p>
+                <p className="text-[9px] font-mono font-bold text-ink truncate">{license.key}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${
                     license.status === "active"
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-blue/10 text-blue"
                       : "bg-destructive/10 text-destructive"
                   }`}>
                     {license.status === "active" ? "Active" : "Expirée"}
                   </span>
-                  <span className="text-[7px] text-muted-foreground flex items-center gap-0.5">
+                  <span className="text-[7px] text-slate flex items-center gap-0.5">
                     <Monitor className="h-2 w-2" /> {license.activations}/{license.max}
                   </span>
-                  <span className="text-[7px] text-muted-foreground">{license.device}</span>
+                  <span className="text-[7px] text-slate">{license.device}</span>
                 </div>
               </div>
-              <Copy className="h-3 w-3 text-muted-foreground hover:text-primary cursor-pointer shrink-0" />
+              <Copy className="h-3 w-3 text-slate hover:text-blue cursor-pointer shrink-0" />
             </motion.div>
           ))}
         </div>
@@ -362,17 +362,17 @@ const LicensesMockup = () => {
             initial={{ opacity: 0, y: 10, height: 0 }}
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -10, height: 0 }}
-            className="rounded-md border border-primary/30 bg-primary/5 p-2.5 flex items-center gap-2"
+            className="rounded-md border border-blue/30 bg-blue/5 p-2.5 flex items-center gap-2"
           >
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             >
-              <Zap className="h-3.5 w-3.5 text-primary" />
+              <Zap className="h-3.5 w-3.5 text-blue" />
             </motion.div>
             <div>
-              <p className="text-[9px] font-bold text-primary">Nouvelle licence générée !</p>
-              <p className="text-[8px] font-mono text-foreground">ECRV-D9WK-53BN-PL06</p>
+              <p className="text-[9px] font-bold text-blue">Nouvelle licence générée !</p>
+              <p className="text-[8px] font-mono text-ink">ECRV-D9WK-53BN-PL06</p>
             </div>
           </motion.div>
         )}
@@ -418,11 +418,11 @@ const ProductShowcase = () => {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <p className="text-sm font-semibold text-primary mb-3 uppercase tracking-wider">Produits</p>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-foreground mb-4">
+          <p className="text-[10px] font-mono text-slate mb-3 uppercase tracking-wider">Produits</p>
+          <h2 className="text-3xl md:text-5xl font-serif text-ink mb-4 tracking-tight font-normal leading-[1.1]">
             Vendez vos produits digitaux instantanément
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-slate text-lg max-w-2xl mx-auto">
             Uploadez vos contenus, fixez vos prix. Dukaio gère les paiements, la livraison et vos clients.
           </p>
         </motion.div>
@@ -435,8 +435,8 @@ const ProductShowcase = () => {
               onClick={() => setActive(i)}
               className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all ${
                 active === i
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "bg-card border border-border text-foreground hover:border-primary/30"
+                  ? "bg-blue text-blue-foreground shadow-lg shadow-primary/25"
+                  : "bg-slate-50 border border-hair text-ink hover:border-blue/30"
               }`}
             >
               <span>{tab.emoji}</span>
@@ -455,16 +455,16 @@ const ProductShowcase = () => {
             transition={{ duration: 0.3 }}
             className="max-w-5xl mx-auto"
           >
-            <div className="rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+            <div className="rounded-2xl border border-hair bg-slate-50 shadow-2xl overflow-hidden">
               {/* Browser bar */}
-              <div className="flex items-center gap-2 border-b border-border px-4 py-3 bg-secondary/50">
+              <div className="flex items-center gap-2 border-b border-hair px-4 py-3 bg-secondary/50">
                 <div className="flex gap-1.5">
                   <div className="h-3 w-3 rounded-full bg-destructive/60" />
-                  <div className="h-3 w-3 rounded-full bg-accent/60" />
-                  <div className="h-3 w-3 rounded-full bg-primary/60" />
+                  <div className="h-3 w-3 rounded-full bg-blueTint/60" />
+                  <div className="h-3 w-3 rounded-full bg-blue/60" />
                 </div>
                 <div className="flex-1 mx-4">
-                  <div className="rounded-md bg-background border border-border px-4 py-1.5 text-xs text-muted-foreground text-center">
+                  <div className="rounded-md bg-white border border-hair px-4 py-1.5 text-xs text-slate text-center">
                     dashboard.dukaio.com/{currentTab.id === "files" ? "products/create" : currentTab.id === "courses" ? "products/lessons" : currentTab.id === "licenses" ? "licenses" : "products/bundle"}
                   </div>
                 </div>
@@ -472,23 +472,23 @@ const ProductShowcase = () => {
 
               <div className="grid md:grid-cols-2 gap-0">
                 {/* Left: description */}
-                <div className="p-8 md:p-10 flex flex-col justify-center border-r border-border">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-                    <currentTab.icon className="h-6 w-6 text-primary" />
+                <div className="p-8 md:p-10 flex flex-col justify-center border-r border-hair">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue/10">
+                    <currentTab.icon className="h-6 w-6 text-blue" />
                   </div>
-                  <h3 className="text-xl md:text-2xl font-extrabold text-card-foreground mb-3">
+                  <h3 className="font-serif text-2xl md:text-3xl text-ink font-medium mb-3 tracking-tight">
                     {desc.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                  <p className="text-sm text-slate leading-relaxed mb-6">
                     {desc.description}
                   </p>
-                  <a href="/register" className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
+                  <a href="/register" className="inline-flex items-center gap-2 text-sm font-semibold text-blue hover:underline">
                     Commencer maintenant →
                   </a>
                 </div>
 
                 {/* Right: animated mockup */}
-                <div className="p-5 md:p-6 bg-background/50 overflow-hidden">
+                <div className="p-5 md:p-6 bg-white/50 overflow-hidden">
                   <MockupComponent />
                 </div>
               </div>

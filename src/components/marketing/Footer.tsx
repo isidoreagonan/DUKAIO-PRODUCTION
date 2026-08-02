@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import logo from "@/assets/logo.png";
 
-const Footer: React.FC = () => {
+export const Footer: React.FC = () => {
   return (
     <footer className="bg-white text-ink border-t border-hair pt-16 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
@@ -12,15 +11,14 @@ const Footer: React.FC = () => {
           
           {/* Col 1: Logo & Baseline */}
           <div className="space-y-4">
-            <Link to="/" className="flex items-center gap-2">
-              <img src={logo} alt="Dukaio" className="h-8 w-8 rounded-lg object-contain" />
+            <a href="#" className="flex items-center gap-2">
               <span className="font-serif text-2xl font-semibold tracking-tight text-ink">
-                Dukaio
+                Duka<span className="text-blue">io</span>
               </span>
               <span className="font-mono text-[10px] uppercase tracking-widest text-slate bg-slate-100 px-2 py-0.5 rounded border border-hair">
                 Afrique
               </span>
-            </Link>
+            </a>
             <p className="text-sm text-slate leading-relaxed font-sans max-w-xs">
               La plateforme e-commerce SaaS conçue pour monétiser vos compétences et contenus numériques en Afrique de l’Ouest et Centrale.
             </p>
@@ -90,5 +88,3 @@ const Footer: React.FC = () => {
     </footer>
   );
 };
-
-export default Footer;

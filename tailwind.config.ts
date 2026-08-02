@@ -21,6 +21,11 @@ export default {
       "3xl": "1920px",
     },
     extend: {
+      fontFamily: {
+        serif: ["Fraunces", "Georgia", "serif"],
+        sans: ["Inter", "sans-serif"],
+        mono: ["JetBrains Mono", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -65,6 +70,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        ink: "#0F1E3D",
+        inkSoft: "#152A52",
+        blue: "#2557D6",
+        blueDeep: "#1B3FA0",
+        blueTint: "#EAF0FF",
+        slate: "#64748B",
+        hair: "rgba(15, 30, 61, 0.12)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -87,7 +87,7 @@ const SearchPage = () => {
       <main className="container mx-auto px-4 py-12 md:py-20 max-w-7xl">
         {/* HERO TITLE */}
         <div className="max-w-4xl mb-10">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-foreground leading-tight md:leading-[1.15] tracking-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif text-ink tracking-tight font-normal leading-[1.1]">
             Profitez de produits digitaux premium pour propulser votre réussite.
           </h1>
         </div>
