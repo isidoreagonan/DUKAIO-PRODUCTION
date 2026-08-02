@@ -31,6 +31,26 @@ const cardVariants = {
 // Couleurs Dukaio
 const COLORS = ["#2563EB", "#60A5FA", "#93C5FD", "#BFDBFE"];
 
+// Helper pour convertir un code pays (ex: FR) en Emoji Drapeau et Nom complet
+const getCountryFlag = (code: string) => {
+  if (!code || code === "XX" || code === "undefined") return "🌍";
+  const codePoints = code.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0));
+  try {
+    return String.fromCodePoint(...codePoints);
+  } catch {
+    return "🌍";
+  }
+};
+
+const getCountryName = (code: string) => {
+  if (!code || code === "XX" || code === "undefined") return "Local / Inconnu";
+  try {
+    return new Intl.DisplayNames(['fr'], { type: 'region' }).of(code.toUpperCase()) || code;
+  } catch {
+    return code;
+  }
+};
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<TrafficStats | null>(null);
@@ -293,9 +313,9 @@ const AdminDashboard = () => {
                     <div key={i} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors">
                       <div className="flex items-center gap-2">
                         <span className="text-lg leading-none">
-                          {c.name === 'FR' ? '🇫🇷' : c.name === 'CI' ? '🇨🇮' : c.name === 'SN' ? '🇸🇳' : c.name === 'CM' ? '🇨🇲' : c.name === 'GH' ? '🇬🇭' : '🌍'}
+                          {getCountryFlag(c.name)}
                         </span>
-                        <span className="text-sm font-medium">{c.name}</span>
+                        <span className="text-sm font-medium">{getCountryName(c.name)}</span>
                       </div>
                       <span className="font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-700">{c.count}</span>
                     </div>
