@@ -90,7 +90,7 @@ const Login = () => {
   const isBusy = loading || authLoading;
 
   return (
-    <div className="min-h-screen flex bg-[#0A0A0A]">
+    <div className="h-screen overflow-hidden flex bg-[#0A0A0A]">
       <SEOHead title="Connexion" description="Connectez-vous à votre compte Dukaio." canonicalPath="/login" />
       
       {/* Left - Visual Pane */}
@@ -133,7 +133,7 @@ const Login = () => {
       </div>
 
       {/* Right - Form Pane */}
-      <div className="flex-1 flex flex-col bg-white rounded-l-none lg:rounded-l-[2.5rem] relative z-20 shadow-2xl">
+      <div className="flex-1 flex flex-col bg-white rounded-l-none lg:rounded-l-[2.5rem] relative z-20 shadow-2xl overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center p-6 lg:p-10">
           <Link to="/">

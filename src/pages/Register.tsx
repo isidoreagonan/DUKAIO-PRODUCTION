@@ -134,7 +134,7 @@ const Register = () => {
   const isBusy = loading || authLoading;
 
   return (
-    <div className="min-h-screen flex bg-[#0A0A0A]">
+    <div className="h-screen overflow-hidden flex bg-[#0A0A0A]">
       <SEOHead title="Inscription" description="Créez votre compte Dukaio pour vendre vos produits digitaux." canonicalPath="/register" />
       
       {/* Left - Visual Pane */}
