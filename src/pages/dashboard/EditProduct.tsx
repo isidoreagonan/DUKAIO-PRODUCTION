@@ -25,6 +25,7 @@ import { NoFilesWarningDialog } from "@/components/dashboard/NoFilesWarningDialo
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import StoreRequiredDialog from "@/components/dashboard/StoreRequiredDialog";
 import { toast } from "sonner";
 
 type TabKey = "info" | "pricing" | "files" | "description" | "visual" | "faq" | "seo" | "advanced";
@@ -63,6 +64,18 @@ const EditProduct = () => {
   // Size limit dialog state
   const [sizeLimitDialogOpen, setSizeLimitDialogOpen] = useState(false);
   const [sizeLimitMaxMB, setSizeLimitMaxMB] = useState(2);
+  
+  const [hasStore, setHasStore] = useState<boolean>(true);
+  const [storeRequiredOpen, setStoreRequiredOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const checkStore = async () => {
+      const { data } = await supabase.from("stores").select("id").eq("owner_id", user.id).limit(1);
+      setHasStore(data && data.length > 0 ? true : false);
+    };
+    checkStore();
+  }, [user]);
 
   // Delete confirm dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -77,6 +90,9 @@ const EditProduct = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
+  const [pricingModel, setPricingModel] = useState("one_time");
+  const [suggestedPrice, setSuggestedPrice] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [type, setType] = useState<string>("file");
   const [isPublished, setIsPublished] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -146,7 +162,8 @@ const EditProduct = () => {
       }
       setTitle(data.title);
       setDescription(data.description || "");
-      setPrice(String(data.price));
+      setPrice(data.price ? String(data.price) : "");
+      setPricingModel(data.price === 0 ? "free" : "one_time");
       setOriginalPrice(data.original_price ? String(data.original_price) : "");
       setType(data.type);
       setIsPublished(data.is_published);
@@ -295,15 +312,44 @@ const EditProduct = () => {
   const persistProduct = async ({
     showToast = true,
     manageSaving = true,
+    forceUnpublish = false,
   }: {
     showToast?: boolean;
     manageSaving?: boolean;
+    forceUnpublish?: boolean;
   } = {}) => {
     if (!id || !user) return false;
 
-    if (type === "file" && uploadedFiles.length === 0) {
-      setNoFilesWarningOpen(true);
-      return false;
+    if (type === "file" && uploadedFiles.length === 0 && !forceUnpublish) {
+      if (isPublished) {
+        setNoFilesWarningOpen(true);
+        return false;
+      }
+    }
+
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = "Le nom du produit est obligatoire";
+    if (!category) newErrors.category = "Veuillez sélectionner une catégorie";
+    
+    const priceNum = parseFloat(price) || 0;
+    if (pricingModel === "one_time") {
+      if (!price || priceNum < 1000) newErrors.price = "Le prix de vente doit être d'au moins 1000 FCFA";
+    } else if (pricingModel === "pay_what_you_want") {
+      if (!price || priceNum < 1000) newErrors.price = "Le prix minimum doit être d'au moins 1000 FCFA";
+      if (!suggestedPrice || parseFloat(suggestedPrice) < priceNum) newErrors.suggestedPrice = "Le prix suggéré est obligatoire et doit être supérieur au prix minimum";
+    }
+
+    const textContent = description.replace(/<[^>]*>/g, "").trim();
+    if (!textContent) newErrors.description = "La description du produit est obligatoire";
+
+    setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+       toast.error("Veuillez corriger les erreurs avant d'enregistrer.");
+       if (newErrors.title || newErrors.category) setActiveTab("info");
+       else if (newErrors.price || newErrors.suggestedPrice) setActiveTab("pricing");
+       else if (newErrors.description) setActiveTab("description");
+       return false;
     }
 
     if (manageSaving) setSaving(true);
@@ -317,11 +363,13 @@ const EditProduct = () => {
         if (seoUploaded?.url) newSeoImageUrl = seoUploaded.url;
       }
 
+      const effectivePrice = parseFloat(price) || 0;
+
       const updateData: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || null,
-        price: parseFloat(price) || 0,
-        original_price: originalPrice ? parseFloat(originalPrice) : null,
+        price: pricingModel === "free" ? 0 : effectivePrice,
+        original_price: originalPrice && pricingModel === "one_time" ? parseFloat(originalPrice) : null,
         thumbnail_url: thumbnailData?.url || null,
         download_url: downloadUrls.length > 0 ? JSON.stringify(downloadUrls) : null,
         seo_title: seoTitle.trim() || null,
@@ -336,12 +384,11 @@ const EditProduct = () => {
         hide_sales_count: hideSalesCount,
       };
 
-      if (type === "license") {
-        updateData.license_max_activations = licenseMaxActivations ? parseInt(licenseMaxActivations) : null;
-        updateData.license_validity_days = licenseValidityDays ? parseInt(licenseValidityDays) : null;
-      }
       if (type === "course") {
         updateData.course_content_type = courseContentType;
+      }
+      if (forceUnpublish) {
+        updateData.is_published = false;
       }
 
       const { error } = await supabase.from("products").update(updateData as any).eq("id", id);
@@ -415,6 +462,12 @@ const EditProduct = () => {
 
     setSaving(true);
     try {
+      if (!hasStore) {
+        setStoreRequiredOpen(true);
+        setSaving(false);
+        return;
+      }
+
       const saved = await persistProduct({ showToast: false, manageSaving: false });
       if (!saved) return;
 
@@ -538,7 +591,11 @@ const EditProduct = () => {
                       Nom du produit <span className="text-destructive">*</span>
                     </label>
                     <div className="flex gap-2">
-                      <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-11" />
+                      <Input 
+                        value={title} 
+                        onChange={(e) => { setTitle(e.target.value); setErrors({...errors, title: undefined}); }} 
+                        className={`h-11 flex-1 ${errors.title ? "border-destructive" : ""}`} 
+                      />
                       <Button
                         variant="outline"
                         size="icon"
@@ -562,6 +619,7 @@ const EditProduct = () => {
                         {aiRewriting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                       </Button>
                     </div>
+                    {errors.title && <p className="text-xs text-destructive mt-1.5 font-medium">{errors.title}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1.5 block">
@@ -580,6 +638,7 @@ const EditProduct = () => {
                         <SelectItem value="other">Autre</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.category && <p className="text-xs text-destructive mt-1.5 font-medium">{errors.category}</p>}
                   </div>
 
                   {/* Advanced toggle options */}
@@ -682,65 +741,100 @@ const EditProduct = () => {
               {activeTab === "pricing" && (
                 <div className="space-y-6">
                   <h2 className="text-lg font-bold text-foreground">Tarification</h2>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Prix</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
-                        <Input
-                          type="number"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          className="h-11 pl-14"
-                          placeholder="0"
-                        />
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-1">Min : 100 FCFA</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Prix barré</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
-                        <Input
-                          type="number"
-                          value={originalPrice}
-                          onChange={(e) => setOriginalPrice(e.target.value)}
-                          className="h-11 pl-14"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">
+                      Modèle de tarification <span className="text-destructive">*</span>
+                    </label>
+                    <Select value={pricingModel} onValueChange={(v) => { setPricingModel(v); setErrors({...errors, price: undefined, suggestedPrice: undefined}); }}>
+                      <SelectTrigger className="h-12 max-w-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="one_time">Prix unique</SelectItem>
+                        <SelectItem value="pay_what_you_want">Prix libre (Pay what you want)</SelectItem>
+                        <SelectItem value="free">Gratuit</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
-                  {type === "license" && (
-                    <div className="p-5 rounded-xl border border-border bg-secondary/30 space-y-4">
-                      <p className="text-sm font-semibold text-foreground">Options de licence</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-medium text-foreground mb-1 block">Max activations</label>
+                  {pricingModel === "one_time" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix de vente <span className="text-destructive">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
                           <Input
                             type="number"
-                            value={licenseMaxActivations}
-                            onChange={(e) => setLicenseMaxActivations(e.target.value)}
-                            placeholder="Illimité"
-                            className="h-10"
+                            value={price}
+                            onChange={(e) => { setPrice(e.target.value); setErrors({...errors, price: undefined}); }}
+                            className={`h-11 pl-14 ${errors.price ? "border-destructive" : ""}`}
+                            placeholder="1000"
+                            min={1000}
                           />
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-foreground mb-1 block">Validité (jours)</label>
+                        {errors.price ? (
+                          <p className="text-xs text-destructive mt-1.5 font-medium">{errors.price}</p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground mt-1">Min : 1000 FCFA</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix barré (optionnel)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
                           <Input
                             type="number"
-                            value={licenseValidityDays}
-                            onChange={(e) => setLicenseValidityDays(e.target.value)}
-                            placeholder="Illimité"
-                            className="h-10"
+                            value={originalPrice}
+                            onChange={(e) => setOriginalPrice(e.target.value)}
+                            className="h-11 pl-14"
+                            placeholder="0"
                           />
                         </div>
                       </div>
                     </div>
                   )}
 
-
+                  {pricingModel === "pay_what_you_want" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix minimum <span className="text-destructive">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
+                          <Input
+                            type="number"
+                            value={price}
+                            onChange={(e) => { setPrice(e.target.value); setErrors({...errors, price: undefined}); }}
+                            className={`h-11 pl-14 ${errors.price ? "border-destructive" : ""}`}
+                            placeholder="1000"
+                            min={1000}
+                          />
+                        </div>
+                        {errors.price ? (
+                          <p className="text-xs text-destructive mt-1.5 font-medium">{errors.price}</p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground mt-1">Min : 1000 FCFA</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix suggéré <span className="text-destructive">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
+                          <Input
+                            type="number"
+                            value={suggestedPrice}
+                            onChange={(e) => { setSuggestedPrice(e.target.value); setErrors({...errors, suggestedPrice: undefined}); }}
+                            className={`h-11 pl-14 ${errors.suggestedPrice ? "border-destructive" : ""}`}
+                            placeholder="2000"
+                          />
+                        </div>
+                        {errors.suggestedPrice && (
+                          <p className="text-xs text-destructive mt-1.5 font-medium">{errors.suggestedPrice}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
 
                 </div>
               )}
@@ -841,7 +935,20 @@ const EditProduct = () => {
                                         if (uf.path) {
                                           await deleteFileFromR2(uf.path, false);
                                         }
-                                        setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
+                                        setUploadedFiles(prev => {
+                                          const newFiles = prev.filter(f => f.name !== uf.name);
+                                          if (id && type === "file") {
+                                            const urls = newFiles.filter(f => f.url).map(f => f.url);
+                                            const updateData: any = { download_url: urls.length > 0 ? JSON.stringify(urls) : null };
+                                            if (urls.length === 0 && isPublished) {
+                                              updateData.is_published = false;
+                                              setIsPublished(false);
+                                              toast.info("Produit dépublié car il n'y a plus de fichiers.");
+                                            }
+                                            supabase.from("products").update(updateData).eq("id", id).then();
+                                          }
+                                          return newFiles;
+                                        });
                                       }
                                     });
                                     setDeleteDialogOpen(true);
@@ -888,11 +995,14 @@ const EditProduct = () => {
                       Assistant IA
                     </Button>
                   </div>
-                  <RichTextEditor
-                    content={description}
-                    onChange={setDescription}
-                    placeholder="Décrivez votre produit en détail…"
-                  />
+                  <div className={errors.description ? "border border-destructive rounded-lg p-1" : ""}>
+                    <RichTextEditor
+                      content={description}
+                      onChange={(v) => { setDescription(v); setErrors({...errors, description: undefined}); }}
+                      placeholder="Décrivez votre produit en détail..."
+                    />
+                  </div>
+                  {errors.description && <p className="text-xs text-destructive mt-1.5 font-medium">{errors.description}</p>}
                 </div>
               )}
 
@@ -936,6 +1046,9 @@ const EditProduct = () => {
                                           await deleteFileFromR2(thumbnailData.path, true);
                                         }
                                         setThumbnailData(null);
+                                        if (id) {
+                                          supabase.from("products").update({ thumbnail_url: null }).eq("id", id).then();
+                                        }
                                       }
                                     });
                                     setDeleteDialogOpen(true);
@@ -1221,14 +1334,18 @@ const EditProduct = () => {
         onOpenChange={setNoFilesWarningOpen} 
         onUnpublish={async () => {
           if (!id) return;
-          const { error } = await supabase.from("products").update({ is_published: false }).eq("id", id);
-          if (error) {
-            toast.error(error.message);
-            return;
-          }
           setIsPublished(false);
-          toast.success("Produit dépublié. Vous pouvez le modifier en tant que brouillon.");
+          const success = await persistProduct({ showToast: false, manageSaving: true, forceUnpublish: true });
+          if (success) {
+            toast.success("Produit dépublié et modifications enregistrées.");
+          }
+          setNoFilesWarningOpen(false);
         }}
+      />
+
+      <StoreRequiredDialog 
+        open={storeRequiredOpen}
+        onOpenChange={setStoreRequiredOpen}
       />
     </DashboardLayout>
   );

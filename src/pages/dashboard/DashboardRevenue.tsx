@@ -224,19 +224,33 @@ const DashboardRevenue = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {statCards.map((s) => (
-            <div key={s.label} className="rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <s.icon className="h-4 w-4 text-primary" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {statCards.map((s, idx) => {
+            const isFirst = idx === 0;
+            return (
+              <div 
+                key={s.label} 
+                className={`rounded-2xl p-6 shadow-sm flex flex-col justify-between group ${isFirst ? 'bg-[#2563EB] border border-[#2563EB] text-white' : 'bg-white border border-[#D0D5DD]'}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isFirst ? 'bg-white/20 text-white' : 'bg-slate-100/90 text-slate-700'}`}>
+                      <s.icon className={`w-5 h-5 ${isFirst ? 'text-white' : 'text-slate-700'}`} />
+                    </div>
+                    <span className={`text-sm font-semibold leading-snug ${isFirst ? 'text-white/90' : 'text-slate-700'}`}>
+                      {s.label}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-5">
+                  <span className={`font-sans font-bold text-3xl sm:text-4xl tracking-tight ${isFirst ? 'text-white' : 'text-slate-900'}`}>
+                    {s.value}
+                  </span>
+                  <p className={`text-xs mt-1 ${isFirst ? 'text-white/80' : 'text-slate-500'}`}>{s.sub}</p>
                 </div>
               </div>
-              <p className="text-xl font-bold text-foreground">{s.value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">{s.sub}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Transaction History */}

@@ -201,11 +201,7 @@ html { font-size: 16px; }
   --blue-ice: 210 100% 96%;
   --neon-green: 145 80% 42%;
 
-  background:
-    radial-gradient(at 0% 0%, hsl(var(--blue-ice)) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, hsl(220 100% 95%) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, hsl(199 100% 95%) 0px, transparent 50%),
-    hsl(var(--background));
+  background: #ffffff;
   color: hsl(var(--foreground));
   position: relative;
   isolation: isolate;
@@ -213,28 +209,7 @@ html { font-size: 16px; }
 
 .dashboard-shell::before,
 .dashboard-shell::after {
-  content: "";
-  position: fixed;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 9999px;
-  filter: blur(140px);
-  animation: dash-float 18s ease-in-out infinite;
-}
-.dashboard-shell::before {
-  top: -15%;
-  left: 5%;
-  width: 700px;
-  height: 700px;
-  background: hsl(var(--blue-bright) / 0.28);
-}
-.dashboard-shell::after {
-  bottom: -10%;
-  right: -5%;
-  width: 600px;
-  height: 600px;
-  background: hsl(var(--blue-sky) / 0.22);
-  animation-delay: -9s;
+  display: none;
 }
 
 @keyframes dash-float {

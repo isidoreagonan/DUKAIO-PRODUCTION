@@ -30,7 +30,7 @@ interface Product {
 }
 
 type PayMethod = "mobile" | "card";
-type Step = "select" | "mobile" | "card";
+type Step = "select" | "mobile" | "card" | "free";
 
 // Taux de conversion sécurisé (inférieur au taux réel ~588 XOF/USD pour absorber le spread Stripe)
 const USD_RATE_SAFE = 555;
@@ -72,6 +72,9 @@ const CheckoutPage = () => {
         .eq("id", productId).maybeSingle();
       if (!p) { setError("Ce produit n'existe pas ou n'est plus disponible."); setLoading(false); return; }
       setProduct(p as Product);
+      if (p.price === 0) {
+        setStep("free");
+      }
       if (storeSlug) {
         const { data: store } = await supabase.from("stores")
           .select("logo_url, name").eq("slug", storeSlug).maybeSingle();
@@ -121,6 +124,30 @@ const CheckoutPage = () => {
       toast.error(e.message || "Erreur paiement");
       setErrorMsg(e.message || "");
     } finally { setSubmitting(false); }
+  };
+
+  const submitFree = async (payload: { name: string; email: string }) => {
+    if (!product) return;
+    setSubmitting(true); setErrorMsg("");
+    try {
+      const { data, error } = await supabase.functions.invoke("process-free-order", {
+        body: {
+          name: payload.name,
+          email: payload.email,
+          productId: product.id
+        }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      setLastEmail(payload.email);
+      setPayStatus("success");
+    } catch (e: any) {
+      toast.error(e.message || "Erreur lors de la récupération du produit gratuit");
+      setErrorMsg(e.message || "");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // poll mobile money
@@ -233,7 +260,7 @@ const CheckoutPage = () => {
           <OrderBar product={product} priceFcfa={priceFcfa} />
 
           {/* Stepper */}
-          {payStatus === "idle" && <Stepper step={step} />}
+          {payStatus === "idle" && step !== "free" && <Stepper step={step} />}
 
           {/* Main panel */}
           <div className="bg-white rounded-3xl shadow-2xl shadow-violet-900/10 ring-1 ring-violet-100/60 overflow-hidden mt-4">
@@ -287,6 +314,16 @@ const CheckoutPage = () => {
                       priceUsd={priceUsd}
                       errorMsg={errorMsg}
                     />
+                  </motion.div>
+                )}
+                {step === "free" && (
+                  <motion.div key="free"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <FreeStep submitting={submitting} onSubmit={submitFree} errorMsg={errorMsg} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -917,5 +954,52 @@ const FailedView = ({ errorMsg, onRetry }: { errorMsg: string; onRetry: () => vo
     <Button onClick={onRetry} variant="outline" className="rounded-xl">Réessayer</Button>
   </div>
 );
+
+// ═══════════════════════════════════════════════
+// STEP — FREE
+// ═══════════════════════════════════════════════
+const FreeStep = ({ submitting, onSubmit, errorMsg }: {
+  submitting: boolean; onSubmit: (p: { name: string; email: string }) => Promise<void>; errorMsg: string;
+}) => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+
+  const handle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firstName || !lastName || !email) { toast.error("Veuillez remplir tous les champs"); return; }
+    await onSubmit({ name: `${firstName} ${lastName}`.trim(), email });
+  };
+
+  return (
+    <div className="p-5 sm:p-10">
+      <div className="mb-6 text-center">
+        <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">Obtenir gratuitement</h2>
+        <p className="text-sm text-gray-500 mt-1">Saisissez vos informations pour recevoir votre produit</p>
+      </div>
+      {errorMsg && <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100">{errorMsg}</div>}
+      
+      <form onSubmit={handle} className="space-y-4 max-w-md mx-auto">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Prénom">
+            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" className="h-11 bg-gray-50 border-gray-200 focus:bg-white" required />
+          </Field>
+          <Field label="Nom">
+            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" className="h-11 bg-gray-50 border-gray-200 focus:bg-white" required />
+          </Field>
+        </div>
+        <Field label="Email">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" className="pl-9 h-11 bg-gray-50 border-gray-200 focus:bg-white" required />
+          </div>
+        </Field>
+        <Button type="submit" disabled={submitting} className="w-full h-12 text-base font-bold shadow-xl shadow-violet-900/20 mt-6" style={{ background: `linear-gradient(135deg, ${ACCENT}, ${GOLD})`, color: "#fff" }}>
+          {submitting ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : "Recevoir maintenant"}
+        </Button>
+      </form>
+    </div>
+  );
+};
 
 export default CheckoutPage;

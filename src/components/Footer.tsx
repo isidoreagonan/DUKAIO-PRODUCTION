@@ -112,7 +112,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenAuthModal }) => {
             </h4>
             <ul className="space-y-3 text-sm text-slate-400 font-sans">
               <li><Link to="/faq" className="hover:text-white transition-colors">Centre d'aide</Link></li>
-              <li><a href="/#pricing" className="hover:text-white transition-colors">Tarifs & Frais</a></li>
+              <li><Link to="/#pricing" className="hover:text-white transition-colors text-left">Tarifs & Frais</Link></li>
               <li><Link to="/documentation" className="hover:text-white transition-colors">Documentation</Link></li>
               <li className="pt-1">
                 <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">

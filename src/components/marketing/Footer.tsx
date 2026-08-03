@@ -47,7 +47,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 text-sm text-slate font-sans">
               <li><Link to="/about" className="hover:text-ink transition-colors">À propos de Dukaio</Link></li>
               <li><Link to="/blog" className="hover:text-ink transition-colors">Blog</Link></li>
-              <li><Link to="/pricing" className="hover:text-ink transition-colors">Tarifs</Link></li>
+              <li><a href="/#pricing" className="hover:text-ink transition-colors">Tarifs</a></li>
               <li><Link to="/partners" className="hover:text-ink transition-colors">Partenaires & Affiliation</Link></li>
             </ul>
           </div>

@@ -16,7 +16,6 @@ type Tool = {
 
 const tools: Tool[] = [
   { title: "Clients", subtitle: "Gérez vos clients", url: "/dashboard/clients", icon: Users },
-  { title: "Licences", subtitle: "Clés de licence", url: "/dashboard/licenses", icon: Key },
   { title: "Revenus", subtitle: "Historique des paiements", url: "/dashboard/revenue", icon: DollarSign },
   { title: "Wallet", subtitle: "Votre portefeuille", url: "/dashboard/wallet", icon: Wallet },
   { title: "Badge Verify", subtitle: "Obtenir votre badge", url: "/dashboard/badge", icon: BadgeCheck },

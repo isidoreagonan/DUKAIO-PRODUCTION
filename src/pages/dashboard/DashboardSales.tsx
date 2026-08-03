@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ShoppingCart, TrendingUp, Calendar, Package, Tag, ChevronRight } from "lucide-react";
+import { ShoppingCart, TrendingUp, Calendar, Package, Tag, Download, Search, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OrderWithProduct {
   id: string;
@@ -24,6 +27,8 @@ const DashboardSales = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderWithProduct[]>([]);
   const [stats, setStats] = useState({ total: 0, thisMonth: 0, growth: "0%" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState("all");
 
   useEffect(() => {
     if (!user) return;
@@ -64,11 +69,38 @@ const DashboardSales = () => {
     fetch();
   }, [user]);
 
-  const statCards = [
-    { label: "Ventes totales", value: `${stats.total.toLocaleString()} F`, icon: ShoppingCart, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary bg-primary/15" },
-    { label: "Ce mois", value: `${stats.thisMonth.toLocaleString()} F`, icon: Calendar, gradient: "from-blue-500/10 to-blue-500/5", iconColor: "text-blue-600 bg-blue-500/15" },
-    { label: "Croissance", value: stats.growth, icon: TrendingUp, gradient: "from-emerald-500/10 to-emerald-500/5", iconColor: "text-emerald-600 bg-emerald-500/15" },
-  ];
+  const uniqueProducts = Array.from(new Set(orders.map(o => o.product?.title).filter(Boolean)));
+  
+  const filteredOrders = orders.filter((o) => {
+    const matchesSearch = 
+      o.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (o.customer?.name || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesProduct = selectedProduct === "all" || o.product?.title === selectedProduct;
+    return matchesSearch && matchesProduct;
+  });
+
+  const handleExportCSV = () => {
+    const csvData = [
+      ["Référence", "Client", "Produit", "Date", "Prix", "Statut"],
+      ...filteredOrders.map(o => [
+        o.id,
+        o.customer?.name || o.customer?.email || "Anonyme",
+        o.product?.title || "Produit inconnu",
+        format(new Date(o.created_at), "dd/MM/yyyy HH:mm"),
+        o.amount,
+        o.status
+      ])
+    ].map(e => e.join(",")).join("\n");
+
+    const blob = new Blob([csvData], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ventes_dukaio_${format(new Date(), "yyyy-MM-dd")}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <DashboardLayout>
@@ -106,36 +138,108 @@ const DashboardSales = () => {
         </motion.div>
 
         {/* ============ Desktop header + stats ============ */}
-        <div className="hidden md:block">
-          <h1 className="text-2xl font-bold text-foreground">Ventes</h1>
-          <p className="text-sm text-muted-foreground mt-1">Suivez toutes vos transactions</p>
+        <div className="hidden md:flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Ventes</h1>
+            <p className="text-sm text-muted-foreground mt-1">Suivez toutes vos transactions</p>
+          </div>
+          <Button onClick={handleExportCSV} className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2 rounded-xl">
+            <Download className="h-4 w-4" />
+            Exporter les données
+          </Button>
         </div>
 
-        <div className="hidden md:grid grid-cols-3 gap-4">
-          {statCards.map((s, i) => (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className={`rounded-2xl border border-border/50 bg-gradient-to-br ${s.gradient} p-5`}
-            >
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${s.iconColor} mb-3`}>
-                <s.icon className="h-4 w-4" />
+        <div className="hidden md:grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {/* Card 1: Ventes totales (Brand Blue) */}
+          <div className="bg-[#2563EB] border border-[#2563EB] rounded-2xl p-6 shadow-sm flex flex-col justify-between group text-white">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0">
+                  <ShoppingCart className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-white/90 leading-snug">
+                  Ventes totales
+                </span>
               </div>
-              <p className="text-2xl font-bold text-foreground">{s.value}</p>
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-            </motion.div>
-          ))}
+            </div>
+            <div className="mt-5">
+              <span className="font-sans font-bold text-3xl sm:text-4xl text-white tracking-tight">
+                {stats.total.toLocaleString()} F
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Ce mois (White with gray border) */}
+          <div className="bg-white border border-[#D0D5DD] rounded-2xl p-6 shadow-sm flex flex-col justify-between group">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-slate-700 flex items-center justify-center shrink-0">
+                  <Calendar className="w-5 h-5 text-slate-700" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700 leading-snug">
+                  Ce mois
+                </span>
+              </div>
+            </div>
+            <div className="mt-5">
+              <span className="font-sans font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight">
+                {stats.thisMonth.toLocaleString()} F
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Croissance (White with gray border) */}
+          <div className="bg-white border border-[#D0D5DD] rounded-2xl p-6 shadow-sm flex flex-col justify-between group">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-slate-700 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-5 h-5 text-slate-700" />
+                </div>
+                <span className="text-sm font-semibold text-slate-700 leading-snug">
+                  Croissance
+                </span>
+              </div>
+            </div>
+            <div className="mt-5">
+              <span className="font-sans font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight">
+                {stats.growth}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {orders.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-3">
-              <ShoppingCart className="h-6 w-6 text-muted-foreground/40" />
-            </div>
-            <p className="text-sm font-medium text-foreground mb-1">Aucune vente pour le moment</p>
-            <p className="text-xs text-muted-foreground">Les ventes apparaîtront ici automatiquement.</p>
+        {/* Filters Row */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input 
+              placeholder="Chercher par vente ou client..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 rounded-xl border-[#D0D5DD] bg-white h-11"
+            />
+          </div>
+          <div className="sm:w-[250px]">
+            <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+              <SelectTrigger className="rounded-xl border-[#D0D5DD] bg-white h-11 text-slate-600">
+                <SelectValue placeholder="Produits..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les produits</SelectItem>
+                {uniqueProducts.map(p => (
+                  <SelectItem key={p as string} value={p as string}>{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {filteredOrders.length === 0 ? (
+          <div className="rounded-2xl bg-[#FAFAFA] p-16 text-center shadow-sm flex flex-col items-center justify-center border border-white">
+            <p className="text-base font-medium text-slate-500 mb-6">Aucune vente à afficher</p>
+            <Button onClick={() => navigate('/dashboard/products/new')} className="bg-[#2563EB] hover:bg-blue-700 text-white px-8 rounded-xl h-11">
+              Ajouter un produit
+            </Button>
           </div>
         ) : (
           <>
@@ -144,60 +248,39 @@ const DashboardSales = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="hidden md:block rounded-2xl border border-border/50 bg-card overflow-hidden"
+              className="hidden md:block rounded-2xl bg-white overflow-hidden shadow-sm"
             >
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30">
-                      <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Produit</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Client</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Montant</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Promo</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Date</th>
-                      <th className="text-left p-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Statut</th>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="text-left p-4 font-semibold text-slate-600 text-xs uppercase tracking-wider">Référence</th>
+                      <th className="text-left p-4 font-semibold text-slate-600 text-xs uppercase tracking-wider">Client</th>
+                      <th className="text-left p-4 font-semibold text-slate-600 text-xs uppercase tracking-wider">Produits</th>
+                      <th className="text-left p-4 font-semibold text-slate-600 text-xs uppercase tracking-wider">Date</th>
+                      <th className="text-left p-4 font-semibold text-slate-600 text-xs uppercase tracking-wider">Prix</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((o) => (
-                      <tr key={o.id} onClick={() => navigate(`/dashboard/sales/${o.id}`)} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors cursor-pointer">
+                    {filteredOrders.map((o) => (
+                      <tr key={o.id} onClick={() => navigate(`/dashboard/sales/${o.id}`)} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors cursor-pointer">
+                        <td className="p-4 text-slate-500 font-mono text-xs">{o.id.slice(0, 8).toUpperCase()}</td>
+                        <td className="p-4 text-slate-700 font-medium">{o.customer?.name || "—"}</td>
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-xl bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                            <div className="h-8 w-8 rounded-lg bg-slate-100 flex items-center justify-center overflow-hidden shrink-0">
                               {o.product?.thumbnail_url ? (
                                 <img src={o.product.thumbnail_url} alt="" className="h-full w-full object-cover" />
                               ) : (
-                                <Package className="h-4 w-4 text-muted-foreground/40" />
+                                <Package className="h-4 w-4 text-slate-400" />
                               )}
                             </div>
-                            <span className="font-medium text-foreground truncate max-w-[200px]">{o.product?.title || "Produit"}</span>
+                            <span className="font-medium text-slate-700 truncate max-w-[200px]">{o.product?.title || "Produit"}</span>
                           </div>
                         </td>
-                        <td className="p-4 text-muted-foreground">{o.customer?.name || "—"}</td>
+                        <td className="p-4 text-slate-500">{format(new Date(o.created_at), "dd/MM/yyyy")}</td>
                         <td className="p-4">
-                          <div>
-                            <span className="font-semibold text-foreground">{o.amount.toLocaleString()} F</span>
-                            {o.original_amount && o.original_amount > o.amount && (
-                              <span className="block text-xs text-muted-foreground line-through">{o.original_amount.toLocaleString()} F</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          {o.promo_code ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent text-accent-foreground">
-                              <Tag className="h-3 w-3" />
-                              {o.promo_code}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-muted-foreground">{format(new Date(o.created_at), "dd MMM yyyy HH:mm", { locale: fr })}</td>
-                        <td className="p-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            {o.status}
-                          </span>
+                          <span className="font-bold text-slate-900">{o.amount.toLocaleString()} XOF</span>
                         </td>
                       </tr>
                     ))}
@@ -211,11 +294,11 @@ const DashboardSales = () => {
               <div className="flex items-center justify-between mb-3 px-1">
                 <h2 className="text-base font-bold text-foreground">Transactions</h2>
                 <span className="text-[11px] font-semibold text-muted-foreground px-2 py-0.5 rounded-full bg-muted">
-                  {orders.length}
+                  {filteredOrders.length}
                 </span>
               </div>
               <div className="space-y-2">
-                {orders.map((o, i) => (
+                {filteredOrders.map((o, i) => (
                   <motion.div
                     key={o.id}
                     initial={{ opacity: 0, x: -8 }}

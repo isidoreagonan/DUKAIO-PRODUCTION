@@ -21,32 +21,124 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "sonner";
 
-type ProductType = "file" | "course" | "license";
+type ProductType = "file" | "course" | "service";
+
+import React from "react";
+import StoreRequiredDialog from "@/components/dashboard/StoreRequiredDialog";
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: any) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
+  render() {
+    if (this.state.hasError) {
+      return <div className="p-4 bg-red-100 text-red-900 border border-red-500 rounded">
+        <strong>CRASH:</strong> {this.state.error?.toString()} <br/><br/>
+        {this.state.error?.stack}
+      </div>;
+    }
+    return this.props.children;
+  }
+}
+
+const DigitalProductsShapes = () => (
+  <div className="relative w-[110%] md:w-3/5 max-w-[140px] h-[80%] md:h-24 flex flex-col items-center justify-end translate-x-2 md:translate-x-0 translate-y-2 md:translate-y-0">
+    <div className="absolute bottom-[2rem] md:bottom-[3rem] w-[75%] h-10 md:h-12 bg-amber-400 rounded-t-lg shadow-sm border-t border-amber-300">
+      <div className="absolute top-0 right-0 w-1/3 h-2 md:h-2.5 bg-amber-300 rounded-tr-lg"></div>
+    </div>
+    <div className="absolute bottom-[1rem] md:bottom-[1.8rem] w-[85%] h-10 md:h-12 bg-fuchsia-700 rounded-t-lg shadow-md border-t border-fuchsia-600">
+      <div className="absolute top-0 right-2 w-1/3 h-2 md:h-2.5 bg-fuchsia-600 rounded-tr-lg"></div>
+    </div>
+    <div className="absolute bottom-[0.25rem] md:bottom-[0.6rem] w-[95%] h-10 md:h-12 bg-pink-500 rounded-t-lg shadow-lg border-t border-pink-400">
+      <div className="absolute top-0 right-3 w-1/3 h-2 md:h-2.5 bg-pink-400 rounded-tr-lg"></div>
+    </div>
+    <div className="absolute bottom-[-0.25rem] md:bottom-0 w-full h-[0.9rem] md:h-[1.1rem] bg-indigo-500 rounded-t-md shadow-xl border-t border-indigo-400 flex items-center justify-center z-10">
+      <div className="w-1/3 h-1 md:h-1.5 bg-indigo-700/50 rounded-full shadow-inner"></div>
+    </div>
+  </div>
+);
+
+const CourseShapes = () => (
+  <div className="relative w-[110%] md:w-3/5 max-w-[140px] h-[90%] md:h-28 flex flex-col items-center justify-end pb-1 md:pb-2 translate-x-2 md:translate-x-0 translate-y-1 md:translate-y-0">
+    <div className="absolute top-2 left-0 w-8 md:w-10 h-8 md:h-10 bg-orange-200/60 rounded-full blur-xl"></div>
+    <div className="absolute bottom-4 md:bottom-6 right-0 w-10 md:w-12 h-10 md:h-12 bg-rose-200/60 rounded-full blur-xl"></div>
+
+    <div className="absolute top-0 left-0 md:left-4 z-20 animate-bounce" style={{ animationDuration: "4s" }}>
+      <div className="relative w-10 md:w-14 h-8 md:h-10">
+        <div className="absolute top-0 left-0 w-10 md:w-14 h-3 md:h-4 bg-indigo-600 rounded-sm" style={{ transform: "skew(-20deg) rotate(-10deg)" }}></div>
+        <div className="absolute top-1.5 md:top-2 left-1.5 md:left-2 w-6 md:w-8 h-4 md:h-6 bg-indigo-800 rounded-b-md"></div>
+        <div className="absolute top-1 right-1.5 md:right-2 w-1 h-4 md:h-5 bg-amber-400 origin-top rotate-12">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 md:w-1.5 h-1.5 md:h-2 bg-amber-500 rounded-sm"></div>
+        </div>
+      </div>
+    </div>
+
+    <div className="relative z-10 w-[95%] aspect-[16/10] bg-slate-800 rounded-t-md p-1 md:p-1.5 border-b-2 md:border-b-4 border-slate-900 shadow-2xl flex flex-col">
+      <div className="flex-1 bg-slate-900 rounded-sm overflow-hidden relative flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-rose-500/20"></div>
+        <div className="relative w-6 md:w-8 h-6 md:h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
+          <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[6px] md:border-l-[7px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div className="w-1/3 h-1 md:h-1.5 bg-slate-700"></div>
+    <div className="w-1/2 h-1 md:h-1.5 bg-slate-500 rounded-t-sm"></div>
+  </div>
+);
+
+const ServicesShapes = () => (
+  <div className="relative w-[110%] md:w-3/5 max-w-[140px] h-[80%] md:h-24 flex flex-col items-center justify-end pb-2 md:pb-4 translate-x-2 md:translate-x-0 translate-y-2 md:translate-y-0">
+    <div className="relative z-10 w-[75%] md:w-[70%] aspect-[5/3.5] bg-amber-400 rounded-lg shadow-xl border-b-[4px] md:border-b-[6px] border-amber-500 overflow-hidden">
+      <div className="absolute top-0 w-full h-1/2 bg-amber-300"></div>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-full bg-blue-500 shadow-sm"></div>
+    </div>
+
+    <div className="absolute top-0 right-0 md:right-2 animate-bounce" style={{ animationDuration: "3s" }}>
+      <div className="bg-rose-500 rounded-full w-5 h-5 md:w-7 md:h-7 flex items-center justify-center shadow-lg shadow-rose-500/30 text-white font-bold text-[10px] md:text-sm">
+        $
+      </div>
+    </div>
+    <div className="absolute top-3 md:top-4 left-0 md:left-2 animate-pulse" style={{ animationDuration: "2s" }}>
+      <div className="bg-emerald-500 rounded-full p-1 md:p-1.5 shadow-lg shadow-emerald-500/30">
+        <Check className="w-3 h-3 md:w-4 md:h-4 text-white" />
+      </div>
+    </div>
+  </div>
+);
 
 const productTypes = [
   {
     type: "file" as ProductType,
-    label: "Fichiers",
-    description: "E-books, templates, fichiers audio : vos clients téléchargent instantanément après achat.",
-    icon: FileText,
-    color: "bg-amber-500",
+    label: "Produits digitaux",
+    description: "E-books, templates, audios : téléchargement instantané.",
+    bgGradient: "bg-gradient-to-br from-[#F4F7FE] to-blue-50/50 dark:from-slate-800 dark:to-slate-900",
+    bgRadial: "circle_at_top_right,_var(--tw-gradient-stops)",
+    illustration: <DigitalProductsShapes />,
     features: ["Tous formats acceptés (PDF, ZIP, MP3…)", "Livraison automatique", "Téléchargement sécurisé"],
+    icon: FileText,
+    color: "bg-blue-600",
   },
   {
     type: "course" as ProductType,
     label: "Formations",
-    description: "Créez des formations structurées avec vidéo, texte et contenu téléchargeable.",
+    description: "Créez des formations avec vidéo et contenu téléchargeable.",
+    bgGradient: "bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-slate-800 dark:to-slate-900",
+    bgRadial: "circle_at_top_left,_var(--tw-gradient-stops)",
+    illustration: <CourseShapes />,
+    features: ["Contenu vidéo, texte & téléchargeable", "Suivi de progression des étudiants", "Modules structurés"],
     icon: GraduationCap,
-    color: "bg-blue-500",
-    features: ["Contenu vidéo, texte & téléchargeable", "Suivi de progression des étudiants", "Modules & leçons structurés"],
+    color: "bg-orange-500",
   },
   {
-    type: "license" as ProductType,
-    label: "Licences",
-    description: "Vendez des clés de licence avec contrôle total sur les activations et la durée.",
-    icon: Key,
-    color: "bg-purple-500",
-    features: ["Génération automatique de licences", "Limite d'activations par licence", "Durée de validité configurable", "Suivi en temps réel"],
+    type: "service" as ProductType,
+    label: "Services",
+    description: "Vendez vos prestations de services en ligne.",
+    bgGradient: "bg-gradient-to-br from-orange-50/50 to-[#FFF6F0] dark:from-slate-800 dark:to-slate-900",
+    bgRadial: "circle_at_center,_var(--tw-gradient-stops)",
+    illustration: <ServicesShapes />,
+    features: ["Planification", "Paiement d'avance", "Gestion client"],
+    icon: Layers,
+    color: "bg-rose-500",
+    comingSoon: true,
   },
 ];
 
@@ -67,6 +159,18 @@ const CreateProduct = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [hasStore, setHasStore] = useState<boolean>(true);
+  const [storeRequiredOpen, setStoreRequiredOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const checkStore = async () => {
+      const { data } = await supabase.from("stores").select("id").eq("owner_id", user.id).limit(1);
+      setHasStore(data && data.length > 0 ? true : false);
+    };
+    checkStore();
+  }, [user]);
 
   // Step 1 - Type
   const [selectedType, setSelectedType] = useState<ProductType | null>(null);
@@ -83,13 +187,13 @@ const CreateProduct = () => {
   // Delete confirm dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingDeleteAction, setPendingDeleteAction] = useState<{ name: string; action: () => void } | null>(null);
+  
   const [pricingModel, setPricingModel] = useState("one_time");
   const [price, setPrice] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
-
-  // License-specific
-  const [licenseMaxActivations, setLicenseMaxActivations] = useState("");
-  const [licenseValidityDays, setLicenseValidityDays] = useState("");
+  const [suggestedPrice, setSuggestedPrice] = useState("");
+  
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Course-specific
   const [courseContentType, setCourseContentType] = useState("mixed");
@@ -120,17 +224,65 @@ const CreateProduct = () => {
 
   const priceNum = parseFloat(price) || 0;
   const originalPriceNum = parseFloat(originalPrice) || 0;
-  const priceError = price && priceNum > 0 && priceNum < 100 ? "Le prix minimum est de 100 FCFA" : "";
-  const originalPriceError = originalPrice && originalPriceNum > 0 && originalPriceNum <= priceNum
-    ? "Le prix barré doit être supérieur au prix de vente" : "";
 
+  const validateStep2 = () => {
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = "Le nom du produit est obligatoire";
+    if (!category) newErrors.category = "Veuillez sélectionner une catégorie";
+    
+    if (pricingModel === "one_time") {
+      if (!price || priceNum < 1000) newErrors.price = "Le prix de vente doit être d'au moins 1000 FCFA";
+    } else if (pricingModel === "pay_what_you_want") {
+      if (!price || priceNum < 1000) newErrors.price = "Le prix minimum doit être d'au moins 1000 FCFA";
+      if (!suggestedPrice || parseFloat(suggestedPrice) < priceNum) newErrors.suggestedPrice = "Le prix suggéré est obligatoire et doit être supérieur au prix minimum";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const newErrors: Record<string, string> = {};
+    const textContent = description.replace(/<[^>]*>/g, "").trim();
+    if (!textContent) newErrors.description = "La description du produit est obligatoire";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNextStep = async () => {
+    if (step === 2 && !validateStep2()) return;
+    if (step === 3 && !validateStep3()) return;
+    
+    if (step === 2 && title.trim()) {
+      try {
+        const productData = {
+          title: title.trim(),
+          category: category || null,
+          price: pricingModel === "free" ? 0 : parseFloat(price),
+          type: selectedType,
+          creator_id: user?.id,
+          is_published: false,
+        };
+        
+        if (draftId) {
+          await supabase.from("products").update(productData).eq("id", draftId);
+        } else {
+          const { data } = await supabase.from("products").insert(productData).select("id").single();
+          if (data) setDraftId(data.id);
+        }
+      } catch (e) {
+        console.error("Auto draft failed", e);
+      }
+    }
+    
+    setStep(step + 1);
+  };
 
   const canNext = () => {
     switch (step) {
       case 1: return !!selectedType;
-      case 2:
-        return !!title.trim() && !!price && priceNum >= 100 && !priceError && !originalPriceError;
-      case 3: return !!description.replace(/<[^>]*>/g, "").trim();
+      case 2: return true; // Validation is done on click
+      case 3: return true; // Validation is done on click
       case 4: return !thumbnailData?.isUploading;
       case 5:
         if (selectedType === "file") return uploadedFiles.some(f => f.url && !f.isUploading);
@@ -237,29 +389,39 @@ const CreateProduct = () => {
         title: title.trim(),
         description: description.trim() || null,
         category: category || null,
-        price: effectivePrice,
-        original_price: originalPrice ? parseFloat(originalPrice) : null,
+        price: pricingModel === "free" ? 0 : effectivePrice,
+        original_price: originalPrice && pricingModel === "one_time" ? parseFloat(originalPrice) : null,
         type: selectedType,
         thumbnail_url: thumbnailData?.url || null,
         download_url: downloadUrls.length > 0 ? JSON.stringify(downloadUrls) : null,
         creator_id: user.id,
-        is_published: true, // Auto publish directly
+        is_published: hasStore ? true : false,
       };
-
-      if (selectedType === "license") {
-        productData.license_max_activations = licenseMaxActivations ? parseInt(licenseMaxActivations) : null;
-        productData.license_validity_days = licenseValidityDays ? parseInt(licenseValidityDays) : null;
-      }
 
       if (selectedType === "course") {
         productData.course_content_type = courseContentType;
       }
 
-      const { data: productResult, error } = await supabase
-        .from("products")
-        .insert(productData as any)
-        .select("id")
-        .single();
+      let productResult;
+      
+      if (draftId) {
+        const { data, error } = await supabase
+          .from("products")
+          .update(productData as any)
+          .eq("id", draftId)
+          .select("id")
+          .single();
+        if (error) throw error;
+        productResult = data;
+      } else {
+        const { data, error } = await supabase
+          .from("products")
+          .insert(productData as any)
+          .select("id")
+          .single();
+        if (error) throw error;
+        productResult = data;
+      }
 
       if (error || !productResult) {
         throw error || new Error("Impossible de créer le produit");
@@ -289,6 +451,11 @@ const CreateProduct = () => {
         if (lessonsError) {
           toast.error("Produit créé mais erreur sur les leçons: " + lessonsError.message);
         }
+      }
+
+      if (!hasStore) {
+        setStoreRequiredOpen(true);
+        return; // Don't navigate, let them read the dialog
       }
 
       toast.success("Produit publié avec succès !");
@@ -461,155 +628,7 @@ const CreateProduct = () => {
           </div>
         );
 
-      case "license":
-        return (
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Configuration de la licence</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Les clés de licence seront générées automatiquement à chaque achat.
-            </p>
 
-            <div className="space-y-6">
-              <div className="p-5 rounded-xl border border-border bg-card space-y-5">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-purple-500" />
-                    Nombre max d'activations par licence
-                  </label>
-                  <Input
-                    type="number"
-                    value={licenseMaxActivations}
-                    onChange={(e) => setLicenseMaxActivations(e.target.value)}
-                    placeholder="Ex: 3 (laisser vide pour illimité)"
-                    className="h-12"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Limitez le nombre d'appareils sur lesquels la licence peut être activée.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-1.5 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-purple-500" />
-                    Durée de validité (en jours)
-                  </label>
-                  <Input
-                    type="number"
-                    value={licenseValidityDays}
-                    onChange={(e) => setLicenseValidityDays(e.target.value)}
-                    placeholder="Ex: 365 (laisser vide pour illimité)"
-                    className="h-12"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Après ce délai, la licence expirera automatiquement.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-foreground mb-3 block">
-                  Fichier associé (optionnel)
-                </label>
-                <div className="space-y-4">
-                  <div
-                    className="rounded-xl border-2 border-dashed border-border bg-secondary/30 p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => document.getElementById("license-download-input")?.click()}
-                  >
-                    <Button variant="outline" size="sm" className="gap-2 rounded-full pointer-events-none">
-                      <Upload className="h-4 w-4" /> Ajouter un fichier (Max 5)
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Logiciel, documentation, etc.
-                    </p>
-                    <input
-                      id="license-download-input"
-                      type="file"
-                      multiple
-                      className="hidden"
-                      accept="image/*,.pdf,.zip,.rar"
-                      onChange={async (e) => {
-                        const files = Array.from(e.target.files || []);
-                        if (files.length === 0) return;
-                        
-                        if (uploadedFiles.length + files.length > 5) {
-                          toast.error("Vous ne pouvez ajouter que 5 fichiers maximum.");
-                          e.target.value = "";
-                          return;
-                        }
-
-                        for (const f of files) {
-                          if (f.size > 30 * 1024 * 1024) {
-                            setSizeLimitMaxMB(30);
-                            setSizeLimitDialogOpen(true);
-                            continue;
-                          }
-
-                          const newFile: UploadedFile = { name: f.name, progress: 0, isUploading: true };
-                          setUploadedFiles(prev => [...prev, newFile]);
-                          
-                          uploadFile(f, "downloads", (p) => {
-                            setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: p } : pf));
-                          }).then(res => {
-                            if (res) {
-                              setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: 100, isUploading: false, url: res.url, path: res.path } : pf));
-                            } else {
-                              setUploadedFiles(prev => prev.filter(pf => pf.name !== f.name));
-                            }
-                          });
-                        }
-                        e.target.value = "";
-                      }}
-                    />
-                  </div>
-                  {uploadedFiles.length > 0 && (
-                    <div className="space-y-3">
-                      {uploadedFiles.map((uf, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-3 rounded-lg border bg-card">
-                          <div className="flex-1 min-w-0 mr-4">
-                            <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
-                            {uf.isUploading ? (
-                              <div className="mt-2 flex items-center gap-2">
-                                <Progress value={uf.progress} className="h-1.5 flex-1" />
-                                <span className="text-xs text-muted-foreground">{uf.progress}%</span>
-                              </div>
-                            ) : (
-                              <p className="text-xs text-green-500 mt-1">Téléversé avec succès</p>
-                            )}
-                          </div>
-                          <button
-                            className="p-2 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPendingDeleteAction({
-                                name: uf.name,
-                                action: async () => {
-                                  if (uf.path) {
-                                    await deleteFileFromR2(uf.path, false);
-                                  }
-                                  setUploadedFiles(prev => prev.filter(pf => pf.name !== uf.name));
-                                }
-                              });
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800">
-                <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-400">
-                  <Key className="h-4 w-4" />
-                  <span>Les activations seront suivies en temps réel dans votre dashboard</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
 
       default:
         return null;
@@ -628,17 +647,22 @@ const CreateProduct = () => {
         </div>
 
         {/* Type banner */}
+        <ErrorBoundary>
         {selectedTypeData && step > 1 && (
-          <div className="flex items-center gap-3 mb-6 p-4 rounded-xl bg-secondary">
-            <div className={`h-10 w-10 rounded-xl ${selectedTypeData.color} flex items-center justify-center`}>
-              <selectedTypeData.icon className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-3 md:gap-4 mb-6 p-3 md:p-4 rounded-xl bg-secondary border border-border/50">
+            <div className={`relative h-14 w-16 md:h-16 md:w-20 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm flex items-center justify-center ${selectedTypeData.bgGradient}`}>
+              <div className={`absolute inset-0 bg-[radial-gradient(${selectedTypeData.bgRadial})] opacity-50`}></div>
+              <div className="absolute inset-0 flex items-center justify-center transform scale-[0.35] md:scale-[0.4] origin-center">
+                {selectedTypeData.illustration}
+              </div>
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">{selectedTypeData.label}</p>
-              <p className="text-xs text-muted-foreground">{selectedTypeData.description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{selectedTypeData.description}</p>
             </div>
           </div>
         )}
+        </ErrorBoundary>
 
         {/* Progress bar */}
         <div className="flex gap-1.5 mb-8">
@@ -667,26 +691,51 @@ const CreateProduct = () => {
                 <h2 className="text-2xl font-bold text-foreground mb-8 italic">
                   Quel type de produit désirez-vous créer ?
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {productTypes.map((pt) => (
                     <button
                       key={pt.type}
+                      disabled={pt.comingSoon}
                       onClick={() => setSelectedType(pt.type)}
-                      className={`relative p-6 rounded-xl border-2 text-left transition-all hover:shadow-md ${
+                      className={`relative group rounded-2xl border-2 text-left transition-all duration-300 overflow-hidden hover:shadow-xl flex flex-row md:flex-col items-center md:items-stretch h-24 md:h-auto ${
                         selectedType === pt.type
-                          ? "border-amber-400 bg-amber-50/50 dark:bg-amber-900/10"
-                          : "border-border hover:border-muted-foreground/30"
-                      }`}
+                          ? "border-blue-500 shadow-blue-500/20 ring-4 ring-blue-500/10"
+                          : pt.comingSoon
+                            ? "border-border/50 opacity-70 cursor-not-allowed"
+                            : "border-border hover:border-blue-300"
+                      } md:bg-card`}
                     >
+                      {/* Background Layer */}
+                      <div className={`absolute inset-0 md:bottom-auto md:h-28 lg:h-32 ${pt.bgGradient} transition-transform duration-500 md:group-hover:scale-105 origin-bottom`}>
+                        <div className={`absolute inset-0 bg-[radial-gradient(${pt.bgRadial})] opacity-50`}></div>
+                      </div>
+
+                      {/* Text Content */}
+                      <div className="relative z-10 p-4 sm:p-5 flex-1 md:mt-28 lg:mt-32 md:bg-card flex flex-col justify-center md:justify-start h-full md:h-auto">
+                        <h3 className={`text-[15px] sm:text-lg font-bold md:mb-1.5 ${selectedType === pt.type ? "text-blue-600 dark:text-blue-400" : "text-foreground"}`}>
+                          {pt.label}
+                        </h3>
+                        <p className="hidden md:block text-sm text-muted-foreground leading-relaxed">
+                          {pt.description}
+                        </p>
+                      </div>
+
+                      {/* Illustration */}
+                      <div className="relative z-10 w-32 sm:w-36 h-full md:absolute md:top-0 md:inset-x-0 md:w-full md:h-28 lg:h-32 flex items-end justify-end md:justify-center overflow-hidden md:overflow-visible transition-transform duration-500 md:group-hover:scale-105">
+                        {pt.illustration}
+                      </div>
+
                       {selectedType === pt.type && (
-                        <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-amber-400 flex items-center justify-center">
-                          <Check className="h-3 w-3 text-white" />
+                        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-20 h-5 w-5 md:h-6 md:w-6 rounded-full bg-white dark:bg-slate-800 border-[1.5px] border-blue-500 shadow-md flex items-center justify-center animate-in zoom-in">
+                          <Check className="h-3 w-3 md:h-3.5 md:w-3.5 text-blue-600 dark:text-blue-500 stroke-[3]" />
                         </div>
                       )}
-                      <div className={`h-12 w-12 rounded-xl ${pt.color} flex items-center justify-center mb-3`}>
-                        <pt.icon className="h-6 w-6 text-white" />
-                      </div>
-                      <p className="text-sm font-semibold text-foreground">{pt.label}</p>
+                      
+                      {pt.comingSoon && (
+                        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-20 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-sm">
+                          Bientôt
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -695,17 +744,33 @@ const CreateProduct = () => {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 p-6 rounded-xl border border-border bg-card"
+                    className="mt-8 rounded-2xl border border-border bg-card/50 p-6 sm:p-8"
                   >
-                    <h3 className="text-lg font-bold text-foreground mb-2">{selectedTypeData.label}</h3>
-                    <p className="text-sm text-muted-foreground mb-4">{selectedTypeData.description}</p>
-                    <div className="space-y-2">
-                      {selectedTypeData.features.map((f) => (
-                        <div key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Check className="h-4 w-4 text-primary" />
-                          <span>{f}</span>
+                    <div className="flex flex-col md:flex-row gap-8 md:gap-12 md:items-center">
+                      {/* Text Block */}
+                      <div className="md:w-1/3">
+                        <div className="inline-flex items-center justify-center p-2 mb-4 rounded-xl border border-border bg-card text-foreground shadow-sm">
+                          <Sparkles className="w-5 h-5" />
                         </div>
-                      ))}
+                        <h3 className="text-xl font-bold text-foreground mb-2">
+                          Idéal pour vos {selectedTypeData.label.toLowerCase()}
+                        </h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {selectedTypeData.description}
+                        </p>
+                      </div>
+                      
+                      {/* Features Grid */}
+                      <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {selectedTypeData.features.map((f, i) => (
+                          <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border shadow-sm">
+                            <div className="mt-0.5 flex-shrink-0 flex items-center justify-center text-foreground">
+                              <Check className="h-4 w-4 stroke-[2.5]" />
+                            </div>
+                            <span className="text-sm font-medium text-foreground leading-snug">{f}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -724,9 +789,9 @@ const CreateProduct = () => {
                     <div className="flex gap-2">
                       <Input
                         value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                        onChange={(e) => { setTitle(e.target.value); setErrors({...errors, title: undefined}); }}
                         placeholder="Ex: Guide complet Facebook Ads 2025"
-                        className="h-12 flex-1"
+                        className={`h-12 flex-1 ${errors.title ? "border-destructive" : ""}`}
                       />
                       <Button
                         type="button"
@@ -744,14 +809,15 @@ const CreateProduct = () => {
                         )}
                       </Button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1">💡 Cliquez sur l'icône ✨ pour améliorer votre titre avec l'IA</p>
+                    {errors.title && <p className="text-xs text-destructive mt-1.5 font-medium">{errors.title}</p>}
+                    {!errors.title && <p className="text-[11px] text-muted-foreground mt-1">💡 Cliquez sur l'icône ✨ pour améliorer votre titre avec l'IA</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1.5 block">
                       Catégorie <span className="text-destructive">*</span>
                     </label>
-                    <Select value={category} onValueChange={setCategory}>
-                      <SelectTrigger className="h-12">
+                    <Select value={category} onValueChange={(v) => { setCategory(v); setErrors({...errors, category: undefined}); }}>
+                      <SelectTrigger className={`h-12 ${errors.category ? "border-destructive" : ""}`}>
                         <SelectValue placeholder="Dans quelle catégorie classer ce produit ?" />
                       </SelectTrigger>
                       <SelectContent>
@@ -765,88 +831,102 @@ const CreateProduct = () => {
                         <SelectItem value="other">✨ Autres</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors.category && <p className="text-xs text-destructive mt-1.5 font-medium">{errors.category}</p>}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1.5 block">
                       Modèle de tarification <span className="text-destructive">*</span>
                     </label>
-                    <Select value={pricingModel} onValueChange={setPricingModel}>
+                    <Select value={pricingModel} onValueChange={(v) => { setPricingModel(v); setErrors({...errors, price: undefined, suggestedPrice: undefined}); }}>
                       <SelectTrigger className="h-12">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="one_time">Paiement unique</SelectItem>
-                        <SelectItem value="subscription">Abonnement</SelectItem>
+                        <SelectItem value="one_time">Prix unique</SelectItem>
+                        <SelectItem value="pay_what_you_want">Prix libre (Pay what you want)</SelectItem>
                         <SelectItem value="free">Gratuit</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Prix <span className="text-destructive">*</span></label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
-                        <Input
-                          type="number"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          className={`h-12 pl-14 ${priceError ? "border-destructive" : ""}`}
-                          placeholder="100"
-                          min={100}
-                        />
+                  
+                  {pricingModel === "one_time" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix de vente <span className="text-destructive">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
+                          <Input
+                            type="number"
+                            value={price}
+                            onChange={(e) => { setPrice(e.target.value); setErrors({...errors, price: undefined}); }}
+                            className={`h-12 pl-14 ${errors.price ? "border-destructive" : ""}`}
+                            placeholder="1000"
+                            min={1000}
+                          />
+                        </div>
+                        {errors.price ? (
+                          <p className="text-xs text-destructive mt-1.5 font-medium">{errors.price}</p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground mt-1">Min : 1000 FCFA</p>
+                        )}
                       </div>
-                      {priceError && <p className="text-[11px] text-destructive mt-1">{priceError}</p>}
-                      {!priceError && <p className="text-[11px] text-muted-foreground mt-1">Min : 100 FCFA</p>}
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Prix barré</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
-                        <Input
-                          type="number"
-                          value={originalPrice}
-                          onChange={(e) => setOriginalPrice(e.target.value)}
-                          className={`h-12 pl-14 ${originalPriceError ? "border-destructive" : ""}`}
-                          placeholder="0"
-                        />
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix barré (optionnel)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
+                          <Input
+                            type="number"
+                            value={originalPrice}
+                            onChange={(e) => setOriginalPrice(e.target.value)}
+                            className="h-12 pl-14"
+                            placeholder="0"
+                          />
+                        </div>
+                        {originalPrice && Number(originalPrice) > Number(price) && (
+                          <p className="text-[11px] text-emerald-600 mt-1">
+                            Réduction de {Math.round(((Number(originalPrice) - Number(price)) / Number(originalPrice)) * 100)}%
+                          </p>
+                        )}
                       </div>
-                      {originalPriceError && <p className="text-[11px] text-destructive mt-1">{originalPriceError}</p>}
-                      {!originalPriceError && originalPrice && originalPriceNum > priceNum && (
-                        <p className="text-[11px] text-emerald-600 mt-1">
-                          Réduction de {Math.round(((originalPriceNum - priceNum) / originalPriceNum) * 100)}%
-                        </p>
-                      )}
                     </div>
-                  </div>
+                  )}
 
-                  {/* License-specific fields in step 2 */}
-                  {selectedType === "license" && (
-                    <div className="p-5 rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10 space-y-4">
-                      <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        <Key className="h-4 w-4 text-purple-500" />
-                        Options de licence
-                      </p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-medium text-foreground mb-1 block">Max activations</label>
+                  {pricingModel === "pay_what_you_want" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix minimum <span className="text-destructive">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
                           <Input
                             type="number"
-                            value={licenseMaxActivations}
-                            onChange={(e) => setLicenseMaxActivations(e.target.value)}
-                            placeholder="Illimité"
-                            className="h-10"
+                            value={price}
+                            onChange={(e) => { setPrice(e.target.value); setErrors({...errors, price: undefined}); }}
+                            className={`h-12 pl-14 ${errors.price ? "border-destructive" : ""}`}
+                            placeholder="1000"
+                            min={1000}
                           />
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-foreground mb-1 block">Validité (jours)</label>
+                        {errors.price ? (
+                          <p className="text-xs text-destructive mt-1.5 font-medium">{errors.price}</p>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground mt-1">Min : 1000 FCFA</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Prix suggéré <span className="text-destructive">*</span></label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">FCFA</span>
                           <Input
                             type="number"
-                            value={licenseValidityDays}
-                            onChange={(e) => setLicenseValidityDays(e.target.value)}
-                            placeholder="Illimité"
-                            className="h-10"
+                            value={suggestedPrice}
+                            onChange={(e) => { setSuggestedPrice(e.target.value); setErrors({...errors, suggestedPrice: undefined}); }}
+                            className={`h-12 pl-14 ${errors.suggestedPrice ? "border-destructive" : ""}`}
+                            placeholder="2000"
                           />
                         </div>
+                        {errors.suggestedPrice && (
+                          <p className="text-xs text-destructive mt-1.5 font-medium">{errors.suggestedPrice}</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -892,11 +972,14 @@ const CreateProduct = () => {
                       )}
                     </Button>
                   </div>
-                  <RichTextEditor
-                    content={description}
-                    onChange={setDescription}
-                    placeholder="Décrivez votre produit en détail. Utilisez la barre d'outils pour formater le texte, ajouter des liens, des images..."
-                  />
+                  <div className={errors.description ? "border border-destructive rounded-lg p-1" : ""}>
+                    <RichTextEditor
+                      content={description}
+                      onChange={(v) => { setDescription(v); setErrors({...errors, description: undefined}); }}
+                      placeholder="Décrivez votre produit en détail. Utilisez la barre d'outils pour formater le texte, ajouter des liens, des images..."
+                    />
+                  </div>
+                  {errors.description && <p className="text-xs text-destructive mt-1.5 font-medium">{errors.description}</p>}
                 </div>
               </div>
             )}
@@ -1026,7 +1109,7 @@ const CreateProduct = () => {
             <Button
               className="rounded-full px-8 bg-amber-500 hover:bg-amber-600 text-white"
               disabled={!canNext()}
-              onClick={() => setStep(step + 1)}
+              onClick={handleNextStep}
             >
               Continuer
             </Button>
@@ -1054,6 +1137,14 @@ const CreateProduct = () => {
         itemName={pendingDeleteAction?.name}
         onConfirm={() => {
           if (pendingDeleteAction) pendingDeleteAction.action();
+        }}
+      />
+
+      <StoreRequiredDialog 
+        open={storeRequiredOpen}
+        onOpenChange={(open) => {
+          setStoreRequiredOpen(open);
+          if (!open) navigate("/dashboard/products");
         }}
       />
     </DashboardLayout>

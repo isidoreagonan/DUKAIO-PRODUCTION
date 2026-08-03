@@ -90,23 +90,19 @@ export function DashboardSidebar() {
               <button className={`flex items-center gap-3 text-left outline-none ${collapsed ? "justify-center w-full" : "flex-1 min-w-0"}`}>
                 <div
                   className={`flex shrink-0 items-center justify-center overflow-hidden ${
-                    collapsed ? "h-12 w-12 mx-auto" : "h-10 w-10 ml-1 rounded-lg bg-white/20"
+                    collapsed ? "h-12 w-12 mx-auto" : "h-10 w-10 ml-1 rounded-lg"
                   }`}
                 >
-                  {activeStore?.logo_url ? (
-                    <img
-                      src={activeStore.logo_url}
-                      alt={activeStore.name}
-                      className={`h-full w-full object-cover ${collapsed ? "rounded-xl" : "rounded-lg"}`}
-                    />
-                  ) : (
-                    <Store className={`${collapsed ? "h-6 w-6" : "h-5 w-5"} text-white`} />
-                  )}
+                  <img
+                    src={logo}
+                    alt="Dukaio"
+                    className={`h-full w-full object-contain ${collapsed ? "rounded-xl" : "rounded-lg"}`}
+                  />
                 </div>
                 {!collapsed && (
                   <div className="flex-1 min-w-0 pr-2">
-                    <p className="text-lg font-bold text-white truncate">
-                      {activeStore?.name || "Dukaio"}
+                    <p className="text-xl font-bold tracking-tight text-white truncate">
+                      Dukaio
                     </p>
                   </div>
                 )}
@@ -159,7 +155,7 @@ export function DashboardSidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="relative flex-1 py-4 space-y-3 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] px-4">
+        <nav className="relative flex-1 py-4 space-y-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] px-4">
           {mainItems.map(renderItem)}
         </nav>
 

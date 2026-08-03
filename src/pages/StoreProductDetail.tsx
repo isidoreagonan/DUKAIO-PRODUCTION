@@ -234,20 +234,23 @@ const StoreProductDetail = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50/40 flex flex-col">
+    <div className="min-h-screen flex flex-col relative bg-[#FAFAFA]">
+      <div 
+        className="absolute top-0 left-0 w-full h-[600px] opacity-[0.15] pointer-events-none" 
+        style={{ background: `radial-gradient(circle at 50% -20%, ${brandColor} 0%, transparent 70%)` }}
+      />
       {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14">
+      <header className="sticky top-0 z-40 border-b border-gray-200/50 bg-white/70 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
           <Link to={`/store/${slug}`} className="flex items-center gap-3 min-w-0">
             {logoUrl ? (
-              <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded-lg object-cover" />
+              <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded-lg object-cover shadow-sm border border-gray-100" />
             ) : (
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: brandColor }}>
+              <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm" style={{ backgroundColor: brandColor }}>
                 {storeName.charAt(0)?.toUpperCase()}
               </div>
             )}
             <span className="text-sm font-bold text-gray-900 truncate">{storeName}</span>
-            {ownerBadge && <VerifiedBadge grade={ownerBadge} size="sm" expiresAt={ownerBadgeExpires} />}
           </Link>
           <div className="flex items-center gap-2">
             <Link to={`/store/${slug}`} className="hidden sm:block">
@@ -274,39 +277,46 @@ const StoreProductDetail = () => {
             Retour à la boutique
           </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-10 mt-2">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-2 relative z-10">
             {/* ─── LEFT: Image + content ─── */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-7 xl:col-span-7 space-y-8">
               {/* Hero image */}
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm"
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="relative rounded-[32px] overflow-hidden p-2 sm:p-3 bg-white/50 backdrop-blur-2xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
               >
-                {product.thumbnail_url ? (
-                  <img
-                    src={product.thumbnail_url}
-                    alt={product.title}
-                    className="w-full h-auto object-contain"
-                  />
-                ) : (
-                  <div className="w-full aspect-[4/3] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                    <Package className="h-20 w-20 text-gray-300" />
-                  </div>
-                )}
+                <div 
+                  className="absolute inset-0 opacity-20 blur-[80px] pointer-events-none" 
+                  style={{ backgroundColor: brandColor }}
+                />
+                <div className="relative rounded-[24px] overflow-hidden bg-white shadow-sm border border-gray-100/50 group">
+                  {product.thumbnail_url ? (
+                    <img
+                      src={product.thumbnail_url}
+                      alt={product.title}
+                      className="w-full h-auto object-cover md:object-contain transition-transform duration-700 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <div className="w-full aspect-[4/3] flex items-center justify-center bg-gray-50">
+                      <Package className="h-24 w-24 text-gray-200" />
+                    </div>
+                  )}
 
-                {/* Floating badges */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  {isBestseller && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
-                      🔥 Bestseller
-                    </span>
-                  )}
-                  {discount && (
-                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold text-white shadow-md" style={{ backgroundColor: brandColor }}>
-                      -{discount}%
-                    </span>
-                  )}
+                  {/* Floating badges */}
+                  <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+                    {isBestseller && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-amber-500/30 backdrop-blur-md">
+                        🔥 Bestseller
+                      </span>
+                    )}
+                    {discount && (
+                      <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-md" style={{ backgroundColor: brandColor, boxShadow: `0 4px 14px 0 ${brandColor}60` }}>
+                        -{discount}%
+                      </span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
 
@@ -363,40 +373,47 @@ const StoreProductDetail = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-7"
+                  className="rounded-[24px] border border-gray-100 bg-white p-6 sm:p-8 shadow-sm"
                 >
-                  <h2 className="mb-4 text-lg font-bold text-gray-900">À propos de ce produit</h2>
+                  <h2 className="mb-6 text-xl font-extrabold text-gray-900 tracking-tight">À propos de ce produit</h2>
                   <div
                     dangerouslySetInnerHTML={{ __html: processDescriptionWithVideos(product.description) }}
-                    className="prose prose-sm max-w-none leading-relaxed text-gray-700 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:text-gray-900 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-3 [&_h2]:text-gray-900 [&_p]:mb-4 [&_p]:text-gray-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_li]:text-gray-600 [&_a]:underline [&_img]:rounded-lg [&_img]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-gray-200 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-500 [&_.video-embed]:my-6 [&_iframe]:rounded-xl [&_iframe]:border [&_iframe]:border-gray-100"
+                    className="prose prose-sm sm:prose-base max-w-none leading-loose text-gray-600 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-6 [&_h1]:text-gray-900 [&_h1]:tracking-tight [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-5 [&_h2]:text-gray-900 [&_h2]:tracking-tight [&_p]:mb-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-6 [&_ul]:space-y-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-6 [&_ol]:space-y-2 [&_li]:text-gray-600 [&_a]:font-medium [&_img]:rounded-2xl [&_img]:shadow-sm [&_img]:my-8 [&_blockquote]:border-l-4 [&_blockquote]:pl-5 [&_blockquote]:italic [&_blockquote]:text-gray-500 [&_blockquote]:my-6 [&_.video-embed]:my-8 [&_iframe]:rounded-2xl [&_iframe]:border [&_iframe]:border-gray-100 [&_iframe]:shadow-sm"
                     style={{ '--tw-prose-links': brandColor } as any}
                   />
                 </motion.div>
               )}
 
-              {/* What's included */}
+              {/* What's included (Bento Grid) */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.12 }}
-                className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-7"
+                className="rounded-[24px] border border-gray-100 bg-white p-6 sm:p-8 shadow-sm"
               >
-                <h2 className="mb-4 text-lg font-bold text-gray-900">Ce qui est inclus</h2>
-                <ul className="space-y-3">
+                <h2 className="mb-6 text-xl font-extrabold text-gray-900 tracking-tight">Ce qui est inclus</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    product.type === "course" ? "Accès à vie aux modules de la formation" :
-                    product.type === "license" ? "Clé de licence unique livrée par email" :
-                    "Téléchargement immédiat après paiement",
-                    "Mises à jour gratuites à vie",
-                    "Support direct du créateur",
-                    "Accès depuis votre espace « Mes achats »",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 text-sm text-gray-700">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0" style={{ color: brandColor }} />
-                      <span>{item}</span>
-                    </li>
+                    { 
+                      title: product.type === "course" ? "Accès à vie" : product.type === "license" ? "Clé de licence unique" : "Téléchargement immédiat", 
+                      desc: product.type === "course" ? "Aux modules de la formation" : product.type === "license" ? "Livrée par email" : "Dès validation du paiement",
+                      icon: Download
+                    },
+                    { title: "Mises à jour gratuites", desc: "Profitez des nouveautés à vie", icon: Zap },
+                    { title: "Support direct", desc: "Assistance par le créateur", icon: HeadphonesIcon },
+                    { title: "Espace client", desc: "Accès depuis « Mes achats »", icon: Lock },
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100/80 transition-colors">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-white shadow-sm shrink-0">
+                        <item.icon className="h-5 w-5" style={{ color: brandColor }} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm">{item.title}</h3>
+                        <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </motion.div>
 
               {/* Course content */}
@@ -496,7 +513,6 @@ const StoreProductDetail = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="text-base font-bold text-gray-900 truncate">{storeName}</div>
-                      {ownerBadge && <VerifiedBadge grade={ownerBadge} size="sm" showLabel expiresAt={ownerBadgeExpires} />}
                     </div>
                     {profile.store_description && (
                       <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">
@@ -512,112 +528,124 @@ const StoreProductDetail = () => {
             </div>
 
             {/* ─── RIGHT: Purchase card ─── */}
-            <div className="lg:col-span-2">
+            {/* ─── RIGHT: Purchase card ─── */}
+            <div className="lg:col-span-5 xl:col-span-5">
               {/* Desktop title */}
-              <div className="hidden lg:block mb-5">
+              <div className="hidden lg:block mb-6">
                 <div className="flex items-center gap-2 mb-3 text-xs text-gray-500">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-100 px-3 py-1 font-semibold text-gray-700 shadow-sm">
                     {typeIcons[product.type]} {typeLabels[product.type] || product.type}
                   </span>
                   {!hideSales && salesCount > 0 && (
-                    <span className="inline-flex items-center gap-1">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-100 px-3 py-1 font-semibold text-gray-700 shadow-sm">
                       <Users className="h-3.5 w-3.5" /> {salesCount} ventes
                     </span>
                   )}
                 </div>
-                <h1 className="text-3xl font-extrabold text-gray-900 leading-tight">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
                   {product.title}
                 </h1>
               </div>
 
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
-                className="lg:sticky lg:top-20 rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm"
+                className="lg:sticky lg:top-24 rounded-[32px] border border-gray-100 bg-white p-6 sm:p-8 space-y-6 shadow-[0_8px_40px_rgb(0,0,0,0.06)]"
               >
                 {/* Price */}
                 <div>
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-3xl sm:text-4xl font-extrabold" style={{ color: brandColor }}>
-                      {product.price.toLocaleString()} FCFA
+                  <div className="flex items-end gap-3 flex-wrap">
+                    <span className="text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: brandColor }}>
+                      {product.price.toLocaleString()} <span className="text-2xl sm:text-3xl">FCFA</span>
                     </span>
                     {product.original_price && product.original_price > product.price && (
-                      <span className="text-base text-gray-400 line-through">
+                      <span className="text-lg text-gray-400 line-through font-medium mb-1">
                         {product.original_price.toLocaleString()}
                       </span>
                     )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-3">
                     {discount && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                      <span className="rounded-full bg-emerald-100/80 px-2.5 py-1 text-xs font-bold text-emerald-700">
                         Économisez {discount}%
                       </span>
                     )}
+                    <p className="text-xs text-gray-500 flex items-center gap-1 font-medium">
+                      <Lock className="h-3.5 w-3.5" /> Paiement unique • À vie
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
-                    <Lock className="h-3 w-3" /> Paiement unique • Pas d'abonnement
-                  </p>
                 </div>
 
                 {/* CTA */}
-                <button
-                  className="w-full text-base font-bold py-4 rounded-xl text-white transition-all hover:opacity-95 hover:scale-[1.01] active:scale-[0.99] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  style={{ backgroundColor: isSoldOut ? "#9CA3AF" : brandColor, boxShadow: isSoldOut ? "none" : `0 8px 24px -8px ${brandColor}80` }}
-                  onClick={handleBuy}
-                  disabled={isSoldOut}
-                >
-                  {isSoldOut ? "Épuisé" : "Acheter maintenant"}
-                </button>
+                <div className="relative group">
+                  {!isSoldOut && (
+                    <div 
+                      className="absolute -inset-1 rounded-[20px] blur-lg opacity-40 group-hover:opacity-70 transition duration-500" 
+                      style={{ backgroundColor: brandColor }}
+                    ></div>
+                  )}
+                  <button
+                    className="relative w-full text-lg font-bold py-4 rounded-[16px] text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 overflow-hidden"
+                    style={{ backgroundColor: isSoldOut ? "#9CA3AF" : brandColor }}
+                    onClick={handleBuy}
+                    disabled={isSoldOut}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out" />
+                    {isSoldOut ? "Épuisé" : "Acheter maintenant"}
+                  </button>
+                </div>
 
                 {/* Quick benefits */}
-                <ul className="space-y-2 text-xs text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <Zap className="h-3.5 w-3.5" style={{ color: brandColor }} />
-                    Livré instantanément après paiement
+                <ul className="space-y-3 text-sm text-gray-700 font-medium bg-gray-50/50 p-4 rounded-[16px] border border-gray-100/50">
+                  <li className="flex items-center gap-3">
+                    <Zap className="h-4 w-4" style={{ color: brandColor }} />
+                    Livré instantanément par email
                   </li>
-                  <li className="flex items-center gap-2">
-                    <ShieldCheck className="h-3.5 w-3.5" style={{ color: brandColor }} />
-                    Transaction 100% sécurisée
+                  <li className="flex items-center gap-3">
+                    <ShieldCheck className="h-4 w-4" style={{ color: brandColor }} />
+                    Paiement 100% sécurisé et chiffré
                   </li>
-                  <li className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5" style={{ color: brandColor }} />
-                    Accès à vie depuis « Mes achats »
+                  <li className="flex items-center gap-3">
+                    <Clock className="h-4 w-4" style={{ color: brandColor }} />
+                    Accès à vie depuis votre espace client
                   </li>
                 </ul>
 
                 <Separator className="bg-gray-100" />
 
                 {/* Payment methods */}
-                <div className="space-y-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-400 font-semibold">Moyens de paiement</p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <div className="h-7 w-10 rounded-md bg-[#1A1F71] flex items-center justify-center">
-                      <span className="text-[8px] font-bold text-white">VISA</span>
+                <div className="space-y-3">
+                  <p className="text-[11px] uppercase tracking-wider text-gray-400 font-bold text-center">Paiement sécurisé via</p>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <div className="h-8 w-12 rounded-lg bg-[#1A1F71] flex items-center justify-center shadow-sm">
+                      <span className="text-[9px] font-bold text-white">VISA</span>
                     </div>
-                    <div className="h-7 w-10 rounded-md bg-[#EB001B] flex items-center justify-center">
-                      <span className="text-[8px] font-bold text-white">MC</span>
+                    <div className="h-8 w-12 rounded-lg bg-[#EB001B] flex items-center justify-center shadow-sm">
+                      <span className="text-[9px] font-bold text-white">MC</span>
                     </div>
-                    <img src="/images/mtn-momo.webp" alt="MTN" className="h-7 w-7 rounded-full object-cover" />
-                    <img src="/images/orange-money.png" alt="Orange" className="h-7 w-7 rounded-full object-cover" />
-                    <img src="/images/moov-money.png" alt="Moov" className="h-7 w-7 rounded-full object-cover" />
-                    <img src="/images/wave.png" alt="Wave" className="h-7 w-7 rounded-full object-cover" />
+                    <img src="/images/mtn-momo.webp" alt="MTN" className="h-8 w-8 rounded-full object-cover shadow-sm" />
+                    <img src="/images/orange-money.png" alt="Orange" className="h-8 w-8 rounded-full object-cover shadow-sm" />
+                    <img src="/images/moov-money.png" alt="Moov" className="h-8 w-8 rounded-full object-cover shadow-sm" />
+                    <img src="/images/wave.png" alt="Wave" className="h-8 w-8 rounded-full object-cover shadow-sm" />
                   </div>
                 </div>
 
                 <Separator className="bg-gray-100" />
 
-                <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+                <div className="flex items-center justify-center gap-6 text-xs text-gray-500 font-medium">
                   <button onClick={handleShare} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors">
-                    <Share2 className="h-3.5 w-3.5" />
+                    <Share2 className="h-4 w-4" />
                     Partager
                   </button>
                   {profile.contact && (
                     <a href={`mailto:${profile.contact}`} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors">
-                      <MessageCircle className="h-3.5 w-3.5" />
+                      <MessageCircle className="h-4 w-4" />
                       Contact
                     </a>
                   )}
                   <button className="flex items-center gap-1.5 hover:text-gray-900 transition-colors" onClick={() => setReportOpen(true)}>
-                    <Flag className="h-3.5 w-3.5" />
+                    <Flag className="h-4 w-4" />
                     Signaler
                   </button>
                 </div>
@@ -674,30 +702,6 @@ const StoreProductDetail = () => {
           )}
         </div>
       </main>
-
-      {/* Mobile sticky purchase bar */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-md px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)]">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] text-gray-400 uppercase tracking-wide">Prix</div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-extrabold truncate" style={{ color: brandColor }}>
-                {product.price.toLocaleString()} FCFA
-              </span>
-              {discount && (
-                <span className="text-[10px] font-bold text-emerald-600">-{discount}%</span>
-              )}
-            </div>
-          </div>
-          <button
-            className="flex-shrink-0 px-6 py-3 rounded-xl text-white text-sm font-bold shadow-lg transition-all active:scale-95"
-            style={{ backgroundColor: brandColor, boxShadow: `0 6px 20px -6px ${brandColor}` }}
-            onClick={handleBuy}
-          >
-            Acheter
-          </button>
-        </div>
-      </div>
 
       {/* Footer */}
       <footer className="border-t border-gray-100 bg-white mt-12 hidden lg:block">
@@ -756,6 +760,27 @@ const StoreProductDetail = () => {
         </div>
       </footer>
 
+
+      {/* ─── MOBILE STICKY CTA ─── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200/50 z-50 shadow-[0_-10px_40px_rgb(0,0,0,0.05)]">
+        <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Paiement unique</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-extrabold text-gray-900 leading-none">{product.price.toLocaleString()}</span>
+              <span className="text-sm font-bold text-gray-900">FCFA</span>
+            </div>
+          </div>
+          <button
+            className="flex-1 text-sm font-bold py-3.5 rounded-xl text-white transition-all active:scale-[0.98] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ backgroundColor: isSoldOut ? "#9CA3AF" : brandColor }}
+            onClick={handleBuy}
+            disabled={isSoldOut}
+          >
+            {isSoldOut ? "Épuisé" : "Acheter maintenant"}
+          </button>
+        </div>
+      </div>
 
       <ProductReportDialog
         open={reportOpen}

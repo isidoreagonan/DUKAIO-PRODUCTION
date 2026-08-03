@@ -472,6 +472,110 @@ serve(async (req) => {
       });
     }
 
+    // ── LIST USERS ──
+    if (action === "list_users") {
+      const { data: profiles, error: profileErr } = await supabaseAdmin
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+      
+      if (profileErr) throw profileErr;
+
+      const { data: { users }, error: authErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      if (authErr) throw authErr;
+
+      const authMap = new Map();
+      users.forEach(u => authMap.set(u.id, u));
+
+      const merged = profiles?.map(p => {
+        const authData = authMap.get(p.id);
+        return {
+          ...p,
+          email: authData?.email || null,
+          google_avatar: authData?.user_metadata?.avatar_url || null,
+          google_name: authData?.user_metadata?.full_name || authData?.user_metadata?.name || null
+        };
+      }) || [];
+
+      return new Response(JSON.stringify({ users: merged }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── GET USER DETAILS ──
+    if (action === "get_user_details") {
+      const { userId } = params;
+
+      const { data: profile } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single();
+      
+      const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
+
+      const { data: stores } = await supabaseAdmin.from("stores").select("*").eq("owner_id", userId).order("created_at", { ascending: false });
+
+      const { data: products } = await supabaseAdmin.from("products").select("*").eq("creator_id", userId).order("created_at", { ascending: false });
+
+      const { data: orders } = await supabaseAdmin.from("orders").select("id, amount, created_at, status").eq("store_owner_id", userId).eq("status", "completed");
+      const totalSalesAmount = orders?.reduce((sum, o) => sum + Number(o.amount), 0) || 0;
+
+      const { data: withdrawals } = await supabaseAdmin.from("withdrawals").select("id, net_amount, status, created_at, operator").eq("user_id", userId).order("created_at", { ascending: false });
+      
+      const events: any[] = [];
+      orders?.forEach(o => {
+        events.push({ type: "sale", amount: Number(o.amount), date: o.created_at, status: o.status });
+        events.push({ type: "commission", amount: Number(o.amount) * 0.1, date: o.created_at, status: o.status, detail: "Commission de plateforme" });
+      });
+      withdrawals?.forEach(w => {
+        events.push({ type: "withdrawal", amount: Number(w.net_amount), date: w.created_at, status: w.status, detail: w.operator });
+      });
+      events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      return new Response(JSON.stringify({
+        profile: {
+          ...profile,
+          email: authUser?.email,
+          google_avatar: authUser?.user_metadata?.avatar_url,
+          google_name: authUser?.user_metadata?.full_name || authUser?.user_metadata?.name
+        },
+        stores: stores || [],
+        products: products || [],
+        stats: {
+          totalSales: totalSalesAmount,
+          salesCount: orders?.length || 0,
+          storesCount: stores?.length || 0,
+          productsCount: products?.length || 0,
+          withdrawalsCount: withdrawals?.length || 0,
+        },
+        events: events.slice(0, 50)
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── CLEANUP ORPHANED PRODUCTS ──
+    if (action === "unpublish_orphaned_products") {
+      // Get all stores
+      const { data: stores, error: storesError } = await supabaseAdmin.from("stores").select("owner_id");
+      if (storesError) throw storesError;
+      
+      const ownersWithStores = new Set(stores?.map(s => s.owner_id));
+      
+      // Get all published products
+      const { data: products, error: productsError } = await supabaseAdmin.from("products").select("id, creator_id").eq("is_published", true);
+      if (productsError) throw productsError;
+      
+      const orphanedProducts = products?.filter(p => !ownersWithStores.has(p.creator_id)) || [];
+      
+      const results = [];
+      for (const p of orphanedProducts) {
+        const { error } = await supabaseAdmin.from("products").update({ is_published: false }).eq("id", p.id);
+        if (!error) results.push(p.id);
+      }
+      
+      return new Response(JSON.stringify({ success: true, updatedCount: results.length }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

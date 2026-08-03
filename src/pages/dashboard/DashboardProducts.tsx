@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "sonner";
+import { MissingContentDialog } from "@/components/dashboard/MissingContentDialog";
+import StoreRequiredDialog from "@/components/dashboard/StoreRequiredDialog";
 
 type ProductType = "file" | "course" | "license";
 
@@ -44,6 +46,18 @@ const DashboardProducts = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
+  const [missingContentProduct, setMissingContentProduct] = useState<Product | null>(null);
+  const [hasStore, setHasStore] = useState<boolean>(true);
+  const [storeRequiredOpen, setStoreRequiredOpen] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const checkStore = async () => {
+      const { data } = await supabase.from("stores").select("id").eq("owner_id", user.id).limit(1);
+      setHasStore(data && data.length > 0 ? true : false);
+    };
+    checkStore();
+  }, [user]);
 
   const fetchProducts = async () => {
     if (!user) return;
@@ -132,6 +146,27 @@ const DashboardProducts = () => {
   };
 
   const togglePublish = async (p: Product) => {
+    if (!p.is_published) {
+      if (p.type === "file") {
+        const { data } = await supabase.from("products").select("download_url").eq("id", p.id).single();
+        if (!data?.download_url || data.download_url === "[]" || data.download_url.trim() === "") {
+          setMissingContentProduct(p);
+          return;
+        }
+      } else if (p.type === "course") {
+        const { count } = await supabase.from("course_lessons").select("*", { count: "exact", head: true }).eq("product_id", p.id);
+        if (count === 0 || count === null) {
+          setMissingContentProduct(p);
+          return;
+        }
+      }
+
+      if (!hasStore) {
+        setStoreRequiredOpen(true);
+        return;
+      }
+    }
+
     await supabase.from("products").update({ is_published: !p.is_published }).eq("id", p.id);
     toast.success(p.is_published ? "Produit dépublié" : "Produit publié");
     fetchProducts();
@@ -310,7 +345,7 @@ const DashboardProducts = () => {
                           <DropdownMenuItem onClick={() => {
                             const slug = profile?.store_slug;
                             if (slug) {
-                              window.open(`/store/${slug}/product/${p.id}`, "_blank");
+                              window.open(`/store/${slug}/${p.id}`, "_blank");
                             } else {
                               navigate(`/products/${p.id}`);
                             }
@@ -424,6 +459,16 @@ const DashboardProducts = () => {
           </>
         )}
       </div>
+      <MissingContentDialog
+        open={!!missingContentProduct}
+        onOpenChange={(open) => !open && setMissingContentProduct(null)}
+        onEdit={() => missingContentProduct && navigate(`/dashboard/products/${missingContentProduct.id}/edit`)}
+      />
+
+      <StoreRequiredDialog 
+        open={storeRequiredOpen}
+        onOpenChange={setStoreRequiredOpen}
+      />
     </DashboardLayout>
   );
 };
