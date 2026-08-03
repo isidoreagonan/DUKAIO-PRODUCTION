@@ -101,13 +101,28 @@ const StorePage = () => {
           .single();
         if (prof) setOwnerProfile(prof as OwnerProfile);
 
-        supabase.from("store_visits").insert({
-          store_owner_id: storeData.owner_id,
-          page_path: `/store/${slug}`,
-          referrer: document.referrer || null,
-          user_agent: navigator.userAgent || null,
-          device_type: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
-        } as any).then();
+        // Track visit asynchronously without blocking
+        (async () => {
+          let countryCode = null;
+          try {
+            const res = await fetch("https://ipapi.co/json/");
+            if (res.ok) {
+              const data = await res.json();
+              countryCode = data.country_code; // e.g., "FR", "CI"
+            }
+          } catch (e) {
+            console.error("Failed to fetch country", e);
+          }
+
+          supabase.from("store_visits").insert({
+            store_owner_id: storeData.owner_id,
+            page_path: `/store/${slug}`,
+            referrer: document.referrer || null,
+            user_agent: navigator.userAgent || null,
+            device_type: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
+            country: countryCode
+          } as any).then();
+        })();
 
         const { data: prods } = await supabase
           .from("products")
