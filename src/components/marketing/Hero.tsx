@@ -81,20 +81,20 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAuthModal }) => {
             {/* Primary Action Button */}
             <button
               onClick={handleCreateStore}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 rounded-2xl text-base font-semibold text-white bg-blue hover:bg-blueDeep hover:-translate-y-0.5 transition-all duration-300 shadow-[0_10px_25px_-5px_rgba(37,87,214,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(37,87,214,0.5)] gap-2 group"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-4 rounded-xl text-base font-bold text-white bg-blue hover:bg-blueDeep transition-colors gap-2 group"
             >
               <Store className="w-5 h-5 text-white/90 group-hover:scale-110 transition-transform" />
-              Créer ma boutique gratuitement
+              Commencer à vendre
               <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
             </button>
 
             {/* Secondary Action Button */}
             <button
               onClick={handleExploreMarketplace}
-              className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-4 rounded-2xl text-base font-semibold text-ink bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 hover:-translate-y-0.5 transition-all duration-300 shadow-sm gap-2"
+              className="w-full sm:w-auto inline-flex items-center justify-center px-7 py-4 rounded-xl text-base font-bold text-ink bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors gap-2"
             >
-              <ShoppingBag className="w-5 h-5 text-slate" />
-              Explorer la Marketplace
+              <ShoppingBag className="w-5 h-5 text-slate-600" />
+              Découvrir les produits
             </button>
           </motion.div>
 
@@ -140,12 +140,12 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAuthModal }) => {
 
         </div>
 
-        {/* Dashboard Preview - Large & Prominent (1240px Wide) */}
+        {/* Dashboard Preview - Large & Prominent */}
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.7 }}
-          className="pt-12 sm:pt-16 w-full max-w-6xl xl:max-w-[1240px] mx-auto"
+          className="pt-12 sm:pt-16 w-full max-w-5xl xl:max-w-[1024px] mx-auto"
         >
           <img 
             src={heroDashboard} 
