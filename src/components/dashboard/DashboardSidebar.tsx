@@ -89,8 +89,8 @@ export function DashboardSidebar() {
             <DropdownMenuTrigger asChild>
               <button className={`flex items-center gap-3 text-left outline-none ${collapsed ? "justify-center w-full" : "flex-1 min-w-0"}`}>
                 <div
-                  className={`flex shrink-0 items-center justify-center overflow-hidden ${
-                    collapsed ? "h-12 w-12 mx-auto" : "h-10 w-10 ml-1 rounded-lg"
+                  className={`flex shrink-0 items-center justify-center overflow-hidden bg-white ${
+                    collapsed ? "h-12 w-12 mx-auto rounded-xl p-1.5" : "h-10 w-10 ml-1 rounded-lg p-1"
                   }`}
                 >
                   <img

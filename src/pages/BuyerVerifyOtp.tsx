@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ShieldCheck, Loader2, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/dukaio-logo.png";
 import {
   getBuyerSession,
   clearBuyerSession,
@@ -86,8 +86,7 @@ const BuyerVerifyOtp = () => {
         className="w-full max-w-sm"
       >
         <div className="flex items-center gap-2.5 mb-10">
-          <img src={logo} alt="Dukaio" className="h-8 w-8 rounded-lg object-contain" />
-          <span className="text-lg font-bold text-foreground">Dukaio</span>
+          <img src={logo} alt="Dukaio" className="h-8 w-auto object-contain" />
         </div>
 
         <div className="flex items-center gap-3 mb-6">

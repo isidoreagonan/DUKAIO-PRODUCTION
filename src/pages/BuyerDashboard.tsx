@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Package, ShoppingBag, FileText, GraduationCap, Key, Layers, LogOut } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/dukaio-logo.png";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -105,8 +105,7 @@ const BuyerDashboard = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto flex items-center justify-between px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
-            <img src={logo} alt="Dukaio" className="h-8 w-8 rounded-lg object-contain" />
-            <span className="text-lg font-bold text-foreground">Dukaio</span>
+            <img src={logo} alt="Dukaio" className="h-8 w-auto object-contain" />
           </Link>
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground hidden sm:inline">{customerName}</span>

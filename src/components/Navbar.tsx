@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Menu, X, ChevronDown, LayoutDashboard, ShoppingBag, Store, FileText, GraduationCap, KeyRound, ShoppingCart, Tag, Info, BookOpen, Users, FileQuestion, Mail, LogOut } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/dukaio-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 

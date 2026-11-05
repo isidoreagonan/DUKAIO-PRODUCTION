@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/dukaio-logo.png";
 
 import BuyerContentDialog from "@/components/BuyerContentDialog";
 import ProductReviewForm from "@/components/buyer/ProductReviewForm";
@@ -148,8 +148,7 @@ const BuyerOrderDetail = () => {
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-xl">
         <div className="container mx-auto flex items-center justify-between px-6 py-3">
           <Link to="/" className="flex items-center gap-2.5">
-            <img src={logo} alt="Dukaio" className="h-8 w-8 rounded-lg object-contain" />
-            <span className="text-lg font-bold text-foreground">Dukaio</span>
+            <img src={logo} alt="Dukaio" className="h-8 w-auto object-contain" />
           </Link>
           <Link to="/mes-achats">
             <Button variant="ghost" size="sm" className="gap-1.5">

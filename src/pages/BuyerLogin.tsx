@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ShoppingBag, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/dukaio-logo.png";
 import { setBuyerOtpVerified, setBuyerSession } from "@/lib/buyerSession";
 
 const BuyerLogin = () => {
@@ -89,8 +89,7 @@ const BuyerLogin = () => {
           className="w-full max-w-sm"
         >
           <Link to="/" className="flex items-center gap-2.5 mb-12">
-            <img src={logo} alt="Dukaio" className="h-8 w-8 rounded-lg object-contain" />
-            <span className="text-lg font-bold text-foreground">Dukaio</span>
+            <img src={logo} alt="Dukaio" className="h-8 w-auto object-contain" />
           </Link>
 
           <div className="flex items-center gap-3 mb-6">
