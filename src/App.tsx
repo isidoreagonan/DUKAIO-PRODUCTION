@@ -8,31 +8,21 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Index from "./pages/Index";
+import { dukaioSiteRoutes } from "@/dukaio-site/SiteRoutes";
+
 import SearchPage from "./pages/SearchPage";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Fichiers from "./pages/Fichiers";
-import Cours from "./pages/Cours";
-import LicencesPage from "./pages/LicencesPage";
-
 import About from "./pages/About";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
-import Pricing from "./pages/Pricing";
 import Partners from "./pages/Partners";
 import Documentation from "./pages/Documentation";
 import Contact from "./pages/Contact";
 import FAQ from "./pages/FAQ";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import LegalNotice from "./pages/LegalNotice";
 import RefundPolicy from "./pages/RefundPolicy";
+
 import StorePage from "./pages/StorePage";
 import StoreProductDetail from "./pages/StoreProductDetail";
 import StoreLegalPage from "./pages/StoreLegalPage";
@@ -105,6 +95,13 @@ const ScrollToHashElement = () => {
   return null;
 };
 
+const ConditionalSupportChatbot = () => {
+  const { pathname } = useLocation();
+  const isMarketing = pathname === "/" || pathname.startsWith("/produits") || pathname.startsWith("/legal") || pathname === "/connexion" || pathname === "/inscription" || pathname === "/reinitialiser-mot-de-passe";
+  if (isMarketing) return null;
+  return <SupportChatbot />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -116,37 +113,34 @@ const App = () => (
         <ScrollToHashElement />
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
+            {dukaioSiteRoutes}
+
+            {/* Redirections douces des anciens liens marketing */}
+            <Route path="/pricing" element={<Navigate to="/#tarif" replace />} />
+
+            {/* Pages publiques additionnelles */}
             <Route path="/products" element={<Products />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/marketplace" element={<SearchPage />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/fichiers" element={<Fichiers />} />
-            <Route path="/cours" element={<Cours />} />
-            <Route path="/licences" element={<LicencesPage />} />
-            
             <Route path="/about" element={<About />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/pricing" element={<Navigate to="/#pricing" replace />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/documentation" element={<Documentation />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/legal" element={<LegalNotice />} />
+            <Route path="/faq" element={<Navigate to="/#faq" replace />} />
             <Route path="/refund-policy" element={<RefundPolicy />} />
+
+            {/* Boutiques Vendeurs Publiques & Détail Produits */}
             <Route path="/store/:slug" element={<StorePage />} />
             <Route path="/store/:slug/legal" element={<StoreLegalPage kind="legal" />} />
             <Route path="/store/:slug/terms" element={<StoreLegalPage kind="terms" />} />
             <Route path="/store/:slug/privacy" element={<StoreLegalPage kind="privacy" />} />
             <Route path="/store/:slug/:productId" element={<StoreProductDetail />} />
+
+            {/* Espace Acheteur */}
             <Route path="/buyer-login" element={<BuyerLogin />} />
             <Route path="/buyer/login" element={<BuyerLogin />} />
             <Route path="/buyer-oauth-callback" element={<BuyerOAuthCallback />} />
@@ -155,7 +149,8 @@ const App = () => (
             <Route path="/mes-achats/:orderId" element={<BuyerProtectedRoute><BuyerOrderDetail /></BuyerProtectedRoute>} />
             <Route path="/payment-callback" element={<PaymentCallback />} />
             <Route path="/checkout/:productId" element={<CheckoutPage />} />
-            
+
+            {/* Espace Vendeur Protégé (Dashboard) */}
             <Route path="/verify-otp" element={<ProtectedRoute><VerifyOtp /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
@@ -178,24 +173,25 @@ const App = () => (
             <Route path="/dashboard/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
             <Route path="/dashboard/webhooks" element={<ProtectedRoute><DashboardWebhooks /></ProtectedRoute>} />
             <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-kyc" element={<ProtectedRoute><AdminKYC /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-            <Route path="/dashboard/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-withdrawals" element={<ProtectedRoute><AdminWithdrawals /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-support" element={<ProtectedRoute><AdminSupport /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-moderation" element={<ProtectedRoute><AdminModeration /></ProtectedRoute>} />
             <Route path="/dashboard/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
-            
             <Route path="/dashboard/badge" element={<ProtectedRoute><DashboardBadge /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-badges" element={<ProtectedRoute><AdminBadges /></ProtectedRoute>} />
-            
             <Route path="/dashboard/support" element={<ProtectedRoute><DashboardSupport /></ProtectedRoute>} />
             <Route path="/dashboard/menu" element={<ProtectedRoute><DashboardMenu /></ProtectedRoute>} />
             <Route path="/dashboard/tools" element={<ProtectedRoute><DashboardTools /></ProtectedRoute>} />
             <Route path="/dashboard/nova" element={<ProtectedRoute><Nova /></ProtectedRoute>} />
+
+            {/* Espace Administration */}
+            <Route path="/dashboard/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/dashboard/admin-kyc" element={<ProtectedRoute><AdminKYC /></ProtectedRoute>} />
+            <Route path="/dashboard/admin-users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/dashboard/admin-withdrawals" element={<ProtectedRoute><AdminWithdrawals /></ProtectedRoute>} />
+            <Route path="/dashboard/admin-support" element={<ProtectedRoute><AdminSupport /></ProtectedRoute>} />
+            <Route path="/dashboard/admin-moderation" element={<ProtectedRoute><AdminModeration /></ProtectedRoute>} />
+            <Route path="/dashboard/admin-badges" element={<ProtectedRoute><AdminBadges /></ProtectedRoute>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <SupportChatbot />
+          <ConditionalSupportChatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

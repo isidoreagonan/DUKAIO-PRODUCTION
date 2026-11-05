@@ -23,7 +23,7 @@ const CTASection = () => {
             <p className="text-background/60 text-lg max-w-xl mx-auto mb-10">
               Rejoignez des milliers de créateurs qui vendent déjà leurs produits digitaux avec Dukaio.
             </p>
-            <Link to="/register">
+            <Link to="/inscription">
               <Button 
                 size="lg" 
                 className="px-10 py-6 text-base font-semibold"

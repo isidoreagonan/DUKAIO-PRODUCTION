@@ -87,7 +87,7 @@ const WithdrawNew = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate("/connexion"); return; }
     (async () => {
       const [walletBalRes, kycRes, walletsRes] = await Promise.all([
         supabase.from("user_wallets").select("balance_fcfa").eq("user_id", user.id).maybeSingle(),

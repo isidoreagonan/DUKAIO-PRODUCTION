@@ -251,7 +251,7 @@ const About = () => {
             <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
               Ouvrez votre boutique en moins de 3 minutes. Encaissez en Mobile Money dès la première vente.
             </p>
-            <Link to="/register">
+            <Link to="/inscription">
               <Button size="lg" className="px-10 py-7 text-base font-bold shadow-2xl hover:shadow-accent/30 transition-shadow">
                 Rejoindre le mouvement
                 <ArrowRight className="ml-2 h-4 w-4" />

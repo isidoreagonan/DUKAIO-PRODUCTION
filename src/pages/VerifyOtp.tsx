@@ -20,7 +20,7 @@ const VerifyOtp = () => {
 
   // Auto-redirect if not authenticated
   useEffect(() => {
-    if (!loading && !user) navigate("/login", { replace: true });
+    if (!loading && !user) navigate("/connexion", { replace: true });
   }, [loading, user, navigate]);
 
   const sendCode = async () => {
@@ -156,7 +156,7 @@ const VerifyOtp = () => {
               type="button"
               onClick={async () => {
                 await signOut();
-                navigate("/login", { replace: true });
+                navigate("/connexion", { replace: true });
               }}
               className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
             >

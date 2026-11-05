@@ -137,7 +137,7 @@ const Marketplace = () => {
                   <ShoppingBag className="h-4 w-4" /> Mes achats
                 </Button>
               </Link>
-              <Link to="/register">
+              <Link to="/inscription">
                 <Button size="sm" className="rounded-full gap-1.5 shadow-lg shadow-primary/30">
                   <Store className="h-4 w-4" /> Devenir vendeur
                 </Button>
@@ -393,7 +393,7 @@ const Marketplace = () => {
             money intégrés, suite marketing complète.
           </p>
           <div className="relative flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register">
+            <Link to="/inscription">
               <Button size="lg" variant="secondary" className="rounded-full gap-2 shadow-lg">
                 Ouvrir ma boutique <ArrowRight className="h-4 w-4" />
               </Button>

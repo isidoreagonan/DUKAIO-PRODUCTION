@@ -71,7 +71,7 @@ const Wallet = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) { navigate("/login"); return; }
+    if (!user) { navigate("/connexion"); return; }
     (async () => {
       const { data } = await supabase.from("wallet_pins").select("user_id").eq("user_id", user.id).maybeSingle();
       const pinExists = !!data;

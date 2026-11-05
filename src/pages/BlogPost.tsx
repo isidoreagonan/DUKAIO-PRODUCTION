@@ -120,7 +120,7 @@ const BlogPost = () => {
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
               Créez gratuitement votre boutique Dukaio en 5 minutes et commencez à vendre vos produits digitaux.
             </p>
-            <Link to="/register">
+            <Link to="/inscription">
               <Button size="lg" className="px-8 gap-2 shadow-lg shadow-primary/25">
                 Créer ma boutique gratuite <ArrowRight className="h-4 w-4" />
               </Button>

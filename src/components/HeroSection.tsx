@@ -65,7 +65,7 @@ const HeroSection = () => {
                 transition={{ duration: 0.6, delay: 0.3 }}
                 className="flex flex-wrap items-center gap-5"
               >
-                <Link to="/register">
+                <Link to="/inscription">
                   <Button
                     size="lg"
                     className="rounded-xl bg-[hsl(225,70%,20%)] hover:bg-[hsl(225,70%,15%)] px-8 py-6 text-base font-semibold text-white shadow-xl shadow-[hsl(225,70%,20%)]/20"

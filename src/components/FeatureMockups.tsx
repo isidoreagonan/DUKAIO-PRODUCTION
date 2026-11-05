@@ -8,7 +8,7 @@ const features = [
     tag: "Boutique",
     title: "Lancez votre boutique en ligne en 2 minutes",
     description: "Personnalisez votre boutique avec votre logo, couleurs et style. Offrez une expérience unique à vos clients, sans compétences techniques.",
-    cta: { label: "Créer une boutique gratuite", href: "/register" },
+    cta: { label: "Créer une boutique gratuite", href: "/inscription" },
     align: "left" as const,
     mockup: (
       <div className="rounded-2xl border border-border bg-card shadow-xl overflow-hidden">
@@ -51,7 +51,7 @@ const features = [
     tag: "Paiements",
     title: "Vendez sans frontières, acceptez tous les paiements",
     description: "Vos clients paient via Mobile Money, Orange Money, Wave, MTN, cartes bancaires. Dukaio gère les devises et les conversions automatiquement.",
-    cta: { label: "Commencer à vendre", href: "/register" },
+    cta: { label: "Commencer à vendre", href: "/inscription" },
     align: "right" as const,
     mockup: (
       <div className="space-y-3">
@@ -93,7 +93,7 @@ const features = [
     tag: "Automatisations",
     title: "Automatisez votre business. Gagnez du temps.",
     description: "Livraison auto après achat, emails de remerciement, relance de paniers abandonnés. Votre boutique tourne 24/7 sans effort.",
-    cta: { label: "Découvrir les automations", href: "/register" },
+    cta: { label: "Découvrir les automations", href: "/inscription" },
     align: "left" as const,
     mockup: (
       <div className="rounded-2xl border border-border bg-card p-5 shadow-xl">
@@ -136,7 +136,7 @@ const features = [
     tag: "IA intégrée",
     title: "L'intelligence artificielle au service de vos ventes",
     description: "Rédigez vos descriptions produits, corrigez vos textes et générez des titres accrocheurs en un clic. L'IA vous assiste à chaque étape.",
-    cta: { label: "Essayer l'IA", href: "/register" },
+    cta: { label: "Essayer l'IA", href: "/inscription" },
     align: "right" as const,
     mockup: (
       <div className="rounded-2xl border border-border bg-card p-5 shadow-xl">
@@ -172,7 +172,7 @@ const features = [
     tag: "Affiliation",
     title: "Boostez vos ventes avec notre réseau d'affiliés",
     description: "Listez vos produits sur notre réseau d'affiliation. Définissez vos commissions. Des milliers de partenaires promeuvent vos créations.",
-    cta: { label: "Rejoindre le réseau", href: "/register" },
+    cta: { label: "Rejoindre le réseau", href: "/inscription" },
     align: "left" as const,
     mockup: (
       <div className="rounded-2xl border border-border bg-card p-5 shadow-xl">
@@ -213,7 +213,7 @@ const features = [
     tag: "Analytics",
     title: "Prenez les bonnes décisions avec des statistiques claires",
     description: "Suivez vos revenus en temps réel. Identifiez vos meilleurs produits. Analysez vos taux de conversion avec des dashboards intuitifs.",
-    cta: { label: "Voir mon dashboard", href: "/register" },
+    cta: { label: "Voir mon dashboard", href: "/inscription" },
     align: "right" as const,
     mockup: (
       <div className="rounded-2xl border border-border bg-card p-5 shadow-xl">

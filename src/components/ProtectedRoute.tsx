@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/connexion" replace />;
 
   // Force 2FA verification if required (after login or after 5 days)
   if (requires2FA && location.pathname !== "/verify-otp") {

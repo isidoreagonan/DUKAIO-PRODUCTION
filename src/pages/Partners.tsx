@@ -27,7 +27,7 @@ const Partners = () => {
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
               Rejoignez notre programme partenaire et gagnez des commissions en recommandant la plateforme.
             </p>
-            <Link to="/register">
+            <Link to="/inscription">
               <Button size="lg" className="px-8 py-6 text-base font-semibold shadow-lg shadow-primary/25">
                 Devenir partenaire <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

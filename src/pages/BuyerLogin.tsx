@@ -234,7 +234,7 @@ const BuyerLogin = () => {
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
             Vous êtes vendeur ?{" "}
-            <Link to="/login" className="font-medium text-primary hover:underline">
+            <Link to="/connexion" className="font-medium text-primary hover:underline">
               Connexion vendeur
             </Link>
           </p>

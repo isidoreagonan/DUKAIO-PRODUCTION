@@ -95,10 +95,10 @@ const Navbar = () => {
                   <ShoppingBag className="h-4 w-4" /> Mes achats
                 </Button>
               </Link>
-              <Link to="/login">
+              <Link to="/connexion">
                 <Button variant="ghost" size="sm" className="text-sm font-medium text-muted-foreground">Connexion vendeur</Button>
               </Link>
-              <Link to="/register">
+              <Link to="/inscription">
                 <Button size="sm" className="text-sm font-semibold gap-2">
                   <Store className="h-4 w-4" /> Devenir vendeur
                 </Button>
@@ -141,7 +141,7 @@ const Navbar = () => {
                         <p className="text-[10px] text-muted-foreground mt-0.5">Acheteur</p>
                       </div>
                     </Link>
-                    <Link to="/register" onClick={() => setMobileOpen(false)}>
+                    <Link to="/inscription" onClick={() => setMobileOpen(false)}>
                       <div className="rounded-2xl bg-gradient-to-br from-primary to-accent p-4 text-center shadow-lg shadow-primary/25">
                         <Store className="h-5 w-5 text-white mx-auto mb-2" />
                         <p className="text-xs font-bold text-white">Devenir vendeur</p>
@@ -223,7 +223,7 @@ const Navbar = () => {
 
               {!user && (
                 <div className="border-t border-border bg-background/95 backdrop-blur px-5 py-3">
-                  <Link to="/login" onClick={() => setMobileOpen(false)}>
+                  <Link to="/connexion" onClick={() => setMobileOpen(false)}>
                     <Button variant="outline" className="w-full" size="sm">
                       Connexion vendeur
                     </Button>

@@ -14,7 +14,7 @@ const Footer: React.FC<FooterProps> = ({ onOpenAuthModal }) => {
     if (onOpenAuthModal) {
       onOpenAuthModal();
     } else {
-      navigate('/register');
+      navigate('/inscription');
     }
   };
 
