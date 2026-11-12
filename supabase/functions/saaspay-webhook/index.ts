@@ -209,10 +209,25 @@ Deno.serve(async (req) => {
           .single();
 
         const currentPending = Number(wallet?.pending_fcfa || 0);
+        const newPending = currentPending + netSeller;
         await supabase
           .from("user_wallets")
-          .update({ pending_fcfa: currentPending + netSeller })
+          .update({ pending_fcfa: newPending })
           .eq("user_id", storeOwnerId);
+
+        // Record in wallet_transactions for the seller history
+        await supabase.from("wallet_transactions").insert({
+          user_id: storeOwnerId,
+          wallet_currency: "FCFA",
+          type: "sale",
+          amount: netSeller,
+          balance_after: newPending,
+          reference_id: orderId,
+          reference_type: "order",
+          status: "pending",
+          available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+          description: `Vente produit (${grossAmount} FCFA brut — net 95% après commission 5% DUKAIO)`,
+        });
 
         console.log(`[saaspay-webhook] credited seller ${storeOwnerId}: gross=${grossAmount}, dukaio(5%)=${dukaioCommission}, seller(95%)=${netSeller}`);
       }

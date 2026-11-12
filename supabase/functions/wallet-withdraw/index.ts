@@ -1,4 +1,4 @@
-// Withdraw from FCFA wallet via PawaPay payout
+// Withdraw from FCFA wallet via SaaSPay payout (with fallback to manual / PawaPay)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,14 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const SAASPAY_BASE_URL = Deno.env.get("SAASPAY_BASE_URL") || "https://api.saspay.me/api/v1";
 const PAWAPAY_BASE = "https://api.pawapay.io";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const token = Deno.env.get("PAWAPAY_API_TOKEN");
-    if (!token) return j({ error: "PawaPay non configuré" }, 500);
+    const saaspayKey = Deno.env.get("SAASPAY_SECRET_KEY");
+    const pawapayToken = Deno.env.get("PAWAPAY_API_TOKEN");
+
+    if (!saaspayKey && !pawapayToken) return j({ error: "Aucun prestataire de paiement configuré" }, 500);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const service = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -25,7 +28,7 @@ Deno.serve(async (req) => {
     const { data: { user } } = await userClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (!user) return j({ error: "Non authentifié" }, 401);
 
-    const { amount, phone, provider } = await req.json();
+    const { amount, phone, provider, country } = await req.json();
     if (!amount || amount < 100) return j({ error: "Montant minimum 100 FCFA" }, 400);
     if (!phone || !provider) return j({ error: "Numéro et opérateur requis" }, 400);
 
@@ -43,16 +46,21 @@ Deno.serve(async (req) => {
     const newBalance = available - amount;
     await service.from("user_wallets").update({ balance_fcfa: newBalance }).eq("user_id", user.id);
 
+    const providerCode = String(provider).toLowerCase();
+    const operatorName = providerCode.split("_")[0];
+    const countryCode = (country || providerCode.split("_")[1] || "BJ").toUpperCase();
+
     // Create withdrawal record
     const { data: withdrawal, error: insErr } = await service.from("withdrawals").insert({
       user_id: user.id,
       amount, fee: 0, net_amount: amount,
       phone_number: `+${cleanPhone}`,
-      operator: provider.toLowerCase().split("_")[0],
+      operator: operatorName,
       provider_code: provider,
-      payment_provider: "pawapay",
+      payment_provider: saaspayKey ? "saaspay" : "pawapay",
       status: "processing",
     } as any).select().single();
+
     if (insErr) {
       // Refund
       await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
@@ -68,6 +76,74 @@ Deno.serve(async (req) => {
       description: `Retrait Mobile Money vers +${cleanPhone}`,
     });
 
+    // -------------------------------------------------------------
+    // OPTION A: SAASPAY PAYOUT
+    // -------------------------------------------------------------
+    if (saaspayKey) {
+      const saaspayMethod = `${operatorName}_${countryCode.toLowerCase()}`;
+      const idempotencyKey = `payout-${withdrawal.id}-${Date.now()}`;
+      const payload = {
+        amount: Math.round(amount).toFixed(2),
+        currency: "XOF",
+        country: countryCode,
+        payment_method: saaspayMethod,
+        recipient: { msisdn: cleanPhone },
+        reference: `RETRAIT-${withdrawal.id.slice(0, 8).toUpperCase()}`,
+      };
+
+      console.log("[wallet-withdraw -> saaspay] payload:", JSON.stringify(payload));
+
+      try {
+        const resp = await fetch(`${SAASPAY_BASE_URL}/payouts/initialize/`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${saaspayKey}`,
+            "Content-Type": "application/json",
+            "Idempotency-Key": idempotencyKey,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+        console.log("[wallet-withdraw -> saaspay] response:", resp.status, JSON.stringify(data));
+
+        if (resp.ok && (data.id || data.payout_id || data.status === "success" || data.status === "processing")) {
+          const payoutId = data.id || data.payout_id || idempotencyKey;
+          await service.from("withdrawals").update({
+            pawapay_payout_id: payoutId,
+            status: "processing",
+          }).eq("id", withdrawal.id);
+
+          await service.from("notifications").insert({
+            user_id: user.id,
+            title: "Demande de retrait en cours",
+            message: `Votre virement de ${amount} FCFA vers +${cleanPhone} est en cours de traitement via SaaSPay.`,
+            type: "info",
+          });
+
+          return j({ success: true, withdrawal_id: withdrawal.id, status: "processing" });
+        } else {
+          // If SaaSPay payout API is still awaiting account validation from their team, keep in manual processing
+          console.warn("[wallet-withdraw -> saaspay] non-fatal or awaiting activation, queuing manual:", data);
+          await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
+          await service.from("notifications").insert({
+            user_id: user.id,
+            title: "Retrait en traitement",
+            message: `Votre retrait de ${amount} FCFA a été enregistré et est en cours de validation.`,
+            type: "info",
+          });
+          return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
+        }
+      } catch (err: any) {
+        console.error("[wallet-withdraw -> saaspay error]", err);
+        await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
+        return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // OPTION B: PAWAPAY PAYOUT (Fallback)
+    // -------------------------------------------------------------
     const payoutId = crypto.randomUUID();
     const payload = {
       payoutId, amount: Math.round(amount).toString(), currency: "XOF",
@@ -78,35 +154,21 @@ Deno.serve(async (req) => {
 
     const resp = await fetch(`${PAWAPAY_BASE}/v2/payouts`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${pawapayToken}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     const data = await resp.json();
-    console.log("[wallet-withdraw]", resp.status, JSON.stringify(data).slice(0, 300));
+    console.log("[wallet-withdraw -> pawapay]", resp.status, JSON.stringify(data).slice(0, 300));
 
     if (!resp.ok || data.status === "REJECTED" || data.status === "FAILED") {
       const reason = data?.failureReason?.failureMessage || data?.rejectionReason?.rejectionMessage || "Erreur PawaPay";
-      const notConfigured = /not been configured to make payouts/i.test(String(reason));
-      if (notConfigured) {
-        // Keep pending for manual processing - don't refund
-        await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
-        await service.from("notifications").insert({
-          user_id: user.id, title: "Retrait en traitement manuel",
-          message: `Votre retrait de ${amount} FCFA sera traité manuellement sous 24-48h.`,
-          type: "info",
-        });
-        return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
-      }
-      // Refund
-      await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
-      await service.from("withdrawals").update({ status: "failed" }).eq("id", withdrawal.id);
-      await service.from("wallet_transactions").insert({
-        user_id: user.id, wallet_currency: "FCFA", type: "refund",
-        amount, balance_after: available,
-        reference_id: withdrawal.id, reference_type: "withdrawal",
-        status: "completed", description: `Remboursement retrait échoué: ${reason}`,
+      await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
+      await service.from("notifications").insert({
+        user_id: user.id, title: "Retrait en traitement manuel",
+        message: `Votre retrait de ${amount} FCFA sera traité manuellement sous 24-48h.`,
+        type: "info",
       });
-      return j({ error: reason }, 400);
+      return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
     }
 
     await service.from("withdrawals").update({ pawapay_payout_id: payoutId }).eq("id", withdrawal.id);
