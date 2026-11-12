@@ -117,7 +117,6 @@ export function DashboardSidebar({
     { title: "Ventes", url: "/dashboard/sales", icon: ShoppingCart },
     { title: "Clients", url: "/dashboard/clients", icon: Users },
     { title: "Revenus", url: "/dashboard/revenue", icon: DollarSign },
-    { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
     { title: "Analytiques", url: "/dashboard/analytics", icon: BarChart3 },
     { title: "Autres outils", url: "/dashboard/menu", icon: LayoutGrid },
   ];

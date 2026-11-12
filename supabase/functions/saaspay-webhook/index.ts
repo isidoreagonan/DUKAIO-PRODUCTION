@@ -198,21 +198,21 @@ Deno.serve(async (req) => {
         await supabase.from("payment_events").update({ status: "success" }).eq("id", ev.id);
       }
 
-      // Credit seller wallet with 95%
+      // Credit seller wallet with 95% immediately (0-minute hold)
       const storeOwnerId = ev?.store_owner_id;
       if (storeOwnerId) {
         await supabase.from("user_wallets").upsert({ user_id: storeOwnerId }, { onConflict: "user_id" });
         const { data: wallet } = await supabase
           .from("user_wallets")
-          .select("pending_fcfa, balance_fcfa")
+          .select("balance_fcfa")
           .eq("user_id", storeOwnerId)
           .single();
 
-        const currentPending = Number(wallet?.pending_fcfa || 0);
-        const newPending = currentPending + netSeller;
+        const currentBal = Number(wallet?.balance_fcfa || 0);
+        const newBal = currentBal + netSeller;
         await supabase
           .from("user_wallets")
-          .update({ pending_fcfa: newPending })
+          .update({ balance_fcfa: newBal })
           .eq("user_id", storeOwnerId);
 
         // Record in wallet_transactions for the seller history
@@ -221,15 +221,15 @@ Deno.serve(async (req) => {
           wallet_currency: "FCFA",
           type: "sale",
           amount: netSeller,
-          balance_after: newPending,
+          balance_after: newBal,
           reference_id: orderId,
           reference_type: "order",
-          status: "pending",
-          available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+          status: "completed",
+          available_at: new Date().toISOString(),
           description: `Vente produit (${grossAmount} FCFA brut — net 95% après commission 5% DUKAIO)`,
         });
 
-        console.log(`[saaspay-webhook] credited seller ${storeOwnerId}: gross=${grossAmount}, dukaio(5%)=${dukaioCommission}, seller(95%)=${netSeller}`);
+        console.log(`[saaspay-webhook] credited seller ${storeOwnerId}: gross=${grossAmount}, dukaio(5%)=${dukaioCommission}, seller(95%)=${netSeller} (instant available)`);
       }
 
       return new Response("ok (transaction completed)", { status: 200 });

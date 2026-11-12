@@ -35,14 +35,6 @@ const tools: Tool[] = [
     bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/70 dark:border-emerald-900/50",
   },
   {
-    title: "Wallet",
-    subtitle: "Soldes & demandes de retrait",
-    url: "/dashboard/wallet",
-    icon: Wallet,
-    iconColor: "text-teal-600 dark:text-teal-400",
-    bg: "bg-teal-50 dark:bg-teal-950/40 border-teal-200/70 dark:border-teal-900/50",
-  },
-  {
     title: "Badge Verify",
     subtitle: "Certification boutique & confiance",
     url: "/dashboard/badge",

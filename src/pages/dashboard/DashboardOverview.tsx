@@ -315,7 +315,7 @@ export function DashboardOverview() {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Card 1: Solde disponible (Full width on mobile/tablet: col-span-2, 1 column on desktop: lg:col-span-1) */}
           <div
-            onClick={() => navigate("/dashboard/wallet")}
+            onClick={() => navigate("/dashboard/wallet?action=withdraw")}
             className="col-span-2 lg:col-span-1 rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-4 sm:p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between shadow-2xs group"
           >
             <div className="flex items-center justify-between text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">

@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, ShoppingBag, Receipt, Wallet, LayoutGrid } from "lucide-react";
+import { Home, ShoppingBag, Receipt, DollarSign, LayoutGrid } from "lucide-react";
 import { createPortal } from "react-dom";
 
 const tabs = [
   { title: "Accueil", url: "/dashboard", icon: Home, end: true },
   { title: "Produits", url: "/dashboard/products", icon: ShoppingBag },
   { title: "Ventes", url: "/dashboard/sales", icon: Receipt },
-  { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
+  { title: "Revenus", url: "/dashboard/revenue", icon: DollarSign },
   { title: "Menu", url: "/dashboard/menu", icon: LayoutGrid },
 ];
 

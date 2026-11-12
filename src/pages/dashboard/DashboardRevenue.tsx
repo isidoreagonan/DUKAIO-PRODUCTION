@@ -113,15 +113,8 @@ export default function DashboardRevenue() {
       const netAmt = Math.round(grossAmt * 0.95);
 
       total += netAmt;
-
-      const createdAt = new Date(o.created_at);
-      if (createdAt > holdCutoff) {
-        // En attente : vente payée il y a moins de 24 heures
-        pending += netAmt;
-      } else {
-        // Payé / Disponible : plus de 24h écoulées, retirable immédiatement
-        paid += netAmt;
-      }
+      // Retrait immédiat (0 minute hold) : toute commande payée est immédiatement disponible
+      paid += netAmt;
     });
 
     return {
@@ -131,21 +124,12 @@ export default function DashboardRevenue() {
     };
   }, [orders]);
 
-  // Transform completed sales into clean revenue items (95% net seller)
+  // Transform completed sales into clean revenue items (95% net seller, instant availability)
   const allItems: RevenueItem[] = useMemo(() => {
-    const now = new Date();
-    const holdCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
     return orders.map((o) => {
-      const createdAt = new Date(o.created_at);
       const grossAmt = Number(o.amount || 0);
       const netAmt = Math.round(grossAmt * 0.95);
       const commission = grossAmt - netAmt;
-      const isAvailable = createdAt <= holdCutoff;
-      const status: "paid" | "pending" = isAvailable ? "paid" : "pending";
-
-      // Date de disponibilité (created_at + 24 heures)
-      const availableAt = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
 
       return {
         id: o.id,
@@ -155,9 +139,9 @@ export default function DashboardRevenue() {
         amount: netAmt,
         commission,
         date: o.created_at,
-        availableAt: availableAt.toISOString(),
-        status,
-        isAvailable,
+        availableAt: o.created_at,
+        status: "paid",
+        isAvailable: true,
       };
     });
   }, [orders]);
@@ -284,7 +268,7 @@ export default function DashboardRevenue() {
 
             {/* Action Button: Effectuer un retrait */}
             <button
-              onClick={() => navigate("/dashboard/wallet")}
+              onClick={() => navigate("/dashboard/wallet?action=withdraw")}
               className="w-full lg:w-auto inline-flex items-center justify-center gap-2.5 2xl:gap-3.5 px-6 py-4 xl:px-8 xl:py-4.5 2xl:px-10 2xl:py-5.5 rounded-2xl 2xl:rounded-[24px] bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] font-extrabold text-xs xl:text-sm 2xl:text-base tracking-tight shadow-sm transition-all active:scale-95 shrink-0"
             >
               <Wallet className="h-4 w-4 xl:h-4.5 xl:w-4.5 2xl:h-5 2xl:w-5 stroke-[2]" />

@@ -51,12 +51,25 @@ Deno.serve(async (req) => {
     const rawPhone = (w.phone_number || "").replace(/\D/g, "");
     const idempotencyKey = `payout-${w.id}-${Date.now()}`;
 
+    const providerCode = String(w.provider_code || "").toLowerCase();
+    const operator = String(w.operator || "").toLowerCase();
+    let method = "mtn_bj";
+    let countryCode = "BJ";
+
+    if (providerCode.includes("_")) {
+      method = providerCode;
+      countryCode = providerCode.split("_")[1].toUpperCase();
+    } else if (operator) {
+      countryCode = "BJ";
+      method = `${operator}_bj`;
+    }
+
     // SaaSPay Payout initialization payload
     const payload = {
       amount: amountFormatted,
       currency: "XOF",
-      country: "BJ",
-      payment_method: w.operator ? `${w.operator.toLowerCase()}_bj` : "mtn_bj",
+      country: countryCode,
+      payment_method: method,
       recipient: {
         msisdn: rawPhone,
       },
