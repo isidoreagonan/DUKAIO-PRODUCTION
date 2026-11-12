@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Home, Package, ShoppingCart, BarChart3, LayoutGrid,
   Search, Moon, Sun, User as UserIcon, Settings, Store,
-  LogOut, ExternalLink, ChevronRight, Folder, ArrowUpRight, X
+  LogOut, ExternalLink, ChevronRight, Folder, ArrowUpRight, X,
+  ArrowLeft, Copy, Plus, Headphones, Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveStore } from "@/hooks/useActiveStore";
@@ -96,6 +98,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
+  // Dynamic page title for PC top header
+  const currentPage = useMemo(() => {
+    const p = location.pathname;
+    if (p === "/dashboard") return { title: "Aperçu", isRoot: true };
+    if (p.startsWith("/dashboard/products/new")) return { title: "Nouveau produit", isRoot: false };
+    if (p.startsWith("/dashboard/products")) return { title: "Produits", isRoot: false };
+    if (p.startsWith("/dashboard/sales")) return { title: "Ventes", isRoot: false };
+    if (p.startsWith("/dashboard/analytics")) return { title: "Analytiques", isRoot: false };
+    if (p.startsWith("/dashboard/clients")) return { title: "Clients", isRoot: false };
+    if (p.startsWith("/dashboard/wallet")) return { title: "Wallet & Solde", isRoot: false };
+    if (p.startsWith("/dashboard/menu")) return { title: "Tous les outils", isRoot: false };
+    if (p.startsWith("/dashboard/settings")) return { title: "Paramètres", isRoot: false };
+    if (p.startsWith("/dashboard/profile")) return { title: "Mon profil", isRoot: false };
+    if (p.startsWith("/dashboard/nova")) return { title: "Nova IA", isRoot: false };
+    if (p.startsWith("/dashboard/support")) return { title: "Support client", isRoot: false };
+    if (p.startsWith("/dashboard/marketing")) return { title: "Marketing", isRoot: false };
+    if (p.startsWith("/dashboard/affiliation")) return { title: "Affiliation", isRoot: false };
+    if (p.startsWith("/dashboard/automations")) return { title: "Automatisations", isRoot: false };
+    if (p.startsWith("/dashboard/webhooks")) return { title: "Webhooks", isRoot: false };
+    if (p.startsWith("/dashboard/stores")) return { title: "Mes boutiques", isRoot: false };
+    if (p.startsWith("/dashboard/badge")) return { title: "Badge Verify", isRoot: false };
+    if (p.startsWith("/dashboard/tools")) return { title: "Outils", isRoot: false };
+    if (p.startsWith("/dashboard/revenue")) return { title: "Revenus", isRoot: false };
+    return { title: "Tableau de bord", isRoot: false };
+  }, [location.pathname]);
+
+  // Copy store link
+  const handleCopyStoreLink = () => {
+    const slug = activeStore?.slug || profile?.store_slug;
+    const url = slug
+      ? `${window.location.origin}/store/${slug}`
+      : window.location.origin;
+
+    navigator.clipboard.writeText(url);
+    toast.success("Lien de votre boutique copié !");
+  };
+
+  // Visit store
+  const handleVisitStore = () => {
+    const slug = activeStore?.slug || profile?.store_slug;
+    if (slug) {
+      window.open(`/store/${slug}`, "_blank");
+    } else {
+      navigate("/dashboard/stores");
+    }
+  };
+
   // 5 mobile bottom navigation items (Exact Chariow pattern)
   const mobileNavItems = [
     { title: "Accueil", url: "/dashboard", icon: Home, end: true },
@@ -122,66 +171,216 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
-      {/* Mobile Sticky Top Header (< 1024px: clean logo, search, theme switch, avatar) */}
-      <header className="lg:hidden sticky top-0 z-30 h-14 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-3.5 flex items-center justify-between shadow-2xs">
-        {/* Left: Brand logo & Store Name */}
-        <div
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 cursor-pointer min-w-0"
-        >
-          <div className="h-7 w-7 rounded-lg bg-card border border-border flex items-center justify-center p-1 shrink-0">
-            <img src={logo} alt="Dukaio" className="h-full w-full object-contain" />
-          </div>
-          <span className="text-xs font-bold uppercase tracking-tight text-foreground truncate max-w-[150px]">
-            {storeName}
-          </span>
-        </div>
-
-        {/* Right: Quick Search, Theme toggle & Profile Avatar */}
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setSearchOpen(true)}
-            aria-label="Recherche rapide"
-            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center transition-colors"
-          >
-            <Search className="h-4 w-4 stroke-[2]" />
-          </button>
-
-          <button
-            onClick={toggleTheme}
-            aria-label="Changer de thème"
-            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center transition-colors"
-          >
-            {isDark ? (
-              <Sun className="h-4 w-4 text-amber-500" />
-            ) : (
-              <Moon className="h-4 w-4 text-slate-500" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileSheetOpen(true)}
-            aria-label="Profil utilisateur"
-            className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center ml-0.5 active:scale-95 transition-transform"
-          >
-            <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[11px] font-black text-primary overflow-hidden">
-              {userAvatar ? (
-                <img src={userAvatar} alt="" className="h-full w-full object-cover" />
-              ) : (
-                initial
-              )}
-            </div>
-          </button>
-        </div>
-      </header>
-
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col transition-[padding-left] duration-300 ease-in-out ${
           collapsed ? "lg:pl-[76px]" : "lg:pl-[236px]"
         }`}
       >
-        <main className="flex-1 pt-3 pb-24 lg:pb-12 px-3 sm:px-6 max-w-[1400px] w-full mx-auto">
+        {/* 1. PC TOP BAR (>= 1024px: Exact match Image 1) */}
+        <header className="hidden lg:flex sticky top-0 z-30 h-14 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-6 items-center justify-between shadow-2xs">
+          {/* Left: Dynamic page title + back button */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {!currentPage.isRoot && (
+              <button
+                onClick={() => navigate(-1)}
+                aria-label="Retour"
+                className="h-8 w-8 rounded-xl bg-secondary/60 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                title="Page précédente"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            )}
+            <h1 className="text-[14px] font-bold text-foreground tracking-tight truncate">
+              {currentPage.title}
+            </h1>
+          </div>
+
+          {/* Center: Search input pill ("Trouvez n'importe quoi : Appuyez sur ⌘K sur votre clavier") */}
+          <div
+            onClick={() => setSearchOpen(true)}
+            className="w-[320px] xl:w-[420px] h-9 px-3.5 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:border-border hover:bg-[#ECEEF2] dark:hover:bg-[#252E42] text-xs text-muted-foreground flex items-center justify-between cursor-pointer transition-all shadow-2xs group"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Search className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
+              <span className="truncate">
+                Trouvez n'importe quoi : Appuyez sur
+              </span>
+              <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-white dark:bg-card border border-border/80 text-foreground shadow-2xs shrink-0">
+                ⌘K
+              </kbd>
+              <span className="hidden xl:inline truncate">
+                sur votre clavier
+              </span>
+            </div>
+          </div>
+
+          {/* Right: Actions row (Visiter boutique + Copier + Nova IA + [+] + Theme + Grid + Avatar) */}
+          <div className="flex items-center gap-2">
+            {/* Visiter ma boutique + Copier combo pill */}
+            <div className="flex items-center rounded-xl bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/60 p-0.5">
+              <button
+                onClick={handleVisitStore}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-white dark:hover:bg-card hover:shadow-2xs transition-all"
+                title="Ouvrir ma boutique publique"
+              >
+                <Store className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate">Visiter ma boutique</span>
+              </button>
+              <div className="w-px h-4 bg-border/60 my-auto" />
+              <button
+                onClick={handleCopyStoreLink}
+                aria-label="Copier le lien"
+                className="h-7 w-7 rounded-lg hover:bg-white dark:hover:bg-card flex items-center justify-center text-muted-foreground hover:text-foreground hover:shadow-2xs transition-all"
+                title="Copier le lien de ma boutique"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Nova IA Button (Flower / AI style) */}
+            <button
+              onClick={() => navigate("/dashboard/nova")}
+              aria-label="Nova IA"
+              className="h-8 w-8 rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-900/50 flex items-center justify-center text-purple-600 dark:text-purple-400 hover:scale-105 transition-transform"
+              title="Nova IA - Assistant digital"
+            >
+              <Sparkles className="h-4 w-4 stroke-[2]" />
+            </button>
+
+            {/* Quick Add Product button [+] */}
+            <button
+              onClick={() => navigate("/dashboard/products/new")}
+              aria-label="Nouveau produit"
+              className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:bg-secondary flex items-center justify-center text-foreground hover:scale-105 transition-all"
+              title="Créer un nouveau produit"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" />
+            </button>
+
+            {/* Theme switch (Eye / Moon / Sun) */}
+            <button
+              onClick={toggleTheme}
+              aria-label="Mode sombre/clair"
+              className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              title="Changer de thème"
+            >
+              {isDark ? (
+                <Sun className="h-3.5 w-3.5 text-amber-500" />
+              ) : (
+                <Moon className="h-3.5 w-3.5 text-slate-500" />
+              )}
+            </button>
+
+            {/* Grid / Tous les outils */}
+            <button
+              onClick={() => navigate("/dashboard/menu")}
+              aria-label="Tous les outils"
+              className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              title="Tous les outils"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Profile Avatar */}
+            <button
+              onClick={() => navigate("/dashboard/profile")}
+              aria-label="Mon profil"
+              className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center hover:scale-105 transition-transform ml-0.5"
+              title="Mon profil"
+            >
+              <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[11px] font-black text-primary overflow-hidden">
+                {userAvatar ? (
+                  <img src={userAvatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initial
+                )}
+              </div>
+            </button>
+          </div>
+        </header>
+
+        {/* 2. MOBILE TOP BAR (< 1024px: Exact match Image 2) */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-3.5 flex items-center justify-between shadow-2xs">
+          {/* Left: Brand logo & Store Name */}
+          <div
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-2 cursor-pointer min-w-0"
+          >
+            <div className="h-7 w-7 rounded-lg bg-card border border-border flex items-center justify-center p-1 shrink-0">
+              <img src={logo} alt="Dukaio" className="h-full w-full object-contain" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-tight text-foreground truncate max-w-[130px]">
+              {storeName}
+            </span>
+          </div>
+
+          {/* Right: Round icon buttons row (Exact Chariow Mobile Image 2) */}
+          <div className="flex items-center gap-1.5">
+            {/* 1. Search (grey circle) */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="Recherche rapide"
+              className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+              title="Rechercher"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+
+            {/* 2. Theme / Mode sombre (grey circle) */}
+            <button
+              onClick={toggleTheme}
+              aria-label="Changer de thème"
+              className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
+              title="Thème"
+            >
+              {isDark ? (
+                <Sun className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Moon className="h-4 w-4 text-slate-500" />
+              )}
+            </button>
+
+            {/* 3. Nova IA (purple flower circle) */}
+            <button
+              onClick={() => navigate("/dashboard/nova")}
+              aria-label="Nova IA"
+              className="h-8 w-8 rounded-full bg-purple-50 dark:bg-purple-950/40 border border-purple-200/50 dark:border-purple-800/40 flex items-center justify-center text-purple-600 dark:text-purple-400 active:scale-95 transition-transform"
+              title="Nova IA"
+            >
+              <Sparkles className="h-4 w-4 stroke-[2]" />
+            </button>
+
+            {/* 4. Support (yellow circle with headset icon) */}
+            <button
+              onClick={() => navigate("/dashboard/support")}
+              aria-label="Support client"
+              className="h-8 w-8 rounded-full bg-amber-400 hover:bg-amber-300 text-amber-950 flex items-center justify-center shadow-xs active:scale-95 transition-transform"
+              title="Support & Aide"
+            >
+              <Headphones className="h-4 w-4 stroke-[2]" />
+            </button>
+
+            {/* 5. Avatar (opens Mobile Profile Sheet) */}
+            <button
+              onClick={() => setProfileSheetOpen(true)}
+              aria-label="Profil utilisateur"
+              className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center ml-0.5 active:scale-95 transition-transform"
+              title="Mon profil"
+            >
+              <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[11px] font-black text-primary overflow-hidden">
+                {userAvatar ? (
+                  <img src={userAvatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initial
+                )}
+              </div>
+            </button>
+          </div>
+        </header>
+
+        {/* Main Page Content */}
+        <main className="flex-1 pt-4 pb-24 lg:pb-12 px-3 sm:px-6 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
       </div>
