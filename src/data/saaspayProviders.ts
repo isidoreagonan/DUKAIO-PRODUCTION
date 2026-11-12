@@ -6,6 +6,8 @@ import airtelLogo from "@/assets/payment-logos/providers/airtel.png";
 import vodacomLogo from "@/assets/payment-logos/providers/vodacom.png";
 import mpesaLogo from "@/assets/payment-logos/providers/mpesa.png";
 import waveLogo from "@/dukaio-site/assets/pay/wave.png";
+import celtiisLogo from "@/assets/payment-logos/providers/celtiis.png";
+import freeLogo from "@/assets/payment-logos/providers/free.svg";
 import visaLogo from "@/dukaio-site/assets/pay/visa.png";
 import mastercardLogo from "@/dukaio-site/assets/pay/mastercard.png";
 import { countries as allWorldCountries } from "./countries";
@@ -52,7 +54,7 @@ export const SAASPAY_METHODS: Record<MethodId, PaymentMethodMeta> = {
   celtiis: {
     id: "celtiis",
     name: "Celtiis Cash",
-    logos: [moovLogo],
+    logos: [celtiisLogo],
     kind: "momo",
     hint: "Push USSD direct Bénin",
   },
@@ -73,7 +75,7 @@ export const SAASPAY_METHODS: Record<MethodId, PaymentMethodMeta> = {
   free: {
     id: "free",
     name: "Free Money",
-    logos: [orangeLogo],
+    logos: [freeLogo],
     kind: "momo",
     hint: "Push USSD Sénégal",
   },
@@ -175,6 +177,10 @@ function buildWorldwideCountries(): SaaSPayCountry[] {
 }
 
 export const SAASPAY_COUNTRIES: SaaSPayCountry[] = buildWorldwideCountries();
+
+export const SAASPAY_PAYOUT_COUNTRIES: SaaSPayCountry[] = SAASPAY_COUNTRIES.filter((c) =>
+  c.methods.some((m) => m !== "card" && m !== "crypto")
+);
 
 /**
  * Maps frontend method + country to exact SaaSPay payment_method string

@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Wallet as WalletIcon, Lock, Loader2, Plus, Trash2, ShieldCheck,
-  ArrowLeft, Check, ChevronDown, KeyRound, Eye, EyeOff, X,
-  ArrowUpRight, RotateCcw, Smartphone, CreditCard, AlertCircle,
-  Receipt, CheckCircle2, Building2, Sparkles, ExternalLink, RefreshCw
+  Wallet as WalletIcon, Loader2, Plus, Trash2, ShieldCheck,
+  ChevronDown, Eye, EyeOff,
+  ArrowUpRight, RotateCcw, Smartphone, AlertCircle,
+  Receipt
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,9 @@ import SEOHead from "@/components/SEOHead";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   SAASPAY_COUNTRIES,
+  SAASPAY_PAYOUT_COUNTRIES,
   SAASPAY_METHODS,
   type MethodId,
-  type SaaSPayCountry,
 } from "@/data/saaspayProviders";
 
 interface SavedWallet {
@@ -48,6 +48,23 @@ const formatFmt = (n: number) =>
   Math.round(n)
     .toLocaleString("fr-FR")
     .replace(/\u202f|\u00a0/g, " ");
+
+// Helper to resolve operator logo, name and country flag
+const getOperatorMeta = (providerCode: string, countryCode?: string) => {
+  const parts = (providerCode || "").toLowerCase().split("_");
+  const method = (parts[0] as MethodId) || "mtn";
+  const cc = parts[1] || (countryCode || "").toLowerCase() || "bj";
+  const meta = SAASPAY_METHODS[method] || { name: providerCode, logos: [] };
+  const logo = meta.logos?.[0] || null;
+  const flagUrl = cc ? `https://flagcdn.com/w40/${cc}.png` : null;
+  return {
+    method,
+    name: meta.name || providerCode,
+    logo,
+    flagUrl,
+    country: cc.toUpperCase(),
+  };
+};
 
 export default function Wallet() {
   const navigate = useNavigate();
@@ -248,7 +265,11 @@ export default function Wallet() {
 
   // Selected Country in Account Form
   const currentCountryConfig = useMemo(() => {
-    return SAASPAY_COUNTRIES.find((c) => c.code === accCountry) || SAASPAY_COUNTRIES[0];
+    return (
+      SAASPAY_PAYOUT_COUNTRIES.find((c) => c.code === accCountry) ||
+      SAASPAY_COUNTRIES.find((c) => c.code === accCountry) ||
+      SAASPAY_COUNTRIES[0]
+    );
   }, [accCountry]);
 
   // Supported Mobile Money operators for selected country
@@ -499,11 +520,6 @@ export default function Wallet() {
     }
   };
 
-  const userInitial =
-    profile?.display_name?.charAt(0)?.toUpperCase() ||
-    user?.email?.charAt(0)?.toUpperCase() ||
-    "D";
-
   return (
     <DashboardLayout>
       <SEOHead title="Portefeuille & Retraits | Dukaio" />
@@ -518,11 +534,12 @@ export default function Wallet() {
 
           {/* Top Pill: Solde retirable with Flags */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs font-bold text-slate-600 dark:text-slate-300 shadow-2xs">
-            <span className="flex items-center -space-x-1 text-sm">
-              <span>🇧🇯</span>
-              <span>🇨🇮</span>
-              <span>🇸🇳</span>
-            </span>
+            <div className="flex items-center -space-x-1.5">
+              <img src="https://flagcdn.com/w40/bj.png" alt="Bénin" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              <img src="https://flagcdn.com/w40/ci.png" alt="Côte d'Ivoire" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              <img src="https://flagcdn.com/w40/sn.png" alt="Sénégal" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              <img src="https://flagcdn.com/w40/tg.png" alt="Togo" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+            </div>
             <span className="tracking-wider uppercase text-[10px]">Solde disponible au retrait</span>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </div>
@@ -732,13 +749,14 @@ export default function Wallet() {
       {/* DIALOG 1: EFFECTUER UN RETRAIT MOBILE MONEY              */}
       {/* ======================================================== */}
       <Dialog open={withdrawModalOpen} onOpenChange={setWithdrawModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800">
+        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
-              Effectuer un retrait
+            <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              Effectuer un retrait Mobile Money
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-              Virement direct vers votre numéro Mobile Money sans frais DUKAIO.
+              Virement direct et sécurisé vers votre compte Mobile Money. 0 FCFA de frais DUKAIO.
             </DialogDescription>
           </DialogHeader>
 
@@ -746,13 +764,13 @@ export default function Wallet() {
             {/* Solde disponible rappel */}
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 p-3.5 flex items-center justify-between">
               <div>
-                <span className="text-[11px] text-slate-500 font-medium block">Solde retirable disponible</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">Solde retirable disponible</span>
                 <span className="text-lg font-black text-slate-900 dark:text-white">
                   {formatFmt(balanceFcfa)} FCFA
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 rounded-md">
-                Disponible de suite
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800/50">
+                Retrait immédiat
               </span>
             </div>
 
@@ -764,62 +782,86 @@ export default function Wallet() {
 
               {savedWallets.length > 0 && (
                 <div className="space-y-2 mb-2">
-                  {savedWallets.map((sw) => (
-                    <div
-                      key={sw.id}
-                      onClick={() => setSelectedWalletId(sw.id)}
-                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                        selectedWalletId === sw.id
-                          ? "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-900"
-                          : "border-slate-200 dark:border-slate-800 hover:border-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                          📱
+                  {savedWallets.map((sw) => {
+                    const meta = getOperatorMeta(sw.provider_code, sw.country);
+                    const isSelected = selectedWalletId === sw.id;
+                    return (
+                      <div
+                        key={sw.id}
+                        onClick={() => setSelectedWalletId(sw.id)}
+                        className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-900/90 ring-1 ring-[#0F172A] dark:ring-white shadow-xs"
+                            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative h-11 w-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1.5 shrink-0 shadow-2xs overflow-hidden">
+                            {meta.logo ? (
+                              <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
+                            ) : (
+                              <Smartphone className="h-5 w-5 text-slate-500" />
+                            )}
+                            {meta.flagUrl && (
+                              <img
+                                src={meta.flagUrl}
+                                alt={meta.country}
+                                className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs"
+                              />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+                              <span>{sw.name}</span>
+                              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                {meta.name}
+                              </span>
+                            </p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                              {sw.phone} • {meta.country}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-900 dark:text-white">{sw.name}</p>
-                          <p className="text-[11px] text-slate-500">{sw.phone} • {sw.provider_code.toUpperCase()}</p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {sw.is_default && (
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                              Défaut
+                            </span>
+                          )}
+                          <div
+                            className={`h-4 w-4 rounded-full border flex items-center justify-center transition-colors ${
+                              isSelected ? "border-[#0F172A] dark:border-white bg-[#0F172A] dark:bg-white" : "border-slate-300 dark:border-slate-600"
+                            }`}
+                          >
+                            {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white dark:bg-slate-900" />}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        {sw.is_default && (
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                            Par défaut
-                          </span>
-                        )}
-                        <div
-                          className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                            selectedWalletId === sw.id ? "border-[#0F172A] dark:border-white bg-[#0F172A] dark:bg-white" : "border-slate-300"
-                          }`}
-                        >
-                          {selectedWalletId === sw.id && <div className="h-1.5 w-1.5 rounded-full bg-white dark:bg-slate-900" />}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
               {/* Option to use another number */}
               <div
                 onClick={() => setSelectedWalletId("new")}
-                className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
                   selectedWalletId === "new"
-                    ? "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-900"
-                    : "border-slate-200 dark:border-slate-800 hover:border-slate-300"
+                    ? "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-900/90 ring-1 ring-[#0F172A] dark:ring-white shadow-xs"
+                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700"
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <Plus className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
+                    <Plus className="h-4 w-4" />
+                  </div>
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     Utiliser un autre numéro Mobile Money
                   </span>
                 </div>
                 <div
                   className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                    selectedWalletId === "new" ? "border-[#0F172A] dark:border-white bg-[#0F172A] dark:bg-white" : "border-slate-300"
+                    selectedWalletId === "new" ? "border-[#0F172A] dark:border-white bg-[#0F172A] dark:bg-white" : "border-slate-300 dark:border-slate-600"
                   }`}
                 >
                   {selectedWalletId === "new" && <div className="h-1.5 w-1.5 rounded-full bg-white dark:bg-slate-900" />}
@@ -827,61 +869,98 @@ export default function Wallet() {
               </div>
             </div>
 
-            {/* If "new" selected, show quick inputs */}
+            {/* If "new" selected, show rich visual inputs */}
             {selectedWalletId === "new" && (
-              <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Pays</label>
+              <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 mt-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                    Pays de réception
+                  </label>
+                  <div className="relative">
                     <select
                       value={accCountry}
                       onChange={(e) => setAccCountry(e.target.value)}
-                      className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold px-2"
+                      className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white text-xs font-semibold px-3 pr-10 focus:ring-2 focus:ring-primary focus:outline-none appearance-none cursor-pointer"
                     >
-                      {SAASPAY_COUNTRIES.slice(0, 8).map((c) => (
-                        <option key={c.code} value={c.code}>
+                      {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.code} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
                           {c.name} ({c.dial})
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 uppercase">Opérateur</label>
-                    <select
-                      value={accOperator}
-                      onChange={(e) => setAccOperator(e.target.value)}
-                      className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold px-2"
-                    >
-                      {countryMethods.map((m) => (
-                        <option key={m} value={m}>
-                          {SAASPAY_METHODS[m]?.name || m.toUpperCase()}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                      <img
+                        src={`https://flagcdn.com/w40/${accCountry.toLowerCase()}.png`}
+                        alt={accCountry}
+                        className="h-4 w-5 rounded object-cover shadow-2xs border border-slate-200 dark:border-slate-700"
+                      />
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Numéro Mobile Money</label>
-                  <Input
-                    value={accPhone}
-                    onChange={(e) => setAccPhone(e.target.value)}
-                    placeholder={currentCountryConfig.placeholder}
-                    className="h-9 text-xs font-semibold"
-                  />
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                    Opérateur Mobile Money
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {countryMethods.map((m) => {
+                      const meta = SAASPAY_METHODS[m];
+                      const isSel = accOperator === m;
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setAccOperator(m)}
+                          className={`p-2 rounded-xl border flex items-center gap-2 transition-all text-left ${
+                            isSel
+                              ? "border-[#0F172A] dark:border-white bg-[#0F172A]/5 dark:bg-white/10 ring-1 ring-[#0F172A] dark:ring-white shadow-2xs"
+                              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:border-slate-300 dark:hover:border-slate-600"
+                          }`}
+                        >
+                          <div className="h-7 w-7 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
+                            {meta?.logos?.[0] ? (
+                              <img src={meta.logos[0]} alt={meta.name} className="h-full w-full object-contain" />
+                            ) : (
+                              <Smartphone className="h-3.5 w-3.5 text-slate-500" />
+                            )}
+                          </div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {meta?.name || m.toUpperCase()}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                    Numéro de réception
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                      {currentCountryConfig.dial}
+                    </span>
+                    <Input
+                      value={accPhone}
+                      onChange={(e) => setAccPhone(e.target.value)}
+                      placeholder={currentCountryConfig.placeholder}
+                      className="h-10 text-xs font-semibold pl-14 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
                   <input
                     type="checkbox"
                     id="saveForNext"
                     checked={accSaveForNext}
                     onChange={(e) => setAccSaveForNext(e.target.checked)}
-                    className="rounded border-slate-300"
+                    className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                   />
-                  <label htmlFor="saveForNext" className="text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
-                    Enregistrer pour mes prochains retraits
+                  <label htmlFor="saveForNext" className="text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+                    Enregistrer ce numéro pour mes prochains retraits
                   </label>
                 </div>
               </div>
@@ -898,7 +977,7 @@ export default function Wallet() {
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="Ex: 5000"
-                  className={`h-12 text-lg font-bold pr-16 ${
+                  className={`h-12 text-lg font-bold pr-16 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 ${
                     isAmountTooHigh ? "border-red-500 focus-visible:ring-red-500" : ""
                   }`}
                 />
@@ -914,7 +993,7 @@ export default function Wallet() {
                     key={pct}
                     type="button"
                     onClick={() => applyPercent(pct)}
-                    className="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 text-slate-700 dark:text-slate-300 transition-colors"
+                    className="flex-1 py-1 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
                   >
                     {pct === 100 ? "Max" : `${pct}%`}
                   </button>
@@ -940,7 +1019,7 @@ export default function Wallet() {
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-3 space-y-1.5 text-xs">
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Frais de plateforme DUKAIO :</span>
-                <span className="font-bold text-emerald-600">0 FCFA (Gratuit)</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">0 FCFA (Gratuit)</span>
               </div>
               <div className="flex justify-between text-slate-900 dark:text-white font-bold pt-1 border-t border-slate-200 dark:border-slate-800">
                 <span>Montant transféré :</span>
@@ -953,7 +1032,7 @@ export default function Wallet() {
             <Button
               onClick={handleInitiateWithdraw}
               disabled={!isAmountValid || submittingWithdraw}
-              className="w-full h-12 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] text-white font-bold text-sm"
+              className="w-full h-12 rounded-xl bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] font-bold text-sm"
             >
               {submittingWithdraw ? (
                 <span className="flex items-center gap-2">
@@ -971,7 +1050,7 @@ export default function Wallet() {
       {/* DIALOG 2: SÉCURITÉ CODE PIN (Demandé UNIQUEMENT au retrait) */}
       {/* ======================================================== */}
       <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
-        <DialogContent className="sm:max-w-sm rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-center">
+        <DialogContent className="sm:max-w-sm rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-center text-slate-900 dark:text-white">
           <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 text-[#0F172A] dark:text-white flex items-center justify-center mx-auto mb-2">
             <ShieldCheck className="h-6 w-6 stroke-[2]" />
           </div>
@@ -984,7 +1063,7 @@ export default function Wallet() {
                 ? "Réinitialiser votre code PIN"
                 : "Sécurité du retrait"}
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 text-center">
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 text-center">
               {pinMode === "create"
                 ? "Créez un code PIN à 4 chiffres pour valider ce retrait et sécuriser vos futurs retraits."
                 : pinMode === "forgot"
@@ -1008,10 +1087,10 @@ export default function Wallet() {
                   }}
                 >
                   <InputOTPGroup>
-                    <InputOTPSlot index={0} className="h-12 w-12 text-lg font-black" />
-                    <InputOTPSlot index={1} className="h-12 w-12 text-lg font-black" />
-                    <InputOTPSlot index={2} className="h-12 w-12 text-lg font-black" />
-                    <InputOTPSlot index={3} className="h-12 w-12 text-lg font-black" />
+                    <InputOTPSlot index={0} className="h-12 w-12 text-lg font-black bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                    <InputOTPSlot index={1} className="h-12 w-12 text-lg font-black bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                    <InputOTPSlot index={2} className="h-12 w-12 text-lg font-black bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
+                    <InputOTPSlot index={3} className="h-12 w-12 text-lg font-black bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
@@ -1034,7 +1113,7 @@ export default function Wallet() {
                 <button
                   type="button"
                   onClick={() => setPinModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
                   Annuler
                 </button>
@@ -1046,26 +1125,26 @@ export default function Wallet() {
           {pinMode === "create" && (
             <div className="space-y-4 pt-3 text-left">
               <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Code PIN (4 chiffres)</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">Code PIN (4 chiffres)</label>
                 <Input
                   type="password"
                   maxLength={4}
                   value={pinValue}
                   onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ""))}
                   placeholder="••••"
-                  className="text-center text-lg font-black tracking-widest"
+                  className="text-center text-lg font-black tracking-widest bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Confirmez votre code PIN</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">Confirmez votre code PIN</label>
                 <Input
                   type="password"
                   maxLength={4}
                   value={pinConfirmValue}
                   onChange={(e) => setPinConfirmValue(e.target.value.replace(/\D/g, ""))}
                   placeholder="••••"
-                  className="text-center text-lg font-black tracking-widest"
+                  className="text-center text-lg font-black tracking-widest bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
                 />
               </div>
 
@@ -1084,7 +1163,7 @@ export default function Wallet() {
                   executeWithdrawalWithPin(pinValue);
                 }}
                 disabled={pinSubmitting || pinValue.length !== 4 || pinConfirmValue.length !== 4}
-                className="w-full h-11 font-bold text-sm bg-[#0F172A] hover:bg-[#1E293B] text-white"
+                className="w-full h-11 font-bold text-sm bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A]"
               >
                 {pinSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sauvegarder et retirer"}
               </Button>
@@ -1096,13 +1175,13 @@ export default function Wallet() {
             <div className="space-y-3 pt-3 text-left">
               {forgotStep === "send" ? (
                 <div className="space-y-3 text-center">
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
                     Nous allons envoyer un code de vérification à 6 chiffres sur <strong>{user?.email}</strong>.
                   </p>
                   <Button
                     onClick={handleSendResetOtp}
                     disabled={sendingResetOtp}
-                    className="w-full h-11 font-bold text-xs bg-[#0F172A] text-white"
+                    className="w-full h-11 font-bold text-xs bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A]"
                   >
                     {sendingResetOtp ? <Loader2 className="h-4 w-4 animate-spin" /> : "Envoyer le code par email"}
                   </Button>
@@ -1110,30 +1189,30 @@ export default function Wallet() {
               ) : (
                 <div className="space-y-3">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Code reçu par email (6 chiffres)</label>
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">Code reçu par email (6 chiffres)</label>
                     <Input
                       maxLength={6}
                       value={resetOtp}
                       onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ""))}
                       placeholder="123456"
-                      className="text-center font-bold tracking-widest"
+                      className="text-center font-bold tracking-widest bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Nouveau code PIN (4 chiffres)</label>
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 block mb-1">Nouveau code PIN (4 chiffres)</label>
                     <Input
                       type="password"
                       maxLength={4}
                       value={resetNewPin}
                       onChange={(e) => setResetNewPin(e.target.value.replace(/\D/g, ""))}
                       placeholder="••••"
-                      className="text-center font-black tracking-widest"
+                      className="text-center font-black tracking-widest bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700"
                     />
                   </div>
                   <Button
                     onClick={handleConfirmResetPin}
                     disabled={pinSubmitting || resetOtp.length !== 6 || resetNewPin.length !== 4}
-                    className="w-full h-11 font-bold text-xs bg-[#0F172A] text-white"
+                    className="w-full h-11 font-bold text-xs bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A]"
                   >
                     {pinSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Valider mon nouveau PIN"}
                   </Button>
@@ -1143,7 +1222,7 @@ export default function Wallet() {
               <button
                 type="button"
                 onClick={() => setPinMode("verify")}
-                className="w-full text-center text-xs text-slate-400 hover:text-slate-600 pt-2"
+                className="w-full text-center text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 pt-2"
               >
                 Retour
               </button>
@@ -1156,12 +1235,13 @@ export default function Wallet() {
       {/* DIALOG 3: GESTION DES COMPTES DE RETRAIT (Carnet Mobile Money) */}
       {/* ======================================================== */}
       <Dialog open={accountModalOpen} onOpenChange={setAccountModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800">
+        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-h-[92vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-white">
-              Mes comptes de retrait
+            <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-primary" />
+              Mes comptes de retrait Mobile Money
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Gérez vos numéros Mobile Money enregistrés pour vos virements.
             </DialogDescription>
           </DialogHeader>
@@ -1172,90 +1252,154 @@ export default function Wallet() {
                 Aucun compte enregistré pour le moment.
               </p>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {savedWallets.map((sw) => (
-                  <div
-                    key={sw.id}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{sw.name}</p>
-                      <p className="text-[11px] text-slate-500">{sw.phone} • {sw.provider_code.toUpperCase()}</p>
-                    </div>
-                    <button
-                      onClick={(e) => handleDeleteAccount(sw.id, e)}
-                      className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors"
-                      title="Supprimer ce compte"
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {savedWallets.map((sw) => {
+                  const meta = getOperatorMeta(sw.provider_code, sw.country);
+                  return (
+                    <div
+                      key={sw.id}
+                      className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 flex items-center justify-between"
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative h-11 w-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1.5 shrink-0 shadow-2xs overflow-hidden">
+                          {meta.logo ? (
+                            <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
+                          ) : (
+                            <Smartphone className="h-5 w-5 text-slate-500" />
+                          )}
+                          {meta.flagUrl && (
+                            <img
+                              src={meta.flagUrl}
+                              alt={meta.country}
+                              className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
+                            <span>{sw.name}</span>
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                              {meta.name}
+                            </span>
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{sw.phone} • {meta.country}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={(e) => handleDeleteAccount(sw.id, e)}
+                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors shrink-0"
+                        title="Supprimer ce compte"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
             {/* Form to add a new account */}
             <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <Plus className="h-4 w-4 text-primary" />
                 Ajouter un nouveau compte
               </h4>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Pays</label>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                  Pays de réception
+                </label>
+                <div className="relative">
                   <select
                     value={accCountry}
                     onChange={(e) => setAccCountry(e.target.value)}
-                    className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold px-2"
+                    className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white text-xs font-semibold px-3 pr-10 focus:ring-2 focus:ring-primary focus:outline-none appearance-none cursor-pointer"
                   >
-                    {SAASPAY_COUNTRIES.slice(0, 10).map((c) => (
-                      <option key={c.code} value={c.code}>
+                    {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
                         {c.name} ({c.dial})
                       </option>
                     ))}
                   </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase">Opérateur</label>
-                  <select
-                    value={accOperator}
-                    onChange={(e) => setAccOperator(e.target.value)}
-                    className="w-full h-9 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold px-2"
-                  >
-                    {countryMethods.map((m) => (
-                      <option key={m} value={m}>
-                        {SAASPAY_METHODS[m]?.name || m.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                    <img
+                      src={`https://flagcdn.com/w40/${accCountry.toLowerCase()}.png`}
+                      alt={accCountry}
+                      className="h-4 w-5 rounded object-cover shadow-2xs border border-slate-200 dark:border-slate-700"
+                    />
+                    <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Numéro de téléphone</label>
-                <Input
-                  value={accPhone}
-                  onChange={(e) => setAccPhone(e.target.value)}
-                  placeholder={currentCountryConfig.placeholder}
-                  className="h-9 text-xs font-semibold"
-                />
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                  Opérateur Mobile Money
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {countryMethods.map((m) => {
+                    const meta = SAASPAY_METHODS[m];
+                    const isSel = accOperator === m;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setAccOperator(m)}
+                        className={`p-2 rounded-xl border flex items-center gap-2 transition-all text-left ${
+                          isSel
+                            ? "border-[#0F172A] dark:border-white bg-[#0F172A]/5 dark:bg-white/10 ring-1 ring-[#0F172A] dark:ring-white shadow-2xs"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:border-slate-300 dark:hover:border-slate-600"
+                        }`}
+                      >
+                        <div className="h-7 w-7 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
+                          {meta?.logos?.[0] ? (
+                            <img src={meta.logos[0]} alt={meta.name} className="h-full w-full object-contain" />
+                          ) : (
+                            <Smartphone className="h-3.5 w-3.5 text-slate-500" />
+                          )}
+                        </div>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {meta?.name || m.toUpperCase()}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Nom du label (ex: Mon MTN Principal)</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                  Numéro de téléphone
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    {currentCountryConfig.dial}
+                  </span>
+                  <Input
+                    value={accPhone}
+                    onChange={(e) => setAccPhone(e.target.value)}
+                    placeholder={currentCountryConfig.placeholder}
+                    className="h-10 text-xs font-semibold pl-14 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                  Nom du label (ex: Mon MTN Principal)
+                </label>
                 <Input
                   value={accLabel}
                   onChange={(e) => setAccLabel(e.target.value)}
                   placeholder="Mon compte principal"
-                  className="h-9 text-xs font-semibold"
+                  className="h-10 text-xs font-semibold bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
               </div>
 
               <Button
                 onClick={handleSaveAccount}
                 disabled={savingAccount}
-                className="w-full h-10 font-bold text-xs bg-[#0F172A] text-white"
+                className="w-full h-11 font-bold text-xs bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A]"
               >
                 {savingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer ce compte"}
               </Button>
