@@ -236,17 +236,20 @@ Deno.serve(async (req) => {
           await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
           debited = false;
 
-          const isIpBlock = data?.error?.code === "ip_not_whitelisted" || resp.status === 403;
+          const isIpBlock = data?.error?.code === "ip_not_whitelisted";
+          const isPayoutNotEnabled = data?.error?.code === "payout_not_enabled";
           console.warn("[wallet-withdraw -> saaspay rejected]:", data);
 
           await service.from("withdrawals").update({
             status: "failed",
-            moneroo_reference: isIpBlock ? "IP_NOT_WHITELISTED" : ((data?.error?.code || "FAILED") as string).slice(0, 100),
+            moneroo_reference: (data?.error?.code || (isIpBlock ? "IP_NOT_WHITELISTED" : "FAILED")).slice(0, 100),
           }).eq("id", withdrawal.id);
 
           let humanMsg = data?.error?.message || (data?.error?.amount ? data.error.amount[0] : null) || "Échec de l'envoi du virement Mobile Money SaaSPay.";
-          if (isIpBlock) {
-            humanMsg = "Échec SaaSPay : L'IP n'est pas autorisée sur la whitelist de votre marchand (403).";
+          if (isPayoutNotEnabled) {
+            humanMsg = "SaaSPay : Les retraits automatiques par API (Payouts) ne sont pas encore activés sur votre compte marchand par SaaSPay. Contactez le support SaaSPay pour activer l'option Payout, ou effectuez le virement directement depuis votre compte SaaSPay.";
+          } else if (isIpBlock) {
+            humanMsg = "SaaSPay : L'adresse IP n'est pas autorisée sur la whitelist de votre marchand.";
           }
 
           return j({ error: humanMsg }, 400);
