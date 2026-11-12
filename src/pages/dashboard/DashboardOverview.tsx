@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Wallet, TrendingUp, Users, DollarSign, Copy, Check,
+  Wallet, TrendingUp, Users, Copy, Check,
   Package, ShoppingBag, ArrowRight
 } from "lucide-react";
 import {
@@ -309,82 +309,71 @@ export function DashboardOverview() {
           </button>
         </div>
 
-        {/* 4 Stat Cards Row (Exact MakeTou / Reference Layout) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Solde disponible */}
+        {/* Stat Cards: Solde disponible on top, 7 derniers jours & Clients side-by-side (Exact Chariow Layout) */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {/* Card 1: Solde disponible (Full width on mobile/tablet: col-span-2, 1 column on desktop: lg:col-span-1) */}
           <div
             onClick={() => navigate("/dashboard/wallet")}
-            className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between"
+            className="col-span-2 lg:col-span-1 rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-4 sm:p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between shadow-2xs group"
           >
-            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-              <div className="h-6 w-6 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#1F3FA8] dark:text-[#4F7BEA] flex items-center justify-center shrink-0">
-                <Wallet className="h-3.5 w-3.5 stroke-[1.75]" />
+            <div className="flex items-center justify-between text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-[#1F3FA8] dark:text-[#4F7BEA] flex items-center justify-center shrink-0">
+                  <Wallet className="h-4 w-4 stroke-[1.75]" />
+                </div>
+                <span className="font-semibold text-foreground">Solde disponible</span>
               </div>
-              <span>Solde disponible</span>
+              <span className="text-[11px] text-muted-foreground group-hover:text-primary transition-colors flex items-center gap-0.5">
+                Retirer →
+              </span>
             </div>
             <div className="mt-3">
-              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+              <span className="text-[26px] sm:text-[30px] font-extrabold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
                 {availableFcfa.toLocaleString("fr-FR")} F
               </span>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5 font-normal">
                 Ce que vous pouvez retirer
               </p>
             </div>
           </div>
 
-          {/* Card 2: 7 derniers jours */}
-          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 flex flex-col justify-between">
+          {/* Card 2: 7 derniers jours (Left side: col-span-1) */}
+          <div className="col-span-1 lg:col-span-1 rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-4 sm:p-5 flex flex-col justify-between shadow-2xs">
             <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
               <div className="h-6 w-6 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                 <TrendingUp className="h-3.5 w-3.5 stroke-[1.75]" />
               </div>
-              <span>7 derniers jours</span>
+              <span className="truncate">7 derniers jours</span>
             </div>
             <div className="mt-3">
-              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+              <span className="text-[20px] sm:text-[26px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block truncate">
                 {sevenDaysRevenue.toLocaleString("fr-FR")} F
               </span>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
+              <p className="text-[11px] sm:text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5 font-normal truncate">
                 Ventes payées
               </p>
             </div>
           </div>
 
-          {/* Card 3: Clients */}
+          {/* Card 3: Clients (Right side: col-span-1) */}
           <div
             onClick={() => navigate("/dashboard/clients")}
-            className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between"
+            className="col-span-1 lg:col-span-1 rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-4 sm:p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between shadow-2xs group"
           >
-            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-              <div className="h-6 w-6 rounded-md bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                <Users className="h-3.5 w-3.5 stroke-[1.75]" />
+            <div className="flex items-center justify-between gap-1 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-6 w-6 rounded-md bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                  <Users className="h-3.5 w-3.5 stroke-[1.75]" />
+                </div>
+                <span className="truncate">Clients</span>
               </div>
-              <span>Clients</span>
             </div>
             <div className="mt-3">
-              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+              <span className="text-[20px] sm:text-[26px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
                 {totalClients}
               </span>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
-                {totalSalesCount} vente{totalSalesCount > 1 ? "s" : ""} payée{totalSalesCount > 1 ? "s" : ""}
-              </p>
-            </div>
-          </div>
-
-          {/* Card 4: Total encaissé */}
-          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 flex flex-col justify-between">
-            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-              <div className="h-6 w-6 rounded-md bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-                <DollarSign className="h-3.5 w-3.5 stroke-[1.75]" />
-              </div>
-              <span>Total encaissé</span>
-            </div>
-            <div className="mt-3">
-              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
-                {lifetimeRevenue.toLocaleString("fr-FR")} F
-              </span>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
-                Depuis l'ouverture, avant 10 %
+              <p className="text-[11px] sm:text-xs text-[#64748B] dark:text-[#94A3B8] mt-0.5 font-normal truncate">
+                {totalSalesCount} commande{totalSalesCount > 1 ? "s" : ""}
               </p>
             </div>
           </div>
