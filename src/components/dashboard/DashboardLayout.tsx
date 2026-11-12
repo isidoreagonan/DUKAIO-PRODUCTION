@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { QuickSearchDialog } from "./QuickSearchDialog";
@@ -50,8 +50,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[#FBFBFC] dark:bg-[#0F1522] text-foreground font-sans antialiased selection:bg-primary/20 relative">
-      {/* Floating Desktop Sidebar (vycut style: surrounded by margins and rounded corners) */}
-      <div className="hidden lg:block fixed top-0 left-0 bottom-0 p-3 sm:p-4 z-40 pointer-events-none">
+      {/* Floating Desktop Sidebar (Sleek vycut style: 12px margin, w-[220px] expanded, w-[60px] collapsed) */}
+      <div className="hidden lg:block fixed top-3 left-3 bottom-3 z-40 pointer-events-none">
         <div className="pointer-events-auto h-full">
           <DashboardSidebar
             collapsed={collapsed}
@@ -65,9 +65,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <button
           onClick={() => setMobileDrawerOpen(true)}
           aria-label="Ouvrir le menu"
-          className="lg:hidden fixed top-3.5 left-3.5 z-40 h-10 w-10 rounded-2xl bg-card/95 backdrop-blur-md border border-border shadow-[0_4px_14px_rgba(0,0,0,0.06)] flex items-center justify-center text-foreground hover:bg-secondary transition-transform active:scale-95"
+          className="lg:hidden fixed top-3 left-3 z-40 h-9 w-9 rounded-xl bg-card/95 backdrop-blur-md border border-border shadow-sm flex items-center justify-center text-foreground hover:bg-secondary transition-transform active:scale-95"
         >
-          <Menu className="h-5 w-5 stroke-[2]" />
+          <Menu className="h-4.5 w-4.5 stroke-[2]" />
         </button>
       )}
 
@@ -103,13 +103,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         )}
       </AnimatePresence>
 
-      {/* Main Content: NO horizontal top bar, pure breathing room and clean spacing */}
+      {/* Main Content: Sleek compact gap with sidebar (16px gap, no wasted space) */}
       <div
         className={`min-h-screen flex flex-col transition-[padding-left] duration-300 ease-in-out ${
-          collapsed ? "lg:pl-[104px]" : "lg:pl-[292px]"
+          collapsed ? "lg:pl-[76px]" : "lg:pl-[236px]"
         }`}
       >
-        <main className="flex-1 pt-14 lg:pt-6 pb-12 px-4 sm:px-8 max-w-[1400px] w-full mx-auto">
+        <main className="flex-1 pt-12 lg:pt-3 pb-12 px-3 sm:px-6 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
       </div>
