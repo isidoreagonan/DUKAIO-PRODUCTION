@@ -307,8 +307,8 @@ export default function Wallet() {
   // Handle Amount validation
   const numericAmount = parseFloat(withdrawAmount) || 0;
   const isAmountTooHigh = numericAmount > balanceFcfa;
-  const isAmountTooLow = numericAmount > 0 && numericAmount < 100;
-  const isAmountValid = numericAmount >= 100 && numericAmount <= balanceFcfa;
+  const isAmountTooLow = numericAmount > 0 && numericAmount < 200;
+  const isAmountValid = numericAmount >= 200 && numericAmount <= balanceFcfa;
 
   // Percentage quick shortcuts
   const applyPercent = (pct: number) => {
@@ -389,7 +389,7 @@ export default function Wallet() {
       if (isAmountTooHigh) {
         toast.error(`Solde insuffisant. Vous disposez de ${formatFmt(balanceFcfa)} FCFA.`);
       } else if (isAmountTooLow) {
-        toast.error("Montant minimum de retrait : 100 FCFA");
+        toast.error("Montant minimum de retrait : 200 FCFA");
       } else {
         toast.error("Veuillez saisir un montant valide");
       }
@@ -1040,7 +1040,7 @@ export default function Wallet() {
               {isAmountTooLow && (
                 <p className="mt-1.5 text-xs text-amber-500 font-medium flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  Montant minimum requis : 100 FCFA
+                  Montant minimum requis : 200 FCFA
                 </p>
               )}
             </div>

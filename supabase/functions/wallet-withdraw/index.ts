@@ -1,5 +1,8 @@
-// Withdraw from FCFA wallet via SaaSPay payout (with fallback to manual / PawaPay)
+// Withdraw from FCFA wallet via SaaSPay payout (routed through whitelisted Webshare proxy)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import http from "node:http";
+import tls from "node:tls";
+import { Buffer } from "node:buffer";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,8 +21,116 @@ const COUNTRY_CURRENCY_MAP: Record<string, string> = {
   US: "USD", IN: "INR",
 };
 
+// Helper: send request to SaaSPay through whitelisted static IP proxy (Webshare)
+async function sendSaaSPayRequest(
+  urlStr: string,
+  payload: any,
+  apiKey: string,
+  idempotencyKey: string
+): Promise<{ status: number; data: any }> {
+  const proxyHost = Deno.env.get("WEBSHARE_PROXY_HOST") || "p.webshare.io";
+  const proxyPort = Number(Deno.env.get("WEBSHARE_PROXY_PORT") || 80);
+  const proxyUser = Deno.env.get("WEBSHARE_PROXY_USER") || "gkkoqjad-1";
+  const proxyPass = Deno.env.get("WEBSHARE_PROXY_PASS") || "se6uv3i8h2dg";
+
+  const bodyStr = JSON.stringify(payload);
+  const url = new URL(urlStr);
+
+  try {
+    const proxyAuth = Buffer.from(`${proxyUser}:${proxyPass}`).toString("base64");
+
+    const result = await new Promise<{ status: number; data: any }>((resolve, reject) => {
+      const connectReq = http.request({
+        host: proxyHost,
+        port: proxyPort,
+        method: "CONNECT",
+        path: `${url.hostname}:443`,
+        headers: {
+          "Proxy-Authorization": `Basic ${proxyAuth}`,
+          "Host": `${url.hostname}:443`,
+        },
+        timeout: 12000,
+      });
+
+      connectReq.on("connect", (res, socket) => {
+        if (res.statusCode !== 200) {
+          return reject(new Error(`Proxy CONNECT failed with status: ${res.statusCode}`));
+        }
+
+        const tlsSocket = tls.connect({
+          socket,
+          servername: url.hostname,
+        });
+
+        tlsSocket.on("secureConnect", () => {
+          let reqHeader = `POST ${url.pathname}${url.search} HTTP/1.1\r\n`;
+          reqHeader += `Host: ${url.hostname}\r\n`;
+          reqHeader += `Authorization: Bearer ${apiKey}\r\n`;
+          reqHeader += `Content-Type: application/json\r\n`;
+          reqHeader += `Idempotency-Key: ${idempotencyKey}\r\n`;
+          reqHeader += `Content-Length: ${Buffer.byteLength(bodyStr)}\r\n`;
+          reqHeader += `Connection: close\r\n\r\n`;
+
+          tlsSocket.write(reqHeader);
+          tlsSocket.write(bodyStr);
+        });
+
+        let respRaw = "";
+        tlsSocket.on("data", (chunk: any) => {
+          respRaw += chunk.toString("utf8");
+        });
+
+        tlsSocket.on("end", () => {
+          try {
+            const splitIdx = respRaw.indexOf("\r\n\r\n");
+            const headerPart = respRaw.slice(0, splitIdx);
+            const bodyPart = respRaw.slice(splitIdx + 4);
+            const statusLine = headerPart.split("\r\n")[0];
+            const statusCode = parseInt(statusLine.split(" ")[1], 10) || 500;
+            const parsedData = JSON.parse(bodyPart);
+            resolve({ status: statusCode, data: parsedData });
+          } catch (pErr) {
+            reject(pErr);
+          }
+        });
+
+        tlsSocket.on("error", reject);
+      });
+
+      connectReq.on("timeout", () => {
+        connectReq.destroy();
+        reject(new Error("Proxy CONNECT timeout"));
+      });
+
+      connectReq.on("error", reject);
+      connectReq.end();
+    });
+
+    return result;
+  } catch (proxyErr) {
+    console.warn("[wallet-withdraw] Proxy failed or timed out, falling back to direct fetch:", proxyErr);
+    const resp = await fetch(urlStr, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: bodyStr,
+    });
+    const data = await resp.json();
+    return { status: resp.status, data };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  let debited = false;
+  let availableBalance = 0;
+  let createdWithdrawalId: string | null = null;
+  let currentUserId: string | null = null;
+  let currentService: any = null;
 
   try {
     const saaspayKey = Deno.env.get("SAASPAY_SECRET_KEY");
@@ -29,6 +140,8 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const service = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    currentService = service;
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) return j({ error: "Non authentifié" }, 401);
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -36,12 +149,12 @@ Deno.serve(async (req) => {
     });
     const { data: { user } } = await userClient.auth.getUser(authHeader.replace("Bearer ", ""));
     if (!user) return j({ error: "Non authentifié" }, 401);
+    currentUserId = user.id;
 
     const { amount, phone, provider, country } = await req.json();
-    let debited = false;
-    let availableBalance = 0;
-    let createdWithdrawalId: string | null = null;
-    if (!amount || amount < 100) return j({ error: "Montant minimum 100 FCFA" }, 400);
+    
+    // SaaSPay minimum withdrawal is 200 FCFA
+    if (!amount || amount < 200) return j({ error: "Montant minimum de retrait : 200 FCFA" }, 400);
     if (!phone || !provider) return j({ error: "Numéro et opérateur requis" }, 400);
 
     // Check FCFA balance
@@ -121,7 +234,7 @@ Deno.serve(async (req) => {
     createdWithdrawalId = withdrawal.id;
 
     // -------------------------------------------------------------
-    // OPTION A: SAASPAY PAYOUT (Live African & Worldwide Networks)
+    // OPTION A: SAASPAY PAYOUT (Routed via Whitelisted Webshare Proxy)
     // -------------------------------------------------------------
     if (saaspayKey) {
       let currency = COUNTRY_CURRENCY_MAP[countryCode] || "XOF";
@@ -155,30 +268,30 @@ Deno.serve(async (req) => {
         fee_charge_mode: "ADD_ON",
       };
 
-      console.log("[wallet-withdraw -> saaspay] payload:", JSON.stringify(payload));
+      console.log("[wallet-withdraw -> saaspay via proxy] payload:", JSON.stringify(payload));
 
       try {
-        const resp = await fetch(`${SAASPAY_BASE_URL}/payouts/initialize/`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${saaspayKey}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotencyKey,
-          },
-          body: JSON.stringify(payload),
-        });
+        const { status: saaspayStatus, data } = await sendSaaSPayRequest(
+          `${SAASPAY_BASE_URL}/payouts/initialize/`,
+          payload,
+          saaspayKey,
+          idempotencyKey
+        );
 
-        const data = await resp.json();
-        console.log("[wallet-withdraw -> saaspay] response:", resp.status, JSON.stringify(data));
+        console.log("[wallet-withdraw -> saaspay response]:", saaspayStatus, JSON.stringify(data));
 
-        if (resp.ok && (data.id || data.payout_id || data.status === "success" || data.status === "processing")) {
+        const isSuccess = saaspayStatus >= 200 && saaspayStatus < 300 && (
+          data.id || data.payout_id || data.status === "success" || data.status === "processing" || data.success === true
+        );
+
+        if (isSuccess) {
           const payoutId = data.id || data.payout_id || idempotencyKey;
           await service.from("withdrawals").update({
             pawapay_payout_id: payoutId,
             status: "processing",
           }).eq("id", withdrawal.id);
 
-          // Log transaction only when accepted by SaaSPay
+          // Log transaction in wallet_transactions only upon gateway confirmation
           await service.from("wallet_transactions").insert({
             user_id: user.id, wallet_currency: "FCFA", type: "withdrawal",
             amount: -amount, balance_after: newBalance,
@@ -201,17 +314,18 @@ Deno.serve(async (req) => {
           await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
           debited = false;
 
-          const isIpBlock = data?.error?.code === "ip_not_whitelisted" || resp.status === 403;
-          console.warn("[wallet-withdraw -> saaspay] payout rejected:", data);
+          const isIpBlock = data?.error?.code === "ip_not_whitelisted" || saaspayStatus === 403;
+          console.warn("[wallet-withdraw -> saaspay rejected]:", data);
 
           await service.from("withdrawals").update({
             status: "failed",
             moneroo_reference: isIpBlock ? "IP_NOT_WHITELISTED" : ((data?.error?.code || "FAILED") as string).slice(0, 100),
           }).eq("id", withdrawal.id);
 
-          const humanMsg = isIpBlock
-            ? "Échec SaaSPay : L'IP du serveur n'est pas autorisée pour les retraits automatiques par API (403 ip_not_whitelisted). Ajoutez l'IP dans SaaSPay (Développeur > IP Whitelist) ou effectuez le retrait directement depuis votre compte SaaSPay."
-            : (data?.error?.message || "Échec de l'envoi du virement Mobile Money SaaSPay.");
+          let humanMsg = data?.error?.message || (data?.error?.amount ? data.error.amount[0] : null) || "Échec de l'envoi du virement Mobile Money SaaSPay.";
+          if (isIpBlock) {
+            humanMsg = "Échec SaaSPay : L'IP n'est pas autorisée sur la whitelist de votre marchand (403).";
+          }
 
           return j({ error: humanMsg }, 400);
         }
@@ -264,19 +378,12 @@ Deno.serve(async (req) => {
   } catch (err: any) {
     console.error("[wallet-withdraw] fatal error:", err);
 
-    if (debited && !createdWithdrawalId && user?.id) {
-      // Refund user if money was deducted but withdrawal record failed
+    if (debited && currentUserId && currentService) {
       try {
-        await service.from("user_wallets").update({ balance_fcfa: availableBalance }).eq("user_id", user.id);
+        await currentService.from("user_wallets").update({ balance_fcfa: availableBalance }).eq("user_id", currentUserId);
       } catch (refundErr) {
         console.error("[wallet-withdraw] refund error:", refundErr);
       }
-    } else if (createdWithdrawalId) {
-      // Ensure withdrawal is in pending state
-      try {
-        await service.from("withdrawals").update({ status: "pending", moneroo_reference: "PENDING_RETRY" }).eq("id", createdWithdrawalId);
-        return j({ success: true, withdrawal_id: createdWithdrawalId, status: "pending_manual" });
-      } catch (_) {}
     }
 
     return j({ error: err.message || "Erreur lors du traitement du retrait" }, 500);
