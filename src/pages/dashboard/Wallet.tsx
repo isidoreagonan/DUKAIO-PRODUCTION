@@ -183,17 +183,18 @@ export default function Wallet() {
       }, 0);
 
       const totalCompletedWithdrawn = (userWithdrawals || [])
-        .filter((w) => w.status === "completed" || w.status === "processing")
+        .filter((w) => w.status === "completed")
         .reduce((acc, w) => acc + Number(w.amount || 0), 0);
 
-      let currentBal = Number(uw?.balance_fcfa || 0);
-      if (currentBal === 0 && totalNetEarned > totalCompletedWithdrawn) {
-        currentBal = Math.max(0, totalNetEarned - totalCompletedWithdrawn);
+      const realAvailable = Math.max(0, totalNetEarned - totalCompletedWithdrawn);
+      let currentBal = Number(uw?.balance_fcfa ?? 0);
+      if (currentBal !== realAvailable) {
+        currentBal = realAvailable;
         await supabase.from("user_wallets").upsert({
           user_id: user.id,
           balance_fcfa: currentBal,
           pending_fcfa: 0,
-        });
+        }, { onConflict: "user_id" });
       }
 
       setBalanceFcfa(currentBal);

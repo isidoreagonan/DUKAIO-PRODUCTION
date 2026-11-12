@@ -47,7 +47,44 @@ Deno.serve(async (req) => {
     // Check FCFA balance
     const { data: wallet } = await service.from("user_wallets")
       .select("balance_fcfa").eq("user_id", user.id).maybeSingle();
-    const available = Number(wallet?.balance_fcfa || 0);
+    let available = Number(wallet?.balance_fcfa || 0);
+
+    // Self-healing: if available in user_wallets is less than requested amount,
+    // recalculate actual net earned from completed orders minus genuinely completed withdrawals
+    if (available < amount) {
+      const { data: completedOrders } = await service
+        .from("orders")
+        .select("amount")
+        .eq("store_owner_id", user.id)
+        .eq("status", "completed");
+
+      const totalEarnedNet = (completedOrders || []).reduce(
+        (sum, o) => sum + Math.round(Number(o.amount || 0) * 0.95),
+        0
+      );
+
+      const { data: completedWithdrawals } = await service
+        .from("withdrawals")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("status", "completed");
+
+      const totalDisbursed = (completedWithdrawals || []).reduce(
+        (sum, w) => sum + Number(w.amount || 0),
+        0
+      );
+
+      const realAvailable = Math.max(0, totalEarnedNet - totalDisbursed);
+      if (realAvailable > available) {
+        available = realAvailable;
+        await service.from("user_wallets").upsert({
+          user_id: user.id,
+          balance_fcfa: available,
+          pending_fcfa: 0,
+        }, { onConflict: "user_id" });
+      }
+    }
+
     if (amount > available) {
       return j({ error: `Solde FCFA insuffisant. Disponible: ${Math.floor(available)} FCFA` }, 400);
     }

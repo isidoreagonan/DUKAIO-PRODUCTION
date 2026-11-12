@@ -358,7 +358,7 @@ const AFRICAN_MOMO_MAP: Record<string, { methods: MethodId[]; currency: string; 
   cg: { methods: ["airtel", "mtn", "card", "crypto"], currency: "XAF", placeholder: "06 000 00 00" },
   cd: { methods: ["vodacom", "airtel", "orange", "card", "crypto"], currency: "CDF", placeholder: "081 000 00 00" },
   ne: { methods: ["airtel", "moov", "card", "crypto"], currency: "XOF", placeholder: "90 00 00 00" },
-  ng: { methods: ["bank", "mtn", "airtel", "card", "crypto"], currency: "NGN", placeholder: "080 0000 0000" },
+  ng: { methods: ["mtn", "airtel", "card", "crypto"], currency: "NGN", placeholder: "080 0000 0000" },
   gh: { methods: ["mtn", "airtel", "card", "crypto"], currency: "GHS", placeholder: "024 000 0000" },
   gn: { methods: ["mtn", "card", "crypto"], currency: "GNF", placeholder: "620 00 00 00" },
   ke: { methods: ["vodacom", "airtel", "card", "crypto"], currency: "KES", placeholder: "0700 000000" },

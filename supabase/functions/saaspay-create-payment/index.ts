@@ -98,7 +98,9 @@ Deno.serve(async (req) => {
     // Generate unique reference
     const reference = `DK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const amountFormatted = Math.round(Number(body.amount)).toFixed(2);
-    const currency = body.currency || "XOF";
+    // DUKAIO products are priced in FCFA (XOF).
+    // Passing currency: "XOF" ensures SaaSPay's official FX engine converts to local currency (NGN, ZMW, KES, etc.) at the official central bank exchange rate without loss.
+    const currency = "XOF";
 
     // Track payment event in database
     const { data: paymentEvent, error: eventErr } = await supabase
@@ -115,8 +117,9 @@ Deno.serve(async (req) => {
 
     if (eventErr) console.error("payment_events insert warning:", eventErr);
 
-    const isCardOrCrypto = body.method === "card" || body.method === "crypto";
-    const isNigerianBank = countryUpper === "NG" || networkCode === "allbanks_ng" || networkCode.includes("bank");
+    const countryUpper = (body.country || "BJ").toUpperCase();
+    const rawMethod = String(body.method || "mtn").toLowerCase();
+    const isCardOrCrypto = rawMethod === "card" || rawMethod === "crypto";
 
     // Split customer name
     const nameParts = name.split(" ").filter(Boolean);
@@ -138,12 +141,19 @@ Deno.serve(async (req) => {
     if (countryUpper === "BJ" && localPhone.length === 8) {
       localPhone = `01${localPhone}`;
     }
+    // Nigeria: Strip leading 0 if present (e.g. 080 -> 80)
+    if (countryUpper === "NG" && localPhone.startsWith("0")) {
+      localPhone = localPhone.slice(1);
+    }
 
     // Determine normalized SaaSPay network code
-    let networkCode = body.method.toLowerCase();
-    if (!networkCode.includes("_") && !isCardOrCrypto && !isNigerianBank) {
-      networkCode = `${networkCode}_${body.country.toLowerCase()}`;
+    let networkCode = rawMethod;
+    if (!networkCode.includes("_") && !isCardOrCrypto) {
+      networkCode = `${networkCode}_${countryUpper.toLowerCase()}`;
     }
+
+    // For Nigeria: All local mobile (MTN, Airtel) and bank options route through dynamic virtual bank transfer
+    const isNigerianBank = (countryUpper === "NG" && !isCardOrCrypto) || networkCode === "allbanks_ng" || networkCode.includes("bank");
 
     let saaspayData: any = null;
     let paymentId = "";
