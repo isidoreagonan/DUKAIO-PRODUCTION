@@ -1111,10 +1111,12 @@ export default function Wallet() {
                   value={pinValue}
                   onChange={(val) => {
                     setPinValue(val);
-                    if (val.length === 4) {
-                      executeWithdrawalWithPin(val);
-                    }
+                    setPinError(null);
                   }}
+                  onComplete={(val) => {
+                    executeWithdrawalWithPin(val);
+                  }}
+                  disabled={pinSubmitting}
                 >
                   <InputOTPGroup>
                     <InputOTPSlot index={0} className="h-12 w-12 text-lg font-black bg-white dark:bg-[#1E293B] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white" />
@@ -1126,8 +1128,30 @@ export default function Wallet() {
               </div>
 
               {pinError && (
-                <p className="text-xs text-red-500 font-semibold">{pinError}</p>
+                <p className="text-xs text-red-500 font-semibold text-center">{pinError}</p>
               )}
+
+              <Button
+                type="button"
+                onClick={() => {
+                  if (pinValue.length === 4) {
+                    executeWithdrawalWithPin(pinValue);
+                  } else {
+                    setPinError("Veuillez saisir votre code PIN à 4 chiffres");
+                  }
+                }}
+                disabled={pinSubmitting || pinValue.length !== 4}
+                className="w-full h-11 font-bold text-sm bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A]"
+              >
+                {pinSubmitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Traitement du virement en cours...</span>
+                  </div>
+                ) : (
+                  "Confirmer le virement"
+                )}
+              </Button>
 
               <div className="flex items-center justify-between text-xs pt-2">
                 <button

@@ -1,8 +1,5 @@
-// Withdraw from FCFA wallet via SaaSPay payout (routed through whitelisted Webshare proxy)
+// Withdraw from FCFA wallet via SaaSPay payout (routed through whitelisted Webshare proxy via native Deno TCP/TLS)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import http from "node:http";
-import tls from "node:tls";
-import { Buffer } from "node:buffer";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,7 +18,7 @@ const COUNTRY_CURRENCY_MAP: Record<string, string> = {
   US: "USD", IN: "INR",
 };
 
-// Helper: send request to SaaSPay through whitelisted static IP proxy (Webshare)
+// Helper: send request to SaaSPay through whitelisted static IP proxy (Webshare) using native Deno TCP/TLS tunnel
 async function sendSaaSPayRequest(
   urlStr: string,
   payload: any,
@@ -37,78 +34,72 @@ async function sendSaaSPayRequest(
   const url = new URL(urlStr);
 
   try {
-    const proxyAuth = Buffer.from(`${proxyUser}:${proxyPass}`).toString("base64");
-
-    const result = await new Promise<{ status: number; data: any }>((resolve, reject) => {
-      const connectReq = http.request({
-        host: proxyHost,
-        port: proxyPort,
-        method: "CONNECT",
-        path: `${url.hostname}:443`,
-        headers: {
-          "Proxy-Authorization": `Basic ${proxyAuth}`,
-          "Host": `${url.hostname}:443`,
-        },
-        timeout: 12000,
-      });
-
-      connectReq.on("connect", (res, socket) => {
-        if (res.statusCode !== 200) {
-          return reject(new Error(`Proxy CONNECT failed with status: ${res.statusCode}`));
-        }
-
-        const tlsSocket = tls.connect({
-          socket,
-          servername: url.hostname,
-        });
-
-        tlsSocket.on("secureConnect", () => {
-          let reqHeader = `POST ${url.pathname}${url.search} HTTP/1.1\r\n`;
-          reqHeader += `Host: ${url.hostname}\r\n`;
-          reqHeader += `Authorization: Bearer ${apiKey}\r\n`;
-          reqHeader += `Content-Type: application/json\r\n`;
-          reqHeader += `Idempotency-Key: ${idempotencyKey}\r\n`;
-          reqHeader += `Content-Length: ${Buffer.byteLength(bodyStr)}\r\n`;
-          reqHeader += `Connection: close\r\n\r\n`;
-
-          tlsSocket.write(reqHeader);
-          tlsSocket.write(bodyStr);
-        });
-
-        let respRaw = "";
-        tlsSocket.on("data", (chunk: any) => {
-          respRaw += chunk.toString("utf8");
-        });
-
-        tlsSocket.on("end", () => {
-          try {
-            const splitIdx = respRaw.indexOf("\r\n\r\n");
-            const headerPart = respRaw.slice(0, splitIdx);
-            const bodyPart = respRaw.slice(splitIdx + 4);
-            const statusLine = headerPart.split("\r\n")[0];
-            const statusCode = parseInt(statusLine.split(" ")[1], 10) || 500;
-            const parsedData = JSON.parse(bodyPart);
-            resolve({ status: statusCode, data: parsedData });
-          } catch (pErr) {
-            reject(pErr);
-          }
-        });
-
-        tlsSocket.on("error", reject);
-      });
-
-      connectReq.on("timeout", () => {
-        connectReq.destroy();
-        reject(new Error("Proxy CONNECT timeout"));
-      });
-
-      connectReq.on("error", reject);
-      connectReq.end();
+    // 1. Establish raw TCP connection to Webshare proxy
+    const proxyConn = await Deno.connect({
+      hostname: proxyHost,
+      port: proxyPort,
     });
 
-    return result;
+    const proxyAuth = btoa(`${proxyUser}:${proxyPass}`);
+    const connectReq =
+      `CONNECT ${url.hostname}:443 HTTP/1.1\r\n` +
+      `Host: ${url.hostname}:443\r\n` +
+      `Proxy-Authorization: Basic ${proxyAuth}\r\n` +
+      `Connection: keep-alive\r\n\r\n`;
+
+    await proxyConn.write(new TextEncoder().encode(connectReq));
+
+    // Read proxy response
+    const initBuf = new Uint8Array(1024);
+    const n = await proxyConn.read(initBuf);
+    const proxyResp = new TextDecoder().decode(initBuf.subarray(0, n || 0));
+
+    if (!proxyResp.includes("200")) {
+      proxyConn.close();
+      throw new Error(`Proxy tunnel rejected: ${proxyResp.slice(0, 100)}`);
+    }
+
+    // 2. Upgrade to TLS
+    const tlsConn = await Deno.startTls(proxyConn, {
+      hostname: url.hostname,
+    });
+
+    // 3. Send HTTP POST request over TLS
+    const bodyBytes = new TextEncoder().encode(bodyStr);
+    const httpReq =
+      `POST ${url.pathname}${url.search} HTTP/1.1\r\n` +
+      `Host: ${url.hostname}\r\n` +
+      `Authorization: Bearer ${apiKey}\r\n` +
+      `Content-Type: application/json\r\n` +
+      `Idempotency-Key: ${idempotencyKey}\r\n` +
+      `Content-Length: ${bodyBytes.length}\r\n` +
+      `Connection: close\r\n\r\n`;
+
+    await tlsConn.write(new TextEncoder().encode(httpReq));
+    await tlsConn.write(bodyBytes);
+
+    // 4. Read response
+    let rawResponse = "";
+    const readBuf = new Uint8Array(4096);
+    while (true) {
+      const bytesRead = await tlsConn.read(readBuf);
+      if (!bytesRead || bytesRead === null) break;
+      rawResponse += new TextDecoder().decode(readBuf.subarray(0, bytesRead));
+    }
+    try {
+      tlsConn.close();
+    } catch (_) {}
+
+    const splitIdx = rawResponse.indexOf("\r\n\r\n");
+    const headerPart = rawResponse.slice(0, splitIdx);
+    const bodyPart = rawResponse.slice(splitIdx + 4);
+    const statusLine = headerPart.split("\r\n")[0];
+    const statusCode = parseInt(statusLine.split(" ")[1], 10) || 500;
+    const parsedData = JSON.parse(bodyPart);
+
+    return { status: statusCode, data: parsedData };
   } catch (proxyErr) {
-    console.warn("[wallet-withdraw] Proxy failed or timed out, falling back to direct fetch:", proxyErr);
+    console.warn("[wallet-withdraw] Native proxy tunnel error, falling back to direct fetch:", proxyErr);
     const resp = await fetch(urlStr, {
       method: "POST",
       headers: {
