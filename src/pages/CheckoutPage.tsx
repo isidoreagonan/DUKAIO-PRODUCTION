@@ -401,7 +401,7 @@ export default function CheckoutPage() {
 
     let isSubscribed = true;
 
-    // Polling interval every 2.5 seconds
+    // Polling interval every 2 seconds
     const interval = setInterval(async () => {
       try {
         const { data } = await supabase.functions.invoke("saaspay-status", {
@@ -423,7 +423,7 @@ export default function CheckoutPage() {
       } catch (pollErr) {
         console.warn("Polling status error:", pollErr);
       }
-    }, 2500);
+    }, 2000);
 
     return () => {
       isSubscribed = false;
@@ -819,15 +819,16 @@ export default function CheckoutPage() {
                   <span>{t("En attente de votre validation PIN...", "Waiting for your PIN approval...")}</span>
                 </div>
 
-                <div className="mt-8 pt-4 border-t border-[#E2E8F0] w-full max-w-xs">
+                <div className="mt-8 pt-4 border-t border-[#E2E8F0] w-full max-w-xs flex flex-col gap-2">
                   <button
+                    type="button"
                     onClick={() => {
                       setStep("form");
                       setPaymentId(null);
                     }}
-                    className="text-xs text-[#64748B] hover:text-[#0F172A] underline underline-offset-4 font-medium transition-colors"
+                    className="w-full h-10 rounded-xl border border-[#E2E8F0] text-xs font-semibold text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
                   >
-                    {t("Modifier le moyen de paiement ou le numéro", "Change payment method or phone number")}
+                    {t("Annuler ou modifier le numéro", "Cancel or change phone number")}
                   </button>
                 </div>
               </div>

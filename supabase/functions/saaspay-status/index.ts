@@ -48,7 +48,8 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("SAASPAY_SECRET_KEY");
     if (apiKey && paymentId && !paymentId.startsWith("DK-")) {
       try {
-        const verifyRes = await fetch(`${SAASPAY_BASE_URL}/payments/${paymentId}/verify/`, {
+        // Try Softpay verify endpoint first
+        let verifyRes = await fetch(`${SAASPAY_BASE_URL}/payments/${paymentId}/verify/`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
@@ -56,14 +57,115 @@ Deno.serve(async (req) => {
           },
         });
 
+        // If not found, try Checkout Sessions endpoint
+        if (verifyRes.status === 404) {
+          verifyRes = await fetch(`${SAASPAY_BASE_URL}/checkout-sessions/${paymentId}/`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+          });
+        }
+
         if (verifyRes.ok) {
           const verifyData = await verifyRes.json();
-          const rawStatus = (verifyData.status || "").toLowerCase();
+          const txn = verifyData.data || verifyData;
+          const rawStatus = String(txn.status || verifyData.status || "").toUpperCase();
 
-          if (rawStatus === "success" || rawStatus === "completed") {
-            return json({ status: "success", orderId: existingOrder?.id });
-          } else if (rawStatus === "failed" || rawStatus === "rejected" || rawStatus === "cancelled") {
-            return json({ status: "failed", error: verifyData.message || "Paiement refusé" });
+          console.log(`[saaspay-status] id=${paymentId} rawStatus=${rawStatus}`);
+
+          if (rawStatus === "SUCCESS" || rawStatus === "COMPLETED" || rawStatus === "PAID") {
+            // If order not yet created by webhook, finalize it now
+            let orderId = existingOrder?.id;
+            if (!orderId) {
+              const { data: ev } = await supabase
+                .from("payment_events")
+                .select("*")
+                .or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${reference}`)
+                .maybeSingle();
+
+              if (ev) {
+                const grossAmount = Number(ev.amount || txn.requested_amount || txn.amount || 0);
+                const netSeller = Math.round(grossAmount * 0.95);
+                const sessionParts = (ev.session_id || "").split("|");
+                const customerId = sessionParts[1] || null;
+
+                const { data: newOrder } = await supabase
+                  .from("orders")
+                  .insert({
+                    product_id: ev.product_id,
+                    store_owner_id: ev.store_owner_id,
+                    customer_id: customerId,
+                    amount: grossAmount,
+                    currency: "XOF",
+                    payment_provider: "saaspay",
+                    payment_method: txn.network_code || "mobile_money",
+                    pawapay_deposit_id: paymentId,
+                    moneroo_transaction_id: reference || txn.reference,
+                    status: "completed",
+                    funds_available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+                  } as any)
+                  .select("id")
+                  .single();
+
+                orderId = newOrder?.id;
+
+                await supabase.from("payment_events").update({ status: "success" }).eq("id", ev.id);
+
+                // Credit seller wallet
+                if (ev.store_owner_id) {
+                  await supabase.from("user_wallets").upsert({ user_id: ev.store_owner_id }, { onConflict: "user_id" });
+                  const { data: w } = await supabase
+                    .from("user_wallets")
+                    .select("pending_fcfa")
+                    .eq("user_id", ev.store_owner_id)
+                    .single();
+                  const newPending = Number(w?.pending_fcfa || 0) + netSeller;
+                  await supabase
+                    .from("user_wallets")
+                    .update({ pending_fcfa: newPending })
+                    .eq("user_id", ev.store_owner_id);
+
+                  await supabase.from("wallet_transactions").insert({
+                    user_id: ev.store_owner_id,
+                    wallet_currency: "XOF",
+                    type: "sale",
+                    amount: netSeller,
+                    balance_after: newPending,
+                    reference_id: orderId,
+                    reference_type: "order",
+                    status: "pending",
+                    available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+                    description: `Vente produit (${grossAmount} FCFA brut — net 95% après commission 5% DUKAIO)`,
+                  });
+                }
+              }
+            }
+
+            return json({ status: "success", orderId });
+          } else if (
+            rawStatus === "FAILED" ||
+            rawStatus === "REJECTED" ||
+            rawStatus === "CANCELLED" ||
+            rawStatus === "CANCELED" ||
+            rawStatus === "EXPIRED" ||
+            rawStatus === "REFUSED"
+          ) {
+            // Update payment event to failed
+            await supabase
+              .from("payment_events")
+              .update({ status: "failed" })
+              .or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${reference}`);
+
+            const errMsg =
+              rawStatus === "CANCELLED" || rawStatus === "CANCELED"
+                ? "Paiement annulé depuis votre téléphone."
+                : rawStatus === "EXPIRED"
+                ? "Le délai de validation sur votre téléphone a expiré."
+                : txn.failure_reason || "Paiement refusé ou annulé sur votre téléphone.";
+
+            return json({ status: "failed", error: errMsg });
           }
         }
       } catch (apiErr) {
