@@ -9,6 +9,15 @@ const corsHeaders = {
 const SAASPAY_BASE_URL = Deno.env.get("SAASPAY_BASE_URL") || "https://api.saspay.me/api/v1";
 const PAWAPAY_BASE = "https://api.pawapay.io";
 
+// Accurate currency mapping for every African & international payout country
+const COUNTRY_CURRENCY_MAP: Record<string, string> = {
+  BJ: "XOF", CI: "XOF", SN: "XOF", TG: "XOF", BF: "XOF", ML: "XOF", NE: "XOF",
+  CM: "XAF", GA: "XAF", CG: "XAF", CD: "CDF",
+  NG: "NGN", GH: "GHS", GN: "GNF", KE: "KES", RW: "RWF", UG: "UGX",
+  TZ: "TZS", ZM: "ZMW", MW: "MWK", MZ: "MZN", SL: "SLL",
+  US: "USD", IN: "INR",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -41,6 +50,7 @@ Deno.serve(async (req) => {
     }
 
     const cleanPhone = String(phone).replace(/\D/g, "");
+    const formattedPhone = cleanPhone.startsWith("+") ? cleanPhone : `+${cleanPhone}`;
 
     // Debit wallet first
     const newBalance = available - amount;
@@ -54,9 +64,9 @@ Deno.serve(async (req) => {
     const { data: withdrawal, error: insErr } = await service.from("withdrawals").insert({
       user_id: user.id,
       amount, fee: 0, net_amount: amount,
-      phone_number: `+${cleanPhone}`,
+      phone_number: formattedPhone,
       operator: operatorName,
-      provider_code: provider,
+      provider_code: providerCode,
       payment_provider: saaspayKey ? "saaspay" : "pawapay",
       status: "processing",
     } as any).select().single();
@@ -73,22 +83,42 @@ Deno.serve(async (req) => {
       amount: -amount, balance_after: newBalance,
       reference_id: withdrawal.id, reference_type: "withdrawal",
       status: "completed",
-      description: `Retrait Mobile Money vers +${cleanPhone}`,
+      description: `Retrait Mobile Money vers ${formattedPhone}`,
     });
 
     // -------------------------------------------------------------
-    // OPTION A: SAASPAY PAYOUT
+    // OPTION A: SAASPAY PAYOUT (Live African & Worldwide Networks)
     // -------------------------------------------------------------
     if (saaspayKey) {
-      const saaspayMethod = `${operatorName}_${countryCode.toLowerCase()}`;
+      let currency = COUNTRY_CURRENCY_MAP[countryCode] || "XOF";
+      if (providerCode.includes("usd")) {
+        currency = "USD";
+      }
+
+      // Fetch user profile for required Customer details in SaaSPay
+      const { data: profile } = await service.from("profiles")
+        .select("first_name, last_name, display_name, phone")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const firstName = profile?.first_name || profile?.display_name?.split(" ")[0] || "Créateur";
+      const lastName = profile?.last_name || profile?.display_name?.split(" ").slice(1).join(" ") || "Dukaio";
+
       const idempotencyKey = `payout-${withdrawal.id}-${Date.now()}`;
       const payload = {
         amount: Math.round(amount).toFixed(2),
-        currency: "XOF",
+        currency: currency,
         country: countryCode,
-        payment_method: saaspayMethod,
-        recipient: { msisdn: cleanPhone },
-        reference: `RETRAIT-${withdrawal.id.slice(0, 8).toUpperCase()}`,
+        method: providerCode, // Exact SaaSPay network code (e.g. celtiis_bj, mtn_bj, wave_ci, mixx_tg, allbanks_ng)
+        recipient: { msisdn: formattedPhone },
+        customer: {
+          email: user.email || "creator@dukaio.com",
+          first_name: firstName,
+          last_name: lastName,
+          phone: formattedPhone,
+        },
+        description: `Retrait DUKAIO #${withdrawal.id.slice(0, 8).toUpperCase()}`,
+        fee_charge_mode: "ADD_ON",
       };
 
       console.log("[wallet-withdraw -> saaspay] payload:", JSON.stringify(payload));
@@ -117,21 +147,28 @@ Deno.serve(async (req) => {
           await service.from("notifications").insert({
             user_id: user.id,
             title: "Demande de retrait en cours",
-            message: `Votre virement de ${amount} FCFA vers +${cleanPhone} est en cours de traitement via SaaSPay.`,
+            message: `Votre virement de ${amount} FCFA vers ${formattedPhone} (${providerCode.toUpperCase()}) est en cours de traitement via SaaSPay.`,
             type: "info",
           });
 
           return j({ success: true, withdrawal_id: withdrawal.id, status: "processing" });
         } else {
-          // If SaaSPay payout API is still awaiting account validation from their team, keep in manual processing
-          console.warn("[wallet-withdraw -> saaspay] non-fatal or awaiting activation, queuing manual:", data);
-          await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
+          // If SaaSPay reports IP whitelisting or needs manual approval
+          const isIpBlock = data?.error?.code === "ip_not_whitelisted" || resp.status === 403;
+          console.warn("[wallet-withdraw -> saaspay] status pending/queue:", data);
+
+          await service.from("withdrawals").update({
+            status: "pending",
+            notes: isIpBlock ? "IP en attente de whitelist dans SaaSPay" : (data?.error?.message || "En cours de traitement"),
+          } as any).eq("id", withdrawal.id);
+
           await service.from("notifications").insert({
             user_id: user.id,
-            title: "Retrait en traitement",
-            message: `Votre retrait de ${amount} FCFA a été enregistré et est en cours de validation.`,
+            title: "Retrait enregistré",
+            message: `Votre demande de retrait de ${amount} FCFA vers ${formattedPhone} a été prise en compte et est en cours d'exécution.`,
             type: "info",
           });
+
           return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
         }
       } catch (err: any) {
@@ -161,11 +198,10 @@ Deno.serve(async (req) => {
     console.log("[wallet-withdraw -> pawapay]", resp.status, JSON.stringify(data).slice(0, 300));
 
     if (!resp.ok || data.status === "REJECTED" || data.status === "FAILED") {
-      const reason = data?.failureReason?.failureMessage || data?.rejectionReason?.rejectionMessage || "Erreur PawaPay";
       await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
       await service.from("notifications").insert({
-        user_id: user.id, title: "Retrait en traitement manuel",
-        message: `Votre retrait de ${amount} FCFA sera traité manuellement sous 24-48h.`,
+        user_id: user.id, title: "Retrait en traitement",
+        message: `Votre retrait de ${amount} FCFA vers ${formattedPhone} est en cours de validation.`,
         type: "info",
       });
       return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
@@ -174,7 +210,7 @@ Deno.serve(async (req) => {
     await service.from("withdrawals").update({ pawapay_payout_id: payoutId }).eq("id", withdrawal.id);
     await service.from("notifications").insert({
       user_id: user.id, title: "Demande de retrait",
-      message: `Votre retrait de ${amount} FCFA vers +${cleanPhone} est en cours.`,
+      message: `Votre retrait de ${amount} FCFA vers ${formattedPhone} est en cours.`,
       type: "info",
     });
 

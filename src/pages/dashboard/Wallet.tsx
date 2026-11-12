@@ -16,10 +16,9 @@ import { toast } from "sonner";
 import SEOHead from "@/components/SEOHead";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
-  SAASPAY_COUNTRIES,
   SAASPAY_PAYOUT_COUNTRIES,
   SAASPAY_METHODS,
-  type MethodId,
+  getSaaSPayNetwork,
 } from "@/data/saaspayProviders";
 
 interface SavedWallet {
@@ -49,20 +48,32 @@ const formatFmt = (n: number) =>
     .toLocaleString("fr-FR")
     .replace(/\u202f|\u00a0/g, " ");
 
-// Helper to resolve operator logo, name and country flag
+// Helper to resolve operator logo, official name and country flag
 const getOperatorMeta = (providerCode: string, countryCode?: string) => {
+  const network = getSaaSPayNetwork(providerCode);
+  if (network) {
+    const opMeta = SAASPAY_METHODS[network.operatorKey] || SAASPAY_METHODS.mtn;
+    return {
+      code: network.code,
+      name: network.name,
+      logo: opMeta.logos?.[0] || null,
+      flagUrl: `https://flagcdn.com/w40/${network.countryCode}.png`,
+      country: network.countryCode.toUpperCase(),
+      currency: network.currency,
+    };
+  }
+
   const parts = (providerCode || "").toLowerCase().split("_");
-  const method = (parts[0] as MethodId) || "mtn";
+  const method = parts[0] || "mtn";
   const cc = parts[1] || (countryCode || "").toLowerCase() || "bj";
   const meta = SAASPAY_METHODS[method] || { name: providerCode, logos: [] };
-  const logo = meta.logos?.[0] || null;
-  const flagUrl = cc ? `https://flagcdn.com/w40/${cc}.png` : null;
   return {
-    method,
+    code: providerCode,
     name: meta.name || providerCode,
-    logo,
-    flagUrl,
+    logo: meta.logos?.[0] || null,
+    flagUrl: cc ? `https://flagcdn.com/w40/${cc}.png` : null,
     country: cc.toUpperCase(),
+    currency: "XOF",
   };
 };
 
@@ -92,9 +103,9 @@ export default function Wallet() {
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
 
-  // New account form inside withdrawal or accounts modal
+  // New account form state
   const [accCountry, setAccCountry] = useState<string>("bj");
-  const [accOperator, setAccOperator] = useState<string>("mtn");
+  const [accOperator, setAccOperator] = useState<string>("mtn_bj");
   const [accPhone, setAccPhone] = useState<string>("");
   const [accLabel, setAccLabel] = useState<string>("");
   const [accHolderName, setAccHolderName] = useState<string>("");
@@ -136,7 +147,7 @@ export default function Wallet() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // 3. Fetch completed orders to ensure balance is 100% accurate
+      // 3. Fetch completed orders
       const { data: completedOrders } = await supabase
         .from("orders")
         .select("id, amount, status, created_at, products(title)")
@@ -175,11 +186,9 @@ export default function Wallet() {
         .filter((w) => w.status === "completed" || w.status === "processing")
         .reduce((acc, w) => acc + Number(w.amount || 0), 0);
 
-      // Computed available: use DB balance if present, otherwise calculate from net earnings minus withdrawals
       let currentBal = Number(uw?.balance_fcfa || 0);
       if (currentBal === 0 && totalNetEarned > totalCompletedWithdrawn) {
         currentBal = Math.max(0, totalNetEarned - totalCompletedWithdrawn);
-        // Sync user_wallets in DB
         await supabase.from("user_wallets").upsert({
           user_id: user.id,
           balance_fcfa: currentBal,
@@ -210,7 +219,6 @@ export default function Wallet() {
         status: (t.status as any) || "completed",
       }));
 
-      // If no transactions logged yet in wallet_transactions table, construct from completed orders and withdrawals
       if (formattedTx.length === 0) {
         const orderTxs: WalletTx[] = (completedOrders || []).map((o) => ({
           id: o.id,
@@ -225,7 +233,7 @@ export default function Wallet() {
         const withTxs: WalletTx[] = (userWithdrawals || []).map((w) => ({
           id: w.id,
           type: "withdrawal",
-          label: `Retrait Mobile Money (${w.operator || "MoMo"})`,
+          label: `Retrait (${w.operator || "MoMo"})`,
           amount: Number(w.amount || 0),
           currency: "FCFA",
           date: w.created_at,
@@ -267,23 +275,24 @@ export default function Wallet() {
   const currentCountryConfig = useMemo(() => {
     return (
       SAASPAY_PAYOUT_COUNTRIES.find((c) => c.code === accCountry) ||
-      SAASPAY_COUNTRIES.find((c) => c.code === accCountry) ||
-      SAASPAY_COUNTRIES[0]
+      SAASPAY_PAYOUT_COUNTRIES[0]
     );
   }, [accCountry]);
 
-  // Supported Mobile Money operators for selected country
-  const countryMethods = useMemo(() => {
-    const list = currentCountryConfig?.methods || [];
-    return list.filter((m) => m !== "card" && m !== "crypto");
+  // Networks available for the selected country
+  const countryNetworks = useMemo(() => {
+    return currentCountryConfig?.networks || [];
   }, [currentCountryConfig]);
 
   // Sync operator when country changes
   useEffect(() => {
-    if (countryMethods.length > 0 && !countryMethods.includes(accOperator as MethodId)) {
-      setAccOperator(countryMethods[0]);
+    if (countryNetworks.length > 0) {
+      const exists = countryNetworks.some((n) => n.code === accOperator);
+      if (!exists) {
+        setAccOperator(countryNetworks[0].code);
+      }
     }
-  }, [accCountry, countryMethods]);
+  }, [accCountry, countryNetworks]);
 
   // Handle Amount validation
   const numericAmount = parseFloat(withdrawAmount) || 0;
@@ -304,15 +313,16 @@ export default function Wallet() {
   const handleSaveAccount = async () => {
     if (!user) return;
     const cleanPh = accPhone.replace(/\D/g, "");
-    if (cleanPh.length < 6) {
-      toast.error("Veuillez saisir un numéro de téléphone valide");
+    if (cleanPh.length < 5) {
+      toast.error("Veuillez saisir un numéro ou compte valide");
       return;
     }
 
     setSavingAccount(true);
     try {
       const isDefault = savedWallets.length === 0;
-      const providerCode = `${accOperator}_${accCountry}`;
+      const selectedNet = countryNetworks.find((n) => n.code === accOperator) || countryNetworks[0];
+      const providerCode = selectedNet ? selectedNet.code : accOperator;
       const dialCode = currentCountryConfig.dial.replace(/\D/g, "");
       const fullPhone = cleanPh.startsWith(dialCode) ? `+${cleanPh}` : `+${dialCode}${cleanPh}`;
 
@@ -320,11 +330,11 @@ export default function Wallet() {
         .from("wallets")
         .insert({
           user_id: user.id,
-          name: accLabel.trim() || `${SAASPAY_METHODS[accOperator as MethodId]?.name || accOperator} (${currentCountryConfig.name})`,
+          name: accLabel.trim() || `${selectedNet?.name || "Compte de retrait"}`,
           country: accCountry.toUpperCase(),
           provider_code: providerCode,
           phone: fullPhone,
-          holder_first_name: accHolderName.trim() || profile?.display_name || "Vendeur",
+          holder_first_name: accHolderName.trim() || profile?.display_name || "Créateur",
           holder_last_name: "",
           is_default: isDefault,
         })
@@ -333,7 +343,7 @@ export default function Wallet() {
 
       if (error) throw error;
 
-      toast.success("Compte de retrait enregistré !");
+      toast.success("Compte de retrait enregistré avec succès !");
       setSavedWallets((prev) => [data as SavedWallet, ...prev]);
       setSelectedWalletId(data.id);
       setAccountModalOpen(false);
@@ -378,8 +388,8 @@ export default function Wallet() {
 
     if (selectedWalletId === "new") {
       const clean = accPhone.replace(/\D/g, "");
-      if (clean.length < 6) {
-        toast.error("Veuillez saisir votre numéro Mobile Money de réception");
+      if (clean.length < 5) {
+        toast.error("Veuillez saisir votre numéro ou compte de réception");
         return;
       }
     }
@@ -401,7 +411,6 @@ export default function Wallet() {
     setPinError(null);
 
     try {
-      // 1. If user doesn't have PIN, set it now
       if (!hasPin) {
         const { error: pinSetErr } = await supabase.functions.invoke("wallet-pin-set", {
           body: { pin: finalPin },
@@ -409,7 +418,6 @@ export default function Wallet() {
         if (pinSetErr) throw pinSetErr;
         setHasPin(true);
       } else {
-        // Verify PIN
         const { data: vData, error: vErr } = await supabase.functions.invoke("wallet-pin-verify", {
           body: { pin: finalPin },
         });
@@ -421,19 +429,18 @@ export default function Wallet() {
         }
       }
 
-      // 2. Prepare phone and operator details
       let targetPhone = "";
       let targetProvider = "";
       let targetCountry = "";
 
       if (selectedWalletId === "new") {
+        const selectedNet = countryNetworks.find((n) => n.code === accOperator) || countryNetworks[0];
         const dial = currentCountryConfig.dial.replace(/\D/g, "");
         const clean = accPhone.replace(/\D/g, "");
         targetPhone = clean.startsWith(dial) ? `+${clean}` : `+${dial}${clean}`;
-        targetProvider = `${accOperator}_${accCountry}`;
+        targetProvider = selectedNet ? selectedNet.code : accOperator;
         targetCountry = accCountry.toUpperCase();
 
-        // Optionally save to savedWallets
         if (accSaveForNext) {
           handleSaveAccount().catch(console.error);
         }
@@ -445,7 +452,7 @@ export default function Wallet() {
         targetCountry = sw.country;
       }
 
-      // 3. Call wallet-withdraw Edge Function (calls SaaSPay Payout with 0 DUKAIO fee)
+      // Call wallet-withdraw Edge Function (calls SaaSPay Payout API with exact network method)
       const { data: withdrawRes, error: wErr } = await supabase.functions.invoke("wallet-withdraw", {
         body: {
           amount: numericAmount,
@@ -459,8 +466,9 @@ export default function Wallet() {
         throw new Error(withdrawRes?.error || wErr?.message || "Échec du retrait");
       }
 
-      toast.success(`Retrait de ${formatFmt(numericAmount)} FCFA initié avec succès !`, {
-        description: `Le virement vers ${targetPhone} est en cours de transmission.`,
+      const netMeta = getOperatorMeta(targetProvider, targetCountry);
+      toast.success(`Retrait de ${formatFmt(numericAmount)} FCFA initié !`, {
+        description: `Le virement vers ${targetPhone} (${netMeta.name}) est en cours de transmission.`,
       });
 
       // Update local state immediately
@@ -470,7 +478,6 @@ export default function Wallet() {
       setPinModalOpen(false);
       setWithdrawModalOpen(false);
 
-      // Reload fresh data in background
       loadData();
     } catch (err: any) {
       console.error("[executeWithdrawalWithPin]", err);
@@ -529,16 +536,17 @@ export default function Wallet() {
         {/* NEO-BANKING FINTECH CARD (Inspiré des captures mobiles)   */}
         {/* ======================================================== */}
         <div className="relative overflow-hidden rounded-[28px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#111827] shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 sm:p-10 text-center">
-          {/* Subtle top decoration */}
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/5 dark:bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Top Pill: Solde retirable with Flags */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs font-bold text-slate-600 dark:text-slate-300 shadow-2xs">
             <div className="flex items-center -space-x-1.5">
               <img src="https://flagcdn.com/w40/bj.png" alt="Bénin" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              <img src="https://flagcdn.com/w40/tg.png" alt="Togo" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
               <img src="https://flagcdn.com/w40/ci.png" alt="Côte d'Ivoire" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
               <img src="https://flagcdn.com/w40/sn.png" alt="Sénégal" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
-              <img src="https://flagcdn.com/w40/tg.png" alt="Togo" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              <img src="https://flagcdn.com/w40/cm.png" alt="Cameroun" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              <img src="https://flagcdn.com/w40/ng.png" alt="Nigéria" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
             </div>
             <span className="tracking-wider uppercase text-[10px]">Solde disponible au retrait</span>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -618,11 +626,10 @@ export default function Wallet() {
         {/* STATS TILES (Solde disponible + Total encaissé)            */}
         {/* ======================================================== */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Tile 1: Solde disponible */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#151C2B] p-5 shadow-2xs flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                Solde disponible (Mobile Money)
+                Solde disponible (Mobile Money & Banque)
               </span>
               <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 block">
                 {hideBalance ? "••••" : `${formatFmt(balanceFcfa)} F`}
@@ -636,7 +643,6 @@ export default function Wallet() {
             </div>
           </div>
 
-          {/* Tile 2: Total des gains nets */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#151C2B] p-5 shadow-2xs flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
@@ -746,17 +752,17 @@ export default function Wallet() {
       </div>
 
       {/* ======================================================== */}
-      {/* DIALOG 1: EFFECTUER UN RETRAIT MOBILE MONEY              */}
+      {/* DIALOG 1: EFFECTUER UN RETRAIT                          */}
       {/* ======================================================== */}
       <Dialog open={withdrawModalOpen} onOpenChange={setWithdrawModalOpen}>
         <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              Effectuer un retrait Mobile Money
+              Effectuer un retrait
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-              Virement direct et sécurisé vers votre compte Mobile Money. 0 FCFA de frais DUKAIO.
+              Virement direct vers votre compte Mobile Money ou bancaire. 0 FCFA de frais DUKAIO.
             </DialogDescription>
           </DialogHeader>
 
@@ -777,7 +783,7 @@ export default function Wallet() {
             {/* Compte de retrait sélection */}
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                Compte de réception Mobile Money
+                Compte de réception
               </label>
 
               {savedWallets.length > 0 && (
@@ -818,7 +824,7 @@ export default function Wallet() {
                               </span>
                             </p>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                              {sw.phone} • {meta.country}
+                              {sw.phone} • {meta.country} ({meta.currency})
                             </p>
                           </div>
                         </div>
@@ -856,7 +862,7 @@ export default function Wallet() {
                     <Plus className="h-4 w-4" />
                   </div>
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Utiliser un autre numéro Mobile Money
+                    Utiliser un autre compte / numéro
                   </span>
                 </div>
                 <div
@@ -884,7 +890,7 @@ export default function Wallet() {
                     >
                       {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
                         <option key={c.code} value={c.code} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
-                          {c.name} ({c.dial})
+                          {c.name} ({c.dial} • {c.currency})
                         </option>
                       ))}
                     </select>
@@ -901,33 +907,38 @@ export default function Wallet() {
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
-                    Opérateur Mobile Money
+                    Réseau officiel ({countryNetworks.length} disponible{countryNetworks.length > 1 ? "s" : ""})
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {countryMethods.map((m) => {
-                      const meta = SAASPAY_METHODS[m];
-                      const isSel = accOperator === m;
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {countryNetworks.map((net) => {
+                      const opMeta = SAASPAY_METHODS[net.operatorKey] || SAASPAY_METHODS.mtn;
+                      const isSel = accOperator === net.code;
                       return (
                         <button
-                          key={m}
+                          key={net.code}
                           type="button"
-                          onClick={() => setAccOperator(m)}
-                          className={`p-2 rounded-xl border flex items-center gap-2 transition-all text-left ${
+                          onClick={() => setAccOperator(net.code)}
+                          className={`p-2.5 rounded-xl border flex items-center gap-2.5 transition-all text-left ${
                             isSel
                               ? "border-[#0F172A] dark:border-white bg-[#0F172A]/5 dark:bg-white/10 ring-1 ring-[#0F172A] dark:ring-white shadow-2xs"
                               : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:border-slate-300 dark:hover:border-slate-600"
                           }`}
                         >
-                          <div className="h-7 w-7 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
-                            {meta?.logos?.[0] ? (
-                              <img src={meta.logos[0]} alt={meta.name} className="h-full w-full object-contain" />
+                          <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
+                            {opMeta?.logos?.[0] ? (
+                              <img src={opMeta.logos[0]} alt={net.name} className="h-full w-full object-contain" />
                             ) : (
-                              <Smartphone className="h-3.5 w-3.5 text-slate-500" />
+                              <Smartphone className="h-4 w-4 text-slate-500" />
                             )}
                           </div>
-                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                            {meta?.name || m.toUpperCase()}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
+                              {net.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-semibold block">
+                              Devise : {net.currency}
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
@@ -936,7 +947,7 @@ export default function Wallet() {
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                    Numéro de réception
+                    Numéro de réception / Compte
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">
@@ -960,7 +971,7 @@ export default function Wallet() {
                     className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
                   />
                   <label htmlFor="saveForNext" className="text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
-                    Enregistrer ce numéro pour mes prochains retraits
+                    Enregistrer ce compte pour mes prochains retraits
                   </label>
                 </div>
               </div>
@@ -1000,7 +1011,6 @@ export default function Wallet() {
                 ))}
               </div>
 
-              {/* Inline validation feedback */}
               {isAmountTooHigh && (
                 <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5" />
@@ -1047,7 +1057,7 @@ export default function Wallet() {
       </Dialog>
 
       {/* ======================================================== */}
-      {/* DIALOG 2: SÉCURITÉ CODE PIN (Demandé UNIQUEMENT au retrait) */}
+      {/* DIALOG 2: SÉCURITÉ CODE PIN                             */}
       {/* ======================================================== */}
       <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
         <DialogContent className="sm:max-w-sm rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-center text-slate-900 dark:text-white">
@@ -1068,7 +1078,7 @@ export default function Wallet() {
                 ? "Créez un code PIN à 4 chiffres pour valider ce retrait et sécuriser vos futurs retraits."
                 : pinMode === "forgot"
                 ? "Un code de validation sera envoyé à votre adresse email pour choisir un nouveau code PIN."
-                : "Entrez votre code PIN à 4 chiffres pour valider le virement Mobile Money."}
+                : "Entrez votre code PIN à 4 chiffres pour valider le virement."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1232,17 +1242,17 @@ export default function Wallet() {
       </Dialog>
 
       {/* ======================================================== */}
-      {/* DIALOG 3: GESTION DES COMPTES DE RETRAIT (Carnet Mobile Money) */}
+      {/* DIALOG 3: GESTION DES COMPTES DE RETRAIT                */}
       {/* ======================================================== */}
       <Dialog open={accountModalOpen} onOpenChange={setAccountModalOpen}>
         <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-h-[92vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-primary" />
-              Mes comptes de retrait Mobile Money
+              Mes comptes de retrait
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-              Gérez vos numéros Mobile Money enregistrés pour vos virements.
+              Gérez vos numéros Mobile Money et comptes bancaires enregistrés.
             </DialogDescription>
           </DialogHeader>
 
@@ -1282,7 +1292,9 @@ export default function Wallet() {
                               {meta.name}
                             </span>
                           </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{sw.phone} • {meta.country}</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                            {sw.phone} • {meta.country} ({meta.currency})
+                          </p>
                         </div>
                       </div>
                       <button
@@ -1317,7 +1329,7 @@ export default function Wallet() {
                   >
                     {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
-                        {c.name} ({c.dial})
+                        {c.name} ({c.dial} • {c.currency})
                       </option>
                     ))}
                   </select>
@@ -1334,33 +1346,38 @@ export default function Wallet() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Opérateur Mobile Money
+                  Réseau officiel ({countryNetworks.length} disponible{countryNetworks.length > 1 ? "s" : ""})
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {countryMethods.map((m) => {
-                    const meta = SAASPAY_METHODS[m];
-                    const isSel = accOperator === m;
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                  {countryNetworks.map((net) => {
+                    const opMeta = SAASPAY_METHODS[net.operatorKey] || SAASPAY_METHODS.mtn;
+                    const isSel = accOperator === net.code;
                     return (
                       <button
-                        key={m}
+                        key={net.code}
                         type="button"
-                        onClick={() => setAccOperator(m)}
-                        className={`p-2 rounded-xl border flex items-center gap-2 transition-all text-left ${
+                        onClick={() => setAccOperator(net.code)}
+                        className={`p-2.5 rounded-xl border flex items-center gap-2.5 transition-all text-left ${
                           isSel
                             ? "border-[#0F172A] dark:border-white bg-[#0F172A]/5 dark:bg-white/10 ring-1 ring-[#0F172A] dark:ring-white shadow-2xs"
                             : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:border-slate-300 dark:hover:border-slate-600"
                         }`}
                       >
-                        <div className="h-7 w-7 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
-                          {meta?.logos?.[0] ? (
-                            <img src={meta.logos[0]} alt={meta.name} className="h-full w-full object-contain" />
+                        <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
+                          {opMeta?.logos?.[0] ? (
+                            <img src={opMeta.logos[0]} alt={net.name} className="h-full w-full object-contain" />
                           ) : (
-                            <Smartphone className="h-3.5 w-3.5 text-slate-500" />
+                            <Smartphone className="h-4 w-4 text-slate-500" />
                           )}
                         </div>
-                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {meta?.name || m.toUpperCase()}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
+                            {net.name}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold block">
+                            Devise : {net.currency}
+                          </span>
+                        </div>
                       </button>
                     );
                   })}
@@ -1369,7 +1386,7 @@ export default function Wallet() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                  Numéro de téléphone
+                  Numéro de téléphone / Compte
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">
@@ -1386,7 +1403,7 @@ export default function Wallet() {
 
               <div>
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                  Nom du label (ex: Mon MTN Principal)
+                  Nom du label (ex: Mon compte principal)
                 </label>
                 <Input
                   value={accLabel}
