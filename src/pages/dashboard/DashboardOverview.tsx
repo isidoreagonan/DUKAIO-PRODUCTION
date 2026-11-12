@@ -1,115 +1,274 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import {
-  Users, ShoppingCart, Wallet, Package, Info, ArrowUpRight, TrendingUp, Plus, ExternalLink, ArrowRight, ShoppingBag, Store
-} from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
-} from "recharts";
-import { format, subDays, eachDayOfInterval } from "date-fns";
-import { fr } from "date-fns/locale";
+  Wallet, TrendingUp, Users, DollarSign, Copy, Check,
+  Package, ShoppingBag, ArrowRight
+} from "lucide-react";
 import {
-  Tooltip as UITooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid
+} from "recharts";
+import {
+  format, subDays, startOfDay, endOfDay, eachDayOfInterval,
+  isWithinInterval, parseISO
+} from "date-fns";
+import { fr } from "date-fns/locale";
+import { toast } from "sonner";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { useActiveStore } from "@/hooks/useActiveStore";
 
-export const DashboardOverview = () => {
+type ChartPeriod = 7 | 30 | 90;
+
+export function DashboardOverview() {
   const { user, profile } = useAuth();
   const { activeStore } = useActiveStore();
   const navigate = useNavigate();
-  
-  const [stats, setStats] = useState({
-    products: 0,
-    published: 0,
-    totalRevenue: 0,
-    clients: 0,
-    totalSales: 0,
-  });
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [recentOrders, setRecentOrders] = useState<any[]>([]);
-  const [topProducts, setTopProducts] = useState<any[]>([]);
 
+  const [periodDays, setPeriodDays] = useState<ChartPeriod>(30);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  // Raw data from DB
+  const [availableFcfa, setAvailableFcfa] = useState<number>(0);
+  const [rawProducts, setRawProducts] = useState<any[]>([]);
+  const [rawOrders, setRawOrders] = useState<any[]>([]);
+
+  // Fetch data
   useEffect(() => {
     if (!user) return;
-    const fetchStats = async () => {
-      const [productsRes, ordersRes] = await Promise.all([
-        supabase.from("products").select("*", { count: "exact" }).eq("creator_id", user.id),
-        supabase.from("orders").select("amount, created_at, customer_id, product_id, status").eq("store_owner_id", user.id).eq("status", "completed"),
-      ]);
 
-      const products = productsRes.data || [];
-      const orders = ordersRes.data || [];
-      const published = products.filter((p: any) => p.is_published).length;
-      const totalRevenue = orders.reduce((sum, o) => sum + Number(o.amount), 0);
-      const uniqueClients = new Set(orders.map(o => o.customer_id)).size;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [walletRes, productsRes, ordersRes] = await Promise.all([
+          supabase
+            .from("user_wallets")
+            .select("balance_fcfa")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          supabase
+            .from("products")
+            .select("id, title, price, thumbnail_url, is_published, created_at, type")
+            .eq("creator_id", user.id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("orders")
+            .select("id, amount, status, created_at, product_id, customer_id, products(title, thumbnail_url), customers(name, email)")
+            .eq("store_owner_id", user.id)
+            .eq("status", "completed")
+            .order("created_at", { ascending: false }),
+        ]);
 
-      setStats({
-        products: productsRes.count || 0,
-        published,
-        totalRevenue,
-        clients: uniqueClients,
-        totalSales: orders.length,
-      });
-
-      // 30 Days Chart data
-      const interval = eachDayOfInterval({ start: subDays(new Date(), 29), end: new Date() });
-      const chart = interval.map(day => {
-        const dayStr = format(day, "yyyy-MM-dd");
-        const dayOrders = orders.filter(o => format(new Date(o.created_at), "yyyy-MM-dd") === dayStr);
-        return {
-          date: format(day, "dd/MM", { locale: fr }),
-          fullDate: format(day, "dd MMM yyyy", { locale: fr }),
-          revenue: dayOrders.reduce((s, o) => s + Number(o.amount), 0),
-          ventes: dayOrders.length,
-        };
-      });
-      setChartData(chart);
-
-      // Fetch Recent Orders
-      const { data: recent } = await supabase
-        .from("orders")
-        .select("id, amount, status, created_at, products(title), customers(name, email)")
-        .eq("store_owner_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      setRecentOrders(recent || []);
-
-      // Top Products calculation
-      const salesByProduct: Record<string, { total: number; count: number }> = {};
-      orders.forEach(o => {
-        if (!salesByProduct[o.product_id]) salesByProduct[o.product_id] = { total: 0, count: 0 };
-        salesByProduct[o.product_id].total += Number(o.amount);
-        salesByProduct[o.product_id].count += 1;
-      });
-      const enriched = products.map((p: any) => ({
-        ...p,
-        salesTotal: salesByProduct[p.id]?.total || 0,
-        salesCount: salesByProduct[p.id]?.count || 0,
-      }));
-      enriched.sort((a: any, b: any) => b.salesTotal - a.salesTotal);
-      setTopProducts(enriched.slice(0, 4));
+        if (walletRes.data) {
+          setAvailableFcfa(Number(walletRes.data.balance_fcfa || 0));
+        }
+        setRawProducts(productsRes.data || []);
+        setRawOrders(ordersRes.data || []);
+      } catch (err) {
+        console.error("Erreur chargement dashboard:", err);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchStats();
+
+    fetchData();
   }, [user]);
+
+  // Dynamic greeting according to hour, season, and catalog products
+  const greetingData = useMemo(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const month = now.getMonth(); // 0 = Jan, 11 = Dec
+
+    // User display name / first name
+    const fullName =
+      profile?.display_name ||
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.name ||
+      user?.email?.split("@")[0] ||
+      "Créateur";
+
+    const firstName = fullName.trim().split(" ")[0].toUpperCase() || "CRÉATEUR";
+
+    // Product highlight for subtitle
+    const publishedProducts = rawProducts.filter((p) => p.is_published);
+    const highlightProduct =
+      publishedProducts.length > 0 ? publishedProducts[0].title : null;
+
+    // Season icon & text (Northern hemisphere / general e-com calendar)
+    // Spring: March (2) - May (4)
+    // Summer: June (5) - August (7)
+    // Autumn: September (8) - November (10)
+    // Winter: December (11) - February (1)
+    let seasonalIcon = "🍂";
+    let seasonTheme = "cet automne";
+    if (month >= 2 && month <= 4) {
+      seasonalIcon = "🌸";
+      seasonTheme = "ce printemps";
+    } else if (month >= 5 && month <= 7) {
+      seasonalIcon = "☀️";
+      seasonTheme = "cet été";
+    } else if (month >= 8 && month <= 10) {
+      seasonalIcon = "🍂";
+      seasonTheme = "cet automne";
+    } else {
+      seasonalIcon = "❄️";
+      seasonTheme = "cet hiver";
+    }
+
+    if (hour >= 5 && hour < 9) {
+      return {
+        greeting: `Bonjour, ${firstName}`,
+        emoji: "🌅",
+        subtitle: highlightProduct
+          ? `Le monde appartient à ceux qui se lèvent tôt. Prêt à travailler aujourd'hui ? Mettez en avant « ${highlightProduct} » pour capter vos premiers clients du matin.`
+          : `Le monde appartient à ceux qui se lèvent tôt. Prêt à travailler aujourd'hui ? Partagez le lien de votre boutique pour lancer vos ventes.`,
+      };
+    } else if (hour >= 9 && hour < 12) {
+      return {
+        greeting: `Bonjour, ${firstName}`,
+        emoji: "☀️",
+        subtitle: highlightProduct
+          ? `Est-ce que tu veux travailler et battre ton record aujourd'hui ? Mettez en avant « ${highlightProduct} » qui booste vos ventes.`
+          : `Est-ce que tu veux travailler et battre ton record aujourd'hui ? Ajoutez vos offres digitales et faites exploser vos résultats ${seasonTheme}.`,
+      };
+    } else if (hour >= 12 && hour < 18) {
+      return {
+        greeting: `Bon après-midi, ${firstName}`,
+        emoji: seasonalIcon,
+        subtitle: highlightProduct
+          ? `Un bon moment pour partager votre lien. Aujourd'hui, mettez en avant « ${highlightProduct} » qui booste vos ventes.`
+          : `Un bon moment pour partager votre lien. Proposez vos produits numériques à votre audience pour encaisser cet après-midi.`,
+      };
+    } else if (hour >= 18 && hour < 23) {
+      return {
+        greeting: `Bonsoir, ${firstName}`,
+        emoji: "🌆",
+        subtitle: highlightProduct
+          ? `Les acheteurs consultent leurs réseaux ce soir. Mettez en avant « ${highlightProduct} » pour transformer vos visites en commandes.`
+          : `Vos acheteurs sont connectés ce soir. Partagez votre lien de boutique pour convertir vos followers en clients fidèles.`,
+      };
+    } else {
+      return {
+        greeting: `Bonne nuit, ${firstName}`,
+        emoji: "🌙",
+        subtitle: `Travailler tard pour réussir c'est bien, mais repose-toi ce soir pour revenir encore plus performant demain !`,
+      };
+    }
+  }, [user, profile, rawProducts]);
+
+  // Copy store link to clipboard
+  const handleCopyLink = () => {
+    const slug = activeStore?.slug || profile?.store_slug;
+    const url = slug
+      ? `${window.location.origin}/store/${slug}`
+      : window.location.origin;
+
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    toast.success("Lien de votre boutique copié !");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Stat calculations
+  const {
+    sevenDaysRevenue,
+    totalClients,
+    totalSalesCount,
+    lifetimeRevenue,
+    chartData,
+    periodRevenue,
+    topProducts,
+    recentSales,
+  } = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = subDays(now, 7);
+
+    // 7 days revenue
+    const last7Orders = rawOrders.filter((o) => {
+      const d = parseISO(o.created_at);
+      return d >= sevenDaysAgo;
+    });
+    const rev7 = last7Orders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+
+    // Total lifetime revenue
+    const lifeRev = rawOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+
+    // Total unique clients
+    const uniqueClients = new Set(
+      rawOrders.map((o) => o.customer_id).filter(Boolean)
+    ).size;
+
+    // Filter chart according to selected period (7, 30, 90 days)
+    const periodStart = subDays(now, periodDays - 1);
+    const ordersInPeriod = rawOrders.filter((o) => {
+      const d = parseISO(o.created_at);
+      return isWithinInterval(d, { start: startOfDay(periodStart), end: endOfDay(now) });
+    });
+    const pRev = ordersInPeriod.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+
+    const daysInterval = eachDayOfInterval({
+      start: startOfDay(periodStart),
+      end: endOfDay(now),
+    });
+
+    const chart = daysInterval.map((day) => {
+      const dayStr = format(day, "yyyy-MM-dd");
+      const dayOrders = rawOrders.filter(
+        (o) => format(parseISO(o.created_at), "yyyy-MM-dd") === dayStr
+      );
+      return {
+        date: format(day, "dd/MM"),
+        fullDate: format(day, "dd MMMM yyyy", { locale: fr }),
+        amount: dayOrders.reduce((s, o) => s + Number(o.amount || 0), 0),
+        count: dayOrders.length,
+      };
+    });
+
+    // Top products calculation
+    const salesByProduct: Record<string, { total: number; count: number }> = {};
+    rawOrders.forEach((o) => {
+      const pId = o.product_id;
+      if (!pId) return;
+      if (!salesByProduct[pId]) salesByProduct[pId] = { total: 0, count: 0 };
+      salesByProduct[pId].total += Number(o.amount || 0);
+      salesByProduct[pId].count += 1;
+    });
+
+    const enriched = rawProducts.map((p) => ({
+      ...p,
+      salesTotal: salesByProduct[p.id]?.total || 0,
+      salesCount: salesByProduct[p.id]?.count || 0,
+    }));
+    enriched.sort((a, b) => b.salesTotal - a.salesTotal);
+
+    return {
+      sevenDaysRevenue: rev7,
+      totalClients: uniqueClients,
+      totalSalesCount: rawOrders.length,
+      lifetimeRevenue: lifeRev,
+      chartData: chart,
+      periodRevenue: pRev,
+      topProducts: enriched.filter((p) => p.salesCount > 0).slice(0, 5),
+      recentSales: rawOrders.slice(0, 5),
+    };
+  }, [rawOrders, rawProducts, periodDays]);
 
   const CustomChartTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
+    const d = payload[0]?.payload;
     return (
-      <div className="rounded-xl border border-slate-200 bg-white shadow-xl p-3 min-w-[150px]">
-        <p className="text-xs font-semibold text-slate-600 mb-1">{payload[0]?.payload?.fullDate}</p>
-        <p className="text-sm font-bold text-blue">
-          {payload[0]?.value?.toLocaleString()} XOF
+      <div className="rounded-xl border border-border bg-card p-3 shadow-lg min-w-[150px]">
+        <p className="text-[11px] font-medium text-muted-foreground mb-1">
+          {d?.fullDate}
         </p>
-        <p className="text-xs text-slate-500 font-medium">
-          {payload[0]?.payload?.ventes} commande(s)
+        <p className="text-sm font-extrabold text-foreground">
+          {Number(d?.amount || 0).toLocaleString("fr-FR")} F
+        </p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          {d?.count || 0} commande{(d?.count || 0) > 1 ? "s" : ""}
         </p>
       </div>
     );
@@ -117,266 +276,313 @@ export const DashboardOverview = () => {
 
   return (
     <DashboardLayout>
-      <TooltipProvider>
-        <div className="space-y-8 w-full pb-16 pt-4 px-2 sm:px-4">
-          
-          {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-blue font-mono text-xs font-bold uppercase tracking-wider mb-2">
-                <Store className="w-3.5 h-3.5 text-blue" />
-                <span>{activeStore?.name || "Boutique Dukaio"}</span>
-              </div>
+      <div className="space-y-6 w-full pb-14 font-sans">
+        {/* Top Header: Greeting + Motivational Text + Copier mon lien Button */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-1.5 max-w-3xl">
+            <h1 className="text-2xl sm:text-[28px] font-extrabold tracking-tight text-[#0F172A] dark:text-[#F8FAFC] flex items-center gap-2">
+              <span>{greetingData.greeting}</span>
+              <span className="text-xl" role="img" aria-label="moment">
+                {greetingData.emoji}
+              </span>
+            </h1>
+            <p className="text-xs sm:text-[13px] text-[#475569] dark:text-[#94A3B8] font-normal leading-relaxed">
+              {greetingData.subtitle}
+            </p>
+          </div>
 
-              <h1 className="text-3xl sm:text-4xl font-normal font-serif text-slate-900 tracking-tight">
-                Bienvenue <span className="font-serif italic text-blue">{profile?.display_name || user?.email?.split("@")[0] || "Créateur"}</span> !
-              </h1>
-              <p className="text-sm text-slate-500 font-sans mt-1">
-                Aperçu synthétique et performances en temps réel de votre activité.
+          <button
+            onClick={handleCopyLink}
+            className="self-start md:self-auto inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border bg-card hover:bg-secondary text-foreground text-xs font-semibold transition-colors shrink-0 shadow-2xs"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Lien copié !</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Copier mon lien</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* 4 Stat Cards Row (Exact MakeTou / Reference Layout) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Solde disponible */}
+          <div
+            onClick={() => navigate("/dashboard/wallet")}
+            className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between"
+          >
+            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+              <div className="h-6 w-6 rounded-md bg-blue-50 dark:bg-blue-950/40 text-[#1F3FA8] dark:text-[#4F7BEA] flex items-center justify-center shrink-0">
+                <Wallet className="h-3.5 w-3.5 stroke-[1.75]" />
+              </div>
+              <span>Solde disponible</span>
+            </div>
+            <div className="mt-3">
+              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+                {availableFcfa.toLocaleString("fr-FR")} F
+              </span>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
+                Ce que vous pouvez retirer
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: 7 derniers jours */}
+          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+              <div className="h-6 w-6 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <TrendingUp className="h-3.5 w-3.5 stroke-[1.75]" />
+              </div>
+              <span>7 derniers jours</span>
+            </div>
+            <div className="mt-3">
+              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+                {sevenDaysRevenue.toLocaleString("fr-FR")} F
+              </span>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
+                Ventes payées
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Clients */}
+          <div
+            onClick={() => navigate("/dashboard/clients")}
+            className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 cursor-pointer hover:border-[#CBD5E1] dark:hover:border-[#334155] transition-all flex flex-col justify-between"
+          >
+            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+              <div className="h-6 w-6 rounded-md bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                <Users className="h-3.5 w-3.5 stroke-[1.75]" />
+              </div>
+              <span>Clients</span>
+            </div>
+            <div className="mt-3">
+              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+                {totalClients}
+              </span>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
+                {totalSalesCount} vente{totalSalesCount > 1 ? "s" : ""} payée{totalSalesCount > 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Total encaissé */}
+          <div className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-[#F8FAFC]/90 dark:bg-[#151C2B] p-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2 text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+              <div className="h-6 w-6 rounded-md bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                <DollarSign className="h-3.5 w-3.5 stroke-[1.75]" />
+              </div>
+              <span>Total encaissé</span>
+            </div>
+            <div className="mt-3">
+              <span className="text-[26px] sm:text-[28px] font-bold text-[#0F172A] dark:text-[#F8FAFC] tracking-tight block">
+                {lifetimeRevenue.toLocaleString("fr-FR")} F
+              </span>
+              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 font-normal">
+                Depuis l'ouverture, avant 10 %
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Chart Card: Montant encaissé */}
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div>
+              <h2 className="text-base font-bold text-foreground">
+                Montant encaissé
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {periodRevenue.toLocaleString("fr-FR")} F sur {periodDays === 7 ? "7 jours" : periodDays === 30 ? "30 jours" : "3 mois"}, commandes payées uniquement
               </p>
             </div>
 
-            <div className="flex items-center gap-3 self-start md:self-auto">
-              {activeStore?.slug && (
-                <a
-                  href={`/store/${activeStore.slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-900 hover:bg-slate-100 font-bold text-xs sm:text-sm shadow-sm transition-all"
-                >
-                  <span className="text-slate-900 font-bold">Visiter ma boutique</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-600 stroke-[2]" />
-                </a>
-              )}
-
+            {/* Period Selector Tabs */}
+            <div className="flex items-center p-1 rounded-xl border border-border bg-secondary/40 self-start sm:self-auto">
               <button
-                onClick={() => navigate("/dashboard/products/new")}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-md transition-all border border-slate-800"
+                onClick={() => setPeriodDays(7)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  periodDays === 7
+                    ? "bg-card text-foreground shadow-xs border border-border"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <Plus className="w-4 h-4 text-white stroke-[2.5]" />
-                <span className="text-white font-bold">Nouveau produit</span>
+                7 jours
+              </button>
+              <button
+                onClick={() => setPeriodDays(30)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  periodDays === 30
+                    ? "bg-card text-foreground shadow-xs border border-border"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                30 jours
+              </button>
+              <button
+                onClick={() => setPeriodDays(90)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  periodDays === 90
+                    ? "bg-card text-foreground shadow-xs border border-border"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                3 mois
               </button>
             </div>
           </div>
 
-          {/* 4 Stat Cards Row - Exact MakeTou Gray Border & White Style */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            
-            {/* Card 1: Total des clients */}
-            <div className="bg-white border border-[#D0D5DD] rounded-2xl p-6 shadow-sm flex flex-col justify-between group">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-slate-700 flex items-center justify-center shrink-0">
-                    <Users className="w-5 h-5 text-slate-700" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-700 leading-snug">
-                    Total des clients
-                  </span>
-                </div>
-
-                <UITooltip>
-                  <TooltipTrigger asChild>
-                    <button className="text-slate-400 hover:text-slate-600 transition-colors p-1">
-                      <Info className="w-4 h-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs text-xs">
-                    Nombre total de clients uniques ayant acheté dans votre boutique
-                  </TooltipContent>
-                </UITooltip>
-              </div>
-
-              <div className="mt-5">
-                <span className="font-sans font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight">
-                  {stats.clients}
-                </span>
-              </div>
-            </div>
-
-            {/* Card 2: Total des commandes */}
-            <div className="bg-white border border-[#D0D5DD] rounded-2xl p-6 shadow-sm flex flex-col justify-between group">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-slate-700 flex items-center justify-center shrink-0">
-                    <ShoppingCart className="w-5 h-5 text-slate-700" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-700 leading-snug">
-                    Total des commandes
-                  </span>
-                </div>
-
-                <UITooltip>
-                  <TooltipTrigger asChild>
-                    <button className="text-slate-400 hover:text-slate-600 transition-colors p-1">
-                      <Info className="w-4 h-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs text-xs">
-                    Nombre total de commandes payées et validées
-                  </TooltipContent>
-                </UITooltip>
-              </div>
-
-              <div className="mt-5">
-                <span className="font-sans font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight">
-                  {stats.totalSales}
-                </span>
-              </div>
-            </div>
-
-            {/* Card 3: Revenus totaux (Brand Blue) */}
-            <div className="bg-[#2563EB] border border-[#2563EB] rounded-2xl p-6 shadow-sm flex flex-col justify-between group text-white">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0">
-                    <Wallet className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-sm font-semibold text-white/90 leading-snug">
-                    Revenus totaux
-                  </span>
-                </div>
-
-                <UITooltip>
-                  <TooltipTrigger asChild>
-                    <button className="text-white/60 hover:text-white transition-colors p-1">
-                      <Info className="w-4 h-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs text-xs bg-white text-slate-900 border-none shadow-xl">
-                    Montant total cumulé de vos encaissements sur Dukaio
-                  </TooltipContent>
-                </UITooltip>
-              </div>
-
-              <div className="mt-5">
-                <span className="font-sans font-bold text-3xl sm:text-4xl text-white tracking-tight">
-                  {stats.totalRevenue.toLocaleString()} XOF
-                </span>
-              </div>
-            </div>
-
-            {/* Card 4: Total des produits publiés */}
-            <div className="bg-white border border-[#D0D5DD] rounded-2xl p-6 shadow-sm flex flex-col justify-between group">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-100/90 text-slate-700 flex items-center justify-center shrink-0">
-                    <Package className="w-5 h-5 text-slate-700" />
-                  </div>
-                  <span className="text-sm font-semibold text-slate-700 leading-snug">
-                    Total des produits publiés
-                  </span>
-                </div>
-
-                <UITooltip>
-                  <TooltipTrigger asChild>
-                    <button className="text-slate-400 hover:text-slate-600 transition-colors p-1">
-                      <Info className="w-4 h-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs text-xs">
-                    Nombre de produits actuellement actifs et en ligne
-                  </TooltipContent>
-                </UITooltip>
-              </div>
-
-              <div className="mt-5">
-                <span className="font-sans font-bold text-3xl sm:text-4xl text-slate-900 tracking-tight">
-                  {stats.published}
-                </span>
-              </div>
-            </div>
-
+          {/* Area Chart: vert-bleu subtle gradient */}
+          <div className="h-[260px] w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="dukaioChartTealBlue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#0EA5A4" stopOpacity={0.25} />
+                    <stop offset="60%" stopColor="#1F3FA8" stopOpacity={0.08} />
+                    <stop offset="100%" stopColor="#16A34A" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  stroke="hsl(var(--border))"
+                  strokeOpacity={0.6}
+                  strokeDasharray="0"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="date"
+                  axisLine={{ stroke: "hsl(var(--border))", strokeOpacity: 0.8 }}
+                  tickLine={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  dy={8}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                  allowDecimals={false}
+                />
+                <Tooltip content={<CustomChartTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#0EA5A4"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#dukaioChartTealBlue)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
+        </div>
 
-          {/* Monthly Sales Chart Card - Exact MakeTou Gray Border & White Style */}
-          <div className="bg-white border border-[#D0D5DD] rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold font-serif text-slate-900 tracking-tight">
-                  Ventes mensuelles
-                </h2>
-                <p className="text-xs text-slate-500 font-sans mt-0.5">
-                  Évolution du volume des transactions sur les 30 derniers jours (XOF)
-                </p>
-              </div>
-
-              <div className="hidden sm:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl text-xs font-semibold text-slate-600">
-                <span className="px-3 py-1.5 rounded-lg bg-white shadow-xs text-slate-900 font-bold">30 jours</span>
-                <span className="px-3 py-1.5 rounded-lg hover:text-slate-900 transition-colors cursor-pointer">7 jours</span>
-              </div>
-            </div>
-
-            <div className="h-[300px] w-full pt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2557D6" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#2557D6" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94A3B8", fontSize: 11 }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94A3B8", fontSize: 11 }}
-                  />
-                  <Tooltip content={<CustomChartTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#2557D6"
-                    strokeWidth={2.5}
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Bottom Grid: Recent Transactions & Top Products */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-            
-            {/* Recent Orders (7 cols) */}
-            <div className="lg:col-span-7 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        {/* Bottom Two Columns: Meilleurs ventes & Activité */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+          {/* Left Column: Meilleurs ventes */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-2xs flex flex-col justify-between">
+            <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold font-serif text-slate-900">
-                  Dernières transactions
-                </h3>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Meilleurs ventes
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Vos produits qui rapportent le plus
+                  </p>
+                </div>
                 <button
-                  onClick={() => navigate("/dashboard/sales")}
-                  className="text-xs font-bold text-blue hover:text-blue-700 inline-flex items-center gap-1 transition-colors"
+                  onClick={() => navigate("/dashboard/products")}
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-secondary text-xs font-semibold text-foreground transition-colors"
                 >
-                  <span>Tout voir</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  Mes produits
                 </button>
               </div>
 
-              {recentOrders.length > 0 ? (
-                <div className="divide-y divide-slate-100">
-                  {recentOrders.map((order: any) => (
-                    <div key={order.id} className="py-3 flex items-center justify-between gap-4">
+              {topProducts.length > 0 ? (
+                <div className="space-y-2.5 mt-2">
+                  {topProducts.map((prod: any, idx: number) => (
+                    <div
+                      key={prod.id}
+                      className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-secondary/30 hover:bg-secondary/60 transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="h-10 w-10 rounded-lg bg-secondary border border-border overflow-hidden flex items-center justify-center shrink-0">
+                          {prod.thumbnail_url ? (
+                            <img src={prod.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">
+                            {prod.title}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {prod.salesCount} vente{prod.salesCount > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-bold text-foreground block">
+                          {Number(prod.salesTotal || 0).toLocaleString("fr-FR")} F
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-[#CBD5E1] dark:border-[#334155] bg-secondary/20 py-12 px-4 text-center mt-2">
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium">
+                    Vos ventes apparaîtront ici dès la première commande payée.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Activité */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-2xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Activité
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Ce qui vient de se passer.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate("/dashboard/sales")}
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card hover:bg-secondary text-xs font-semibold text-foreground transition-colors"
+                >
+                  Toutes les ventes
+                </button>
+              </div>
+
+              {recentSales.length > 0 ? (
+                <div className="divide-y divide-border border-t border-border mt-2">
+                  {recentSales.map((order: any) => (
+                    <div key={order.id} className="py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">
-                          {order.products?.title || "Produit numérique"}
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {order.products?.title || "Produit digital"}
                         </p>
-                        <p className="text-xs text-slate-500 font-sans">
-                          {order.customers?.name || order.customers?.email || "Acheteur anonyme"} · {format(new Date(order.created_at), "dd MMM HH:mm", { locale: fr })}
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                          {order.customers?.name || order.customers?.email || "Client"} ·{" "}
+                          {format(parseISO(order.created_at), "dd MMM à HH:mm", { locale: fr })}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <span className="text-sm font-bold text-slate-900 block">
-                          +{Number(order.amount).toLocaleString()} F
+                        <span className="text-xs font-bold text-foreground block">
+                          +{Number(order.amount).toLocaleString("fr-FR")} F
                         </span>
-                        <span className="inline-block text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                        <span className="inline-flex items-center text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-1.5 py-0.2 rounded-full">
                           Payé
                         </span>
                       </div>
@@ -384,63 +590,18 @@ export const DashboardOverview = () => {
                   ))}
                 </div>
               ) : (
-                <div className="py-12 text-center text-slate-400 space-y-2 my-auto">
-                  <ShoppingBag className="w-8 h-8 mx-auto text-slate-300" />
-                  <p className="text-sm font-medium">Aucune transaction récente</p>
-                  <p className="text-xs text-slate-400">Vos prochaines ventes s'afficheront ici en direct.</p>
+                <div className="rounded-xl border border-dashed border-[#CBD5E1] dark:border-[#334155] bg-secondary/20 py-12 px-4 text-center mt-2">
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] font-medium">
+                    Vos ventes et nouveaux clients apparaîtront ici.
+                  </p>
                 </div>
               )}
             </div>
-
-            {/* Top Products (5 cols) */}
-            <div className="lg:col-span-5 bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold font-serif text-slate-900">
-                  Meilleurs produits
-                </h3>
-                <button
-                  onClick={() => navigate("/dashboard/products")}
-                  className="text-xs font-bold text-blue hover:text-blue-700 inline-flex items-center gap-1 transition-colors"
-                >
-                  <span>Gérer</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {topProducts.length > 0 ? (
-                <div className="space-y-3">
-                  {topProducts.map((prod: any, idx: number) => (
-                    <div key={prod.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-6 h-6 rounded-lg bg-blue-100 text-blue font-bold text-xs flex items-center justify-center shrink-0">
-                          #{idx + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 truncate">{prod.title}</p>
-                          <p className="text-[11px] text-slate-500 font-sans">{prod.salesCount} vente(s)</p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-slate-900 shrink-0">
-                        {prod.salesTotal.toLocaleString()} F
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-12 text-center text-slate-400 space-y-2 my-auto">
-                  <Package className="w-8 h-8 mx-auto text-slate-300" />
-                  <p className="text-sm font-medium">Aucun produit vendu</p>
-                  <p className="text-xs text-slate-400">Ajoutez des produits pour voir votre top classement.</p>
-                </div>
-              )}
-            </div>
-
           </div>
-
         </div>
-      </TooltipProvider>
+      </div>
     </DashboardLayout>
   );
-};
+}
 
 export default DashboardOverview;
