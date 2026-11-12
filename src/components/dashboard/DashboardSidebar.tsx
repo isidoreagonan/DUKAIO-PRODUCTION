@@ -1,10 +1,12 @@
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Home, Package, ShoppingCart, BarChart3, LayoutGrid,
   Plus, Settings, ChevronRight, ChevronsUpDown, Check,
   ExternalLink, Moon, Sun, LogOut, User as UserIcon,
-  Store, PanelLeft, Folder, ArrowUpRight, Globe
+  Store, PanelLeft, Folder, ArrowUpRight, X
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,6 +50,7 @@ export function DashboardSidebar({
   const [productsCount, setProductsCount] = useState<number>(0);
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const profileBlockRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -60,6 +63,23 @@ export function DashboardSidebar({
     };
     fetchCount();
   }, [user]);
+
+  // Click outside to close profile popover on desktop
+  useEffect(() => {
+    if (isMobile || !profilePopoverOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileBlockRef.current &&
+        !profileBlockRef.current.contains(event.target as Node)
+      ) {
+        setProfilePopoverOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profilePopoverOpen, isMobile]);
 
   const initial =
     profile?.display_name?.charAt(0)?.toUpperCase() ||
@@ -98,8 +118,9 @@ export function DashboardSidebar({
     { title: "Autres outils", url: "/dashboard/menu", icon: LayoutGrid },
   ];
 
-  // Mouse hover handlers for PC profile popover
+  // Mouse hover handlers for PC profile popover (disabled on mobile)
   const handleMouseEnter = () => {
+    if (isMobile) return;
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
@@ -108,6 +129,7 @@ export function DashboardSidebar({
   };
 
   const handleMouseLeave = () => {
+    if (isMobile) return;
     closeTimeoutRef.current = setTimeout(() => {
       setProfilePopoverOpen(false);
     }, 180);
@@ -117,7 +139,7 @@ export function DashboardSidebar({
     <TooltipProvider delayDuration={80}>
       <aside
         className={`h-full rounded-[22px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] shadow-[0_2px_16px_rgba(0,0,0,0.03)] dark:shadow-none p-2.5 flex flex-col justify-between select-none transition-all duration-300 ease-in-out relative ${
-          isCollapsed ? "w-[60px]" : "w-[220px]"
+          isCollapsed ? "w-[60px]" : isMobile ? "w-[240px]" : "w-[220px]"
         }`}
       >
         {/* Top: Header / Store selector / Toggle Button */}
@@ -304,6 +326,7 @@ export function DashboardSidebar({
 
         {/* Bottom Section: Profile block with automatic hover popup on PC */}
         <div
+          ref={profileBlockRef}
           className="pt-2.5 border-t border-border/60 relative"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -343,8 +366,8 @@ export function DashboardSidebar({
             )}
           </button>
 
-          {/* vycut Responsive Profile Popover (Opens automatically on hover on PC, tap on mobile) */}
-          {profilePopoverOpen && (
+          {/* Desktop vycut Profile Popover (PC hover or click flyout to right) */}
+          {profilePopoverOpen && !isMobile && (
             <div
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
@@ -404,7 +427,7 @@ export function DashboardSidebar({
                   ))}
                 </div>
 
-                {/* Action Link: Tous les outils / Tous les projets */}
+                {/* Action Link: Tous les outils */}
                 <NavLink
                   to="/dashboard/menu"
                   onClick={() => {
@@ -467,7 +490,7 @@ export function DashboardSidebar({
                       <Store className="h-4 w-4 text-muted-foreground" />
                       <span>Voir ma boutique</span>
                     </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/60" />
                   </a>
                 )}
 
@@ -515,6 +538,214 @@ export function DashboardSidebar({
           )}
         </div>
       </aside>
+
+      {/* Mobile Profile Bottom Sheet (Portaled to document.body: 100% full-width, zero horizontal clipping) */}
+      {typeof document !== "undefined" && isMobile &&
+        createPortal(
+          <AnimatePresence>
+            {profilePopoverOpen && (
+              <div className="fixed inset-0 z-[70] flex flex-col justify-end">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => setProfilePopoverOpen(false)}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                />
+
+                {/* Slide-up Bottom Sheet */}
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 28, stiffness: 320 }}
+                  className="relative z-10 w-full max-w-md mx-auto rounded-t-[26px] border-t border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] shadow-[0_-12px_40px_rgba(0,0,0,0.2)] p-4 pb-8 space-y-3.5 max-h-[85vh] overflow-y-auto select-none"
+                >
+                  {/* Top Bar: Center drag pill & Close button */}
+                  <div className="flex items-center justify-between pb-0.5">
+                    <div className="w-7" />
+                    <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                    <button
+                      onClick={() => setProfilePopoverOpen(false)}
+                      className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Fermer"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Header: User Avatar + Name */}
+                  <div
+                    onClick={() => {
+                      navigate("/dashboard/profile");
+                      setProfilePopoverOpen(false);
+                      onNavigate?.();
+                    }}
+                    className="flex items-center justify-between gap-3 p-1 rounded-xl cursor-pointer hover:bg-secondary/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-11 w-11 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center">
+                        <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-sm font-black text-primary overflow-hidden">
+                          {userAvatar ? (
+                            <img src={userAvatar} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            initial
+                          )}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate uppercase tracking-tight">
+                          {userName}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          Mon profil personnel
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </div>
+
+                  {/* Space & Projects Block (Mon espace) */}
+                  <div className="rounded-2xl bg-[#F6F4EE] dark:bg-[#1A2234] border border-[#EBE7DD] dark:border-[#263043] p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-foreground text-[13px]">Mon espace</span>
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {productsCount} produit{productsCount > 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    {/* Progress / Status colored dots */}
+                    <div className="flex items-center gap-1.5 py-0.5">
+                      {[...Array(14)].map((_, i) => (
+                        <span
+                          key={i}
+                          className={`h-2 w-2 rounded-full ${
+                            i < 6 ? "bg-[#3B82F6]" : "bg-[#F97316]"
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Action link: Tous les outils */}
+                    <NavLink
+                      to="/dashboard/menu"
+                      onClick={() => {
+                        setProfilePopoverOpen(false);
+                        onNavigate?.();
+                      }}
+                      className="flex items-center justify-between text-xs font-semibold text-foreground hover:text-primary transition-colors pt-2 border-t border-[#E8E4DA] dark:border-[#222C3E]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Folder className="h-4 w-4 text-muted-foreground" />
+                        <span>Tous les outils</span>
+                      </div>
+                      <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                    </NavLink>
+                  </div>
+
+                  {/* Action items list */}
+                  <div className="space-y-1 text-sm font-medium">
+                    {/* Mon profil */}
+                    <button
+                      onClick={() => {
+                        navigate("/dashboard/profile");
+                        setProfilePopoverOpen(false);
+                        onNavigate?.();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <UserIcon className="h-4.5 w-4.5 text-muted-foreground" />
+                        <span>Mon profil</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                    </button>
+
+                    {/* Paramètres du compte */}
+                    <button
+                      onClick={() => {
+                        navigate("/dashboard/settings");
+                        setProfilePopoverOpen(false);
+                        onNavigate?.();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Settings className="h-4.5 w-4.5 text-muted-foreground" />
+                        <span>Paramètres du compte</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                    </button>
+
+                    {/* Voir ma boutique */}
+                    {activeStore?.slug && (
+                      <a
+                        href={`/store/${activeStore.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => {
+                          setProfilePopoverOpen(false);
+                          onNavigate?.();
+                        }}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Store className="h-4.5 w-4.5 text-muted-foreground" />
+                          <span>Voir ma boutique</span>
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground/60" />
+                      </a>
+                    )}
+
+                    {/* Mode sombre switch */}
+                    <div
+                      onClick={toggleTheme}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl text-foreground hover:bg-secondary/70 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isDark ? (
+                          <Sun className="h-4.5 w-4.5 text-amber-500" />
+                        ) : (
+                          <Moon className="h-4.5 w-4.5 text-slate-500" />
+                        )}
+                        <span>Mode sombre</span>
+                      </div>
+                      <div
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                          isDark ? "bg-primary" : "bg-muted-foreground/30"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                            isDark ? "translate-x-4" : "translate-x-0"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Separator + Se déconnecter */}
+                  <div className="pt-2 border-t border-border/60">
+                    <button
+                      onClick={() => {
+                        setProfilePopoverOpen(false);
+                        onNavigate?.();
+                        signOut();
+                      }}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-xl text-xs font-semibold text-destructive hover:bg-destructive/10 transition-colors text-left"
+                    >
+                      <LogOut className="h-4.5 w-4.5" />
+                      <span>Se déconnecter</span>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </TooltipProvider>
   );
 }
