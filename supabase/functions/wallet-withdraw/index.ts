@@ -120,15 +120,6 @@ Deno.serve(async (req) => {
     }
     createdWithdrawalId = withdrawal.id;
 
-    // Log transaction
-    await service.from("wallet_transactions").insert({
-      user_id: user.id, wallet_currency: "FCFA", type: "withdrawal",
-      amount: -amount, balance_after: newBalance,
-      reference_id: withdrawal.id, reference_type: "withdrawal",
-      status: "completed",
-      description: `Retrait Mobile Money vers ${formattedPhone}`,
-    });
-
     // -------------------------------------------------------------
     // OPTION A: SAASPAY PAYOUT (Live African & Worldwide Networks)
     // -------------------------------------------------------------
@@ -187,6 +178,15 @@ Deno.serve(async (req) => {
             status: "processing",
           }).eq("id", withdrawal.id);
 
+          // Log transaction only when accepted by SaaSPay
+          await service.from("wallet_transactions").insert({
+            user_id: user.id, wallet_currency: "FCFA", type: "withdrawal",
+            amount: -amount, balance_after: newBalance,
+            reference_id: withdrawal.id, reference_type: "withdrawal",
+            status: "completed",
+            description: `Retrait Mobile Money vers ${formattedPhone}`,
+          });
+
           await service.from("notifications").insert({
             user_id: user.id,
             title: "Demande de retrait en cours",
@@ -196,28 +196,31 @@ Deno.serve(async (req) => {
 
           return j({ success: true, withdrawal_id: withdrawal.id, status: "processing" });
         } else {
-          // If SaaSPay reports IP whitelisting or needs manual approval
+          // Payout failed or rejected by SaaSPay
+          // 1. Refund user wallet balance immediately
+          await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
+          debited = false;
+
           const isIpBlock = data?.error?.code === "ip_not_whitelisted" || resp.status === 403;
-          console.warn("[wallet-withdraw -> saaspay] status pending/queue:", data);
+          console.warn("[wallet-withdraw -> saaspay] payout rejected:", data);
 
           await service.from("withdrawals").update({
-            status: "pending",
-            moneroo_reference: isIpBlock ? "IP_PENDING_WHITELIST" : ((data?.error?.message || "PENDING_REVIEW") as string).slice(0, 100),
+            status: "failed",
+            moneroo_reference: isIpBlock ? "IP_NOT_WHITELISTED" : ((data?.error?.code || "FAILED") as string).slice(0, 100),
           }).eq("id", withdrawal.id);
 
-          await service.from("notifications").insert({
-            user_id: user.id,
-            title: "Retrait enregistré",
-            message: `Votre demande de retrait de ${amount} FCFA vers ${formattedPhone} a été prise en compte et est en cours d'exécution.`,
-            type: "info",
-          });
+          const humanMsg = isIpBlock
+            ? "Échec SaaSPay : L'IP du serveur n'est pas autorisée pour les retraits automatiques par API (403 ip_not_whitelisted). Ajoutez l'IP dans SaaSPay (Développeur > IP Whitelist) ou effectuez le retrait directement depuis votre compte SaaSPay."
+            : (data?.error?.message || "Échec de l'envoi du virement Mobile Money SaaSPay.");
 
-          return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
+          return j({ error: humanMsg }, 400);
         }
       } catch (err: any) {
         console.error("[wallet-withdraw -> saaspay error]", err);
-        await service.from("withdrawals").update({ status: "pending" }).eq("id", withdrawal.id);
-        return j({ success: true, withdrawal_id: withdrawal.id, status: "pending_manual" });
+        await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
+        debited = false;
+        await service.from("withdrawals").update({ status: "failed", moneroo_reference: "FETCH_ERROR" }).eq("id", withdrawal.id);
+        return j({ error: err.message || "Erreur de connexion SaaSPay" }, 400);
       }
     }
 

@@ -209,16 +209,25 @@ export default function Wallet() {
         setSelectedWalletId("new");
       }
 
-      // Format transactions
-      const formattedTx: WalletTx[] = (txList || []).map((t) => ({
-        id: t.id,
-        type: t.type as any,
-        label: t.description || (t.type === "sale" ? "Vente de produit" : "Retrait Mobile Money"),
-        amount: Math.abs(Number(t.amount || 0)),
-        currency: t.wallet_currency || "FCFA",
-        date: t.created_at,
-        status: (t.status as any) || "completed",
-      }));
+      // Valid withdrawals that were actually accepted or completed by payment gateway
+      const acceptedWithdrawalIds = new Set(
+        (userWithdrawals || [])
+          .filter((w) => w.status === "completed" || w.status === "processing")
+          .map((w) => w.id)
+      );
+
+      // Format transactions (filter out any rejected/phantom withdrawals)
+      const formattedTx: WalletTx[] = (txList || [])
+        .filter((t) => t.type !== "withdrawal" || acceptedWithdrawalIds.has(t.reference_id))
+        .map((t) => ({
+          id: t.id,
+          type: t.type as any,
+          label: t.description || (t.type === "sale" ? "Vente de produit" : "Retrait Mobile Money"),
+          amount: Math.abs(Number(t.amount || 0)),
+          currency: t.wallet_currency || "FCFA",
+          date: t.created_at,
+          status: (t.status as any) || "completed",
+        }));
 
       if (formattedTx.length === 0) {
         const orderTxs: WalletTx[] = (completedOrders || []).map((o) => ({
