@@ -185,20 +185,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }`}
         >
           {/* Top Header inside the Main Card (Curves harmoniously with rounded-tl-[22px]) */}
-          <header className="h-14 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-6 flex items-center justify-between shrink-0 select-none">
+          <header className="h-14 2xl:h-16 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-6 2xl:px-8 flex items-center justify-between shrink-0 select-none">
             {/* Left: Dynamic page title + back button */}
             <div className="flex items-center gap-2.5 min-w-0">
               {!currentPage.isRoot && (
                 <button
                   onClick={() => navigate(-1)}
                   aria-label="Retour"
-                  className="h-8 w-8 rounded-xl bg-secondary/60 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  className="h-8 w-8 2xl:h-9 2xl:w-9 rounded-xl bg-secondary/60 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
                   title="Page précédente"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4 2xl:h-4.5 2xl:w-4.5" />
                 </button>
               )}
-              <h1 className="text-[14px] font-bold text-foreground tracking-tight truncate">
+              <h1 className="text-[14px] 2xl:text-[16px] font-bold text-foreground tracking-tight truncate">
                 {currentPage.title}
               </h1>
             </div>
@@ -206,7 +206,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Center: Search input pill ("Trouvez n'importe quoi : Appuyez sur ⌘K sur votre clavier") */}
             <div
               onClick={() => setSearchOpen(true)}
-              className="w-[320px] xl:w-[420px] h-9 px-3.5 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:border-border hover:bg-[#ECEEF2] dark:hover:bg-[#252E42] text-xs text-muted-foreground flex items-center justify-between cursor-pointer transition-all shadow-2xs group"
+              className="w-[320px] xl:w-[420px] 2xl:w-[520px] h-9 2xl:h-10 px-3.5 2xl:px-4 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:border-border hover:bg-[#ECEEF2] dark:hover:bg-[#252E42] text-xs 2xl:text-sm text-muted-foreground flex items-center justify-between cursor-pointer transition-all shadow-2xs group"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <Search className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground shrink-0 transition-colors" />
@@ -308,8 +308,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </header>
 
           {/* Scrollable Content inside the Main Card */}
-          <div ref={mainRef} className="flex-1 overflow-y-auto px-6 py-6 font-sans">
-            <div className="max-w-[1400px] w-full mx-auto">
+          <div ref={mainRef} className="flex-1 overflow-y-auto px-6 py-6 2xl:px-10 2xl:py-8 font-sans">
+            <div className="max-w-[1440px] 2xl:max-w-[1760px] w-full mx-auto">
               {children}
             </div>
           </div>
