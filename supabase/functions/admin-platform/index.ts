@@ -11,15 +11,30 @@ const ADMIN_EMAIL = "isidoreagonan@gmail.com";
 const getAdminUser = async (req: Request, supabaseUrl: string, anonKey: string) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = authHeader.replace("Bearer ", "");
 
   const supabaseAuth = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });
-  const { data, error } = await supabaseAuth.auth.getClaims(authHeader.replace("Bearer ", ""));
-  const email = String(data?.claims?.email || "").toLowerCase();
 
-  if (error || !data?.claims?.sub || email !== ADMIN_EMAIL) return null;
-  return { id: String(data.claims.sub), email };
+  try {
+    const { data, error } = await supabaseAuth.auth.getUser(token);
+    const email = String(data?.user?.email || "").toLowerCase();
+    if (!error && data?.user?.id && email === ADMIN_EMAIL) {
+      return { id: data.user.id, email };
+    }
+  } catch {}
+
+  try {
+    const { data: claimsData } = await (supabaseAuth.auth as any).getClaims(token);
+    const email = String(claimsData?.claims?.email || claimsData?.email || "").toLowerCase();
+    const sub = String(claimsData?.claims?.sub || claimsData?.sub || "");
+    if (email === ADMIN_EMAIL && sub) {
+      return { id: sub, email };
+    }
+  } catch {}
+
+  return null;
 };
 
 serve(async (req) => {

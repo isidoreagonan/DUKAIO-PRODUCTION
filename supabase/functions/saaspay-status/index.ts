@@ -152,6 +152,12 @@ Deno.serve(async (req) => {
             rawStatus === "EXPIRED" ||
             rawStatus === "REFUSED"
           ) {
+            // Update order to failed so it reflects in Dashboard
+            await supabase
+              .from("orders")
+              .update({ status: "failed" })
+              .or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${reference}`);
+
             // Update payment event to failed
             await supabase
               .from("payment_events")

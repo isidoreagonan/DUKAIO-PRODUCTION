@@ -29,6 +29,7 @@ export default function DashboardSales() {
   const [stats, setStats] = useState({ total: 0, thisMonth: 0, growth: "0%" });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "pending" | "failed">("all");
 
   useEffect(() => {
     if (!user) return;
@@ -39,7 +40,6 @@ export default function DashboardSales() {
           .from("orders")
           .select("id, amount, status, created_at, promo_code, original_amount, products(title, thumbnail_url), customers(name, email)")
           .eq("store_owner_id", user.id)
-          .eq("status", "completed")
           .order("created_at", { ascending: false });
 
         const mapped: OrderWithProduct[] = (data || []).map((o: any) => ({
@@ -55,17 +55,19 @@ export default function DashboardSales() {
 
         setOrders(mapped);
 
-        const totalSales = mapped.reduce((s, o) => s + o.amount, 0);
+        const totalSales = mapped
+          .filter((o) => o.status === "completed")
+          .reduce((s, o) => s + o.amount, 0);
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const thisMonth = mapped
-          .filter((o) => new Date(o.created_at) >= monthStart)
+          .filter((o) => o.status === "completed" && new Date(o.created_at) >= monthStart)
           .reduce((s, o) => s + o.amount, 0);
         const lastMonth = mapped
           .filter((o) => {
             const d = new Date(o.created_at);
-            return d >= prevMonthStart && d < monthStart;
+            return o.status === "completed" && d >= prevMonthStart && d < monthStart;
           })
           .reduce((s, o) => s + o.amount, 0);
 
@@ -93,7 +95,12 @@ export default function DashboardSales() {
       (o.customer?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (o.customer?.email || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesProduct = selectedProduct === "all" || o.product?.title === selectedProduct;
-    return matchesSearch && matchesProduct;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "completed" && o.status === "completed") ||
+      (statusFilter === "pending" && o.status === "pending") ||
+      (statusFilter === "failed" && (o.status === "failed" || o.status === "cancelled"));
+    return matchesSearch && matchesProduct && matchesStatus;
   });
 
   const handleExportCSV = () => {
@@ -198,7 +205,7 @@ export default function DashboardSales() {
           </div>
         </div>
 
-        {/* Filters: Search + Filter by Product */}
+        {/* Filters: Search + Filter by Product + Status Filter */}
         <div className="flex flex-col sm:flex-row gap-3 p-2 rounded-2xl border border-border bg-card shadow-2xs">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -210,7 +217,7 @@ export default function DashboardSales() {
               className="w-full h-8 pl-9 pr-3 rounded-lg bg-secondary/40 border border-border text-xs text-foreground placeholder:text-muted-foreground outline-none font-medium focus:border-primary/50 transition-colors"
             />
           </div>
-          <div className="sm:w-[240px]">
+          <div className="sm:w-[200px]">
             <select
               value={selectedProduct}
               onChange={(e) => setSelectedProduct(e.target.value)}
@@ -222,6 +229,18 @@ export default function DashboardSales() {
                   {p}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="sm:w-[180px]">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="w-full h-8 px-2.5 rounded-lg border border-border bg-secondary/40 text-xs font-medium text-foreground outline-none cursor-pointer hover:bg-secondary transition-colors"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="completed">Payés (Succès)</option>
+              <option value="pending">En attente (USSD)</option>
+              <option value="failed">Échoués / Annulés</option>
             </select>
           </div>
         </div>
@@ -301,10 +320,22 @@ export default function DashboardSales() {
                         {o.amount.toLocaleString("fr-FR")} F
                       </td>
                       <td className="py-2 px-4 text-center whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          Payé
-                        </span>
+                        {o.status === "completed" ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-2 py-0.5 rounded-full">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            Payé
+                          </span>
+                        ) : o.status === "pending" ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 px-2 py-0.5 rounded-full">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            En attente
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 px-2 py-0.5 rounded-full">
+                            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                            Échoué / Annulé
+                          </span>
+                        )}
                       </td>
                       <td className="py-2 px-4 text-right whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary group-hover:underline">

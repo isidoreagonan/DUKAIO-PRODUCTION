@@ -252,10 +252,43 @@ Deno.serve(async (req) => {
         .eq("id", paymentEvent.id);
     }
 
+    // Create pending order record so it is immediately visible in Dashboard (sales, revenues, clients, admin)
+    let orderId: string | null = null;
+    try {
+      const { data: createdOrder, error: orderErr } = await supabase
+        .from("orders")
+        .insert({
+          amount: Number(body.amount),
+          currency,
+          customer_id: customerId,
+          product_id: body.metadata.product_id,
+          store_owner_id: body.metadata.store_owner_id,
+          status: "pending",
+          payment_provider: "saaspay",
+          payment_method: isCardOrCrypto ? (body.method === "crypto" ? "crypto" : "card") : networkCode,
+          pawapay_deposit_id: paymentId,
+          moneroo_transaction_id: reference,
+          promo_code: body.metadata.promo_code || null,
+          original_amount: body.metadata.original_price ? Number(body.metadata.original_price) : null,
+          shipping_address: body.metadata.shipping_address || null,
+        } as any)
+        .select("id")
+        .single();
+
+      if (orderErr) {
+        console.warn("[saaspay-create-payment] order insert warning:", orderErr);
+      } else {
+        orderId = createdOrder?.id || null;
+      }
+    } catch (orderCatch) {
+      console.warn("[saaspay-create-payment] order insert exception:", orderCatch);
+    }
+
     return json({
       success: true,
       paymentId,
       reference,
+      orderId,
       checkoutUrl,
       directPush: !checkoutUrl, // if no checkout_url, user received USSD prompt on phone
       status: saaspayData.status || "pending",

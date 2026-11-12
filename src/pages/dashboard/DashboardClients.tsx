@@ -32,9 +32,8 @@ export default function DashboardClients() {
       try {
         const { data: orders } = await supabase
           .from("orders")
-          .select("id, amount, created_at, customer_id, products(title), customers(id, name, email, phone, created_at)")
+          .select("id, amount, status, created_at, customer_id, products(title), customers(id, name, email, phone, created_at)")
           .eq("store_owner_id", user.id)
-          .eq("status", "completed")
           .order("created_at", { ascending: false });
 
         if (!orders || orders.length === 0) {
@@ -48,6 +47,7 @@ export default function DashboardClients() {
           const c = o.customers;
           if (!c) continue;
           const existing = clientMap.get(c.id);
+          const isCompleted = o.status === "completed";
           const orderItem = {
             id: o.id,
             amount: Number(o.amount),
@@ -55,7 +55,7 @@ export default function DashboardClients() {
             productTitle: o.products?.title || "Produit numérique",
           };
           if (existing) {
-            existing.totalSpent += Number(o.amount);
+            if (isCompleted) existing.totalSpent += Number(o.amount);
             existing.orderCount += 1;
             existing.orders.push(orderItem);
           } else {
@@ -65,7 +65,7 @@ export default function DashboardClients() {
               email: c.email || "—",
               phone: c.phone || "—",
               created_at: c.created_at,
-              totalSpent: Number(o.amount),
+              totalSpent: isCompleted ? Number(o.amount) : 0,
               orderCount: 1,
               orders: [orderItem],
             });

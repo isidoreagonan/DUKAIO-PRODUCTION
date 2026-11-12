@@ -35,7 +35,7 @@ interface RevenueItem {
   detail: string;
   amount: number;
   date: string;
-  status: "paid" | "pending";
+  status: "paid" | "pending" | "failed";
   rawStatus: string;
 }
 
@@ -50,7 +50,7 @@ export default function DashboardRevenue() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "failed">("all");
   const [periodFilter, setPeriodFilter] = useState<"all" | "7d" | "30d" | "year">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -134,6 +134,12 @@ export default function DashboardRevenue() {
     return orders.map((o) => {
       const createdAt = new Date(o.created_at);
       const isPaid = o.status === "completed" && createdAt <= holdCutoff;
+      const status: "paid" | "pending" | "failed" =
+        o.status === "completed"
+          ? (isPaid ? "paid" : "pending")
+          : o.status === "pending"
+          ? "pending"
+          : "failed";
 
       return {
         id: o.id,
@@ -141,7 +147,7 @@ export default function DashboardRevenue() {
         detail: (o.customers as any)?.name || (o.customers as any)?.email || "Client",
         amount: Number(o.amount || 0),
         date: o.created_at,
-        status: isPaid ? "paid" : "pending",
+        status,
         rawStatus: o.status,
       };
     });
@@ -364,6 +370,19 @@ export default function DashboardRevenue() {
               <span className="h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full bg-amber-500" />
               <span>En attente</span>
             </button>
+
+            {/* Pill: Échoué / Annulé */}
+            <button
+              onClick={() => setStatusFilter("failed")}
+              className={`inline-flex items-center gap-2 2xl:gap-2.5 px-3.5 py-1.5 xl:px-4.5 xl:py-2 2xl:px-5.5 2xl:py-2.5 rounded-full text-xs xl:text-sm 2xl:text-base font-semibold transition-all shrink-0 ${
+                statusFilter === "failed"
+                  ? "bg-red-100 dark:bg-red-950/60 text-red-950 dark:text-red-200 border border-red-300 dark:border-red-700 shadow-2xs"
+                  : "bg-red-50/80 dark:bg-red-950/25 text-red-700 dark:text-red-400 hover:bg-red-100/70"
+              }`}
+            >
+              <span className="h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full bg-red-500" />
+              <span>Échoués / Annulés</span>
+            </button>
           </div>
 
           {/* Row 3 (Mobile only): Period Selector */}
@@ -452,10 +471,15 @@ export default function DashboardRevenue() {
                             <BadgeCheck className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-emerald-600 dark:text-emerald-400" />
                             <span>Payé</span>
                           </span>
-                        ) : (
+                        ) : item.status === "pending" ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 xl:px-4 xl:py-1.5 2xl:px-5 2xl:py-2 rounded-full text-[11px] xl:text-xs 2xl:text-sm font-bold bg-[#FEF3C7] dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/60 ml-auto">
                             <Clock className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-amber-600 dark:text-amber-400" />
                             <span>En attente</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 xl:px-4 xl:py-1.5 2xl:px-5 2xl:py-2 rounded-full text-[11px] xl:text-xs 2xl:text-sm font-bold bg-red-100 dark:bg-red-950/70 text-red-900 dark:text-red-300 border border-red-300/60 dark:border-red-800/60 ml-auto">
+                            <X className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-red-600 dark:text-red-400" />
+                            <span>Échoué / Annulé</span>
                           </span>
                         )}
                       </td>

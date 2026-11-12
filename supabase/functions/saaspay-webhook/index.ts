@@ -235,8 +235,13 @@ Deno.serve(async (req) => {
       return new Response("ok (transaction completed)", { status: 200 });
     }
 
-    if (eventType === "transaction.failed" || eventType === "transaction.cancelled") {
+    if (eventType === "transaction.failed" || eventType === "transaction.cancelled" || eventType.includes("fail") || eventType.includes("cancel")) {
       if (transactionId || reference) {
+        await supabase
+          .from("orders")
+          .update({ status: "failed" })
+          .or(`pawapay_deposit_id.eq.${transactionId},moneroo_transaction_id.eq.${reference}`);
+
         await supabase
           .from("payment_events")
           .update({ status: "failed" })
