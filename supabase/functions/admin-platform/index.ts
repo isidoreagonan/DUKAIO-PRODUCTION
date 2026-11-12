@@ -6,7 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const ADMIN_EMAIL = "isidoreagonan@gmail.com";
+const ADMIN_EMAILS = [
+  "isidoreagonan@gmail.com",
+  "agonandolapo@gmail.com",
+  "dolapoecomllc@gmail.com",
+  "dolapoecom1@gmail.com",
+  "dolapoagonan@gmail.com",
+];
 
 const getAdminUser = async (req: Request, supabaseUrl: string, anonKey: string) => {
   const authHeader = req.headers.get("Authorization");
@@ -19,17 +25,17 @@ const getAdminUser = async (req: Request, supabaseUrl: string, anonKey: string) 
 
   try {
     const { data, error } = await supabaseAuth.auth.getUser(token);
-    const email = String(data?.user?.email || "").toLowerCase();
-    if (!error && data?.user?.id && email === ADMIN_EMAIL) {
+    const email = String(data?.user?.email || "").toLowerCase().trim();
+    if (!error && data?.user?.id && ADMIN_EMAILS.includes(email)) {
       return { id: data.user.id, email };
     }
   } catch {}
 
   try {
     const { data: claimsData } = await (supabaseAuth.auth as any).getClaims(token);
-    const email = String(claimsData?.claims?.email || claimsData?.email || "").toLowerCase();
+    const email = String(claimsData?.claims?.email || claimsData?.email || "").toLowerCase().trim();
     const sub = String(claimsData?.claims?.sub || claimsData?.sub || "");
-    if (email === ADMIN_EMAIL && sub) {
+    if (ADMIN_EMAILS.includes(email) && sub) {
       return { id: sub, email };
     }
   } catch {}

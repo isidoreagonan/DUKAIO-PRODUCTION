@@ -11,8 +11,7 @@ import { toast } from "sonner";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
-
-const ADMIN_EMAIL = "isidoreagonan@gmail.com";
+import { isAdminUser } from "@/lib/admin";
 
 const AdminBadges = () => {
   const { user } = useAuth();
@@ -28,7 +27,7 @@ const AdminBadges = () => {
   const [emailLoading, setEmailLoading] = useState(false);
   const [foundUser, setFoundUser] = useState<{ id: string; email: string; profile: any; badge: any } | null>(null);
 
-  if (user && user.email !== ADMIN_EMAIL) return <Navigate to="/dashboard" />;
+  if (user && !isAdminUser(user.email)) return <Navigate to="/dashboard" />;
 
   const load = async () => {
     setLoading(true);

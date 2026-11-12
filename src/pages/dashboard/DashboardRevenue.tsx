@@ -33,10 +33,13 @@ interface RevenueItem {
   id: string;
   title: string;
   detail: string;
-  amount: number;
+  grossAmount: number;
+  amount: number; // 95% net pour le vendeur
+  commission: number; // 5% frais de plateforme DUKAIO
   date: string;
-  status: "paid" | "pending" | "failed";
-  rawStatus: string;
+  availableAt: string;
+  status: "paid" | "pending";
+  isAvailable: boolean;
 }
 
 const ITEMS_PER_PAGE = 7;
@@ -50,11 +53,11 @@ export default function DashboardRevenue() {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "failed">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending">("all");
   const [periodFilter, setPeriodFilter] = useState<"all" | "7d" | "30d" | "year">("all");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch orders
+  // Fetch only successfully completed orders (money actually paid by the buyer)
   useEffect(() => {
     if (!user) return;
 
@@ -65,6 +68,7 @@ export default function DashboardRevenue() {
           .from("orders")
           .select("id, amount, status, created_at, product_id, payment_method, products(title), customers(name, email)")
           .eq("store_owner_id", user.id)
+          .eq("status", "completed")
           .order("created_at", { ascending: false });
 
         if (error) throw error;
@@ -78,7 +82,7 @@ export default function DashboardRevenue() {
 
     fetchData();
 
-    // Realtime subscription for order updates
+    // Realtime subscription for completed order updates
     const channel = supabase
       .channel("revenue-updates")
       .on(
@@ -93,29 +97,30 @@ export default function DashboardRevenue() {
     };
   }, [user]);
 
-  // Aggregate stats: Revenus totaux, Revenus en attente, Revenus payés
+  // Aggregate stats: Revenus totaux, Revenus en attente (délai 24h), Revenus payés / disponibles
   const { totalRevenue, pendingRevenue, paidRevenue } = useMemo(() => {
     const now = new Date();
-    // 3 days hold threshold for pending
-    const holdCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    // Délai automatique de sécurité de 24 heures avant que les fonds soient retirables
+    const holdCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     let total = 0;
     let pending = 0;
     let paid = 0;
 
     orders.forEach((o) => {
-      const amt = Number(o.amount || 0);
-      if (o.status === "completed") {
-        total += amt;
-        const createdAt = new Date(o.created_at);
-        if (createdAt > holdCutoff) {
-          // Within 3-day hold window
-          pending += amt;
-        } else {
-          paid += amt;
-        }
-      } else if (o.status === "pending") {
-        pending += amt;
+      const grossAmt = Number(o.amount || 0);
+      // Net vendeur : 95% après déduction des 5% de frais de plateforme DUKAIO
+      const netAmt = Math.round(grossAmt * 0.95);
+
+      total += netAmt;
+
+      const createdAt = new Date(o.created_at);
+      if (createdAt > holdCutoff) {
+        // En attente : vente payée il y a moins de 24 heures
+        pending += netAmt;
+      } else {
+        // Payé / Disponible : plus de 24h écoulées, retirable immédiatement
+        paid += netAmt;
       }
     });
 
@@ -126,29 +131,33 @@ export default function DashboardRevenue() {
     };
   }, [orders]);
 
-  // Transform orders into clean revenue items
+  // Transform completed sales into clean revenue items (95% net seller)
   const allItems: RevenueItem[] = useMemo(() => {
     const now = new Date();
-    const holdCutoff = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const holdCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     return orders.map((o) => {
       const createdAt = new Date(o.created_at);
-      const isPaid = o.status === "completed" && createdAt <= holdCutoff;
-      const status: "paid" | "pending" | "failed" =
-        o.status === "completed"
-          ? (isPaid ? "paid" : "pending")
-          : o.status === "pending"
-          ? "pending"
-          : "failed";
+      const grossAmt = Number(o.amount || 0);
+      const netAmt = Math.round(grossAmt * 0.95);
+      const commission = grossAmt - netAmt;
+      const isAvailable = createdAt <= holdCutoff;
+      const status: "paid" | "pending" = isAvailable ? "paid" : "pending";
+
+      // Date de disponibilité (created_at + 24 heures)
+      const availableAt = new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
 
       return {
         id: o.id,
         title: (o.products as any)?.title || "Vente produit digital",
         detail: (o.customers as any)?.name || (o.customers as any)?.email || "Client",
-        amount: Number(o.amount || 0),
+        grossAmount: grossAmt,
+        amount: netAmt,
+        commission,
         date: o.created_at,
+        availableAt: availableAt.toISOString(),
         status,
-        rawStatus: o.status,
+        isAvailable,
       };
     });
   }, [orders]);
@@ -224,45 +233,51 @@ export default function DashboardRevenue() {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 xl:gap-5 2xl:gap-6">
             {/* Stat Cards Grid (Desktop 3 columns / Mobile stacked) */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 xl:gap-4 2xl:gap-6 flex-1">
-              {/* Card 1: Revenus totaux */}
+              {/* Card 1: Revenus totaux nets */}
               <div className="rounded-2xl 2xl:rounded-[24px] border border-slate-200/40 dark:border-slate-800 bg-white dark:bg-[#1A2234] p-4 sm:p-5 xl:p-6 2xl:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-center text-center sm:text-left transition-all">
-                {/* Mobile: label top. Desktop/Monitor: label bottom */}
                 <span className="text-xs sm:text-xs xl:text-sm 2xl:text-base font-semibold text-slate-500 dark:text-slate-400 block sm:hidden mb-1">
-                  Revenus totaux
+                  Revenus totaux nets
                 </span>
                 <span className="text-2xl sm:text-3xl xl:text-3xl 2xl:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                   {formatAmount(totalRevenue)}
                 </span>
                 <span className="text-xs sm:text-xs xl:text-sm 2xl:text-base font-semibold text-slate-500 dark:text-slate-400 hidden sm:block mt-1 2xl:mt-1.5">
-                  Revenus totaux
+                  Revenus totaux nets
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">
+                  Net vendeur (-5% DUKAIO déduits)
                 </span>
               </div>
 
-              {/* Card 2: Revenus en attente */}
+              {/* Card 2: Revenus en attente (délai 24h) */}
               <div className="rounded-2xl 2xl:rounded-[24px] border border-amber-200/50 dark:border-amber-900/40 bg-[#FEFDEB] dark:bg-amber-950/25 p-4 sm:p-5 xl:p-6 2xl:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-center text-center sm:text-left transition-all">
-                {/* Mobile: label top. Desktop/Monitor: label bottom */}
                 <span className="text-xs sm:text-xs xl:text-sm 2xl:text-base font-semibold text-amber-900/70 dark:text-amber-300/80 block sm:hidden mb-1">
-                  Revenus en attente
+                  En attente (Délai 24h)
                 </span>
                 <span className="text-2xl sm:text-3xl xl:text-3xl 2xl:text-4xl font-black text-slate-900 dark:text-amber-200 tracking-tight">
                   {formatAmount(pendingRevenue)}
                 </span>
                 <span className="text-xs sm:text-xs xl:text-sm 2xl:text-base font-semibold text-amber-900/70 dark:text-amber-300/80 hidden sm:block mt-1 2xl:mt-1.5">
-                  Revenus en attente
+                  En attente (Délai 24h)
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-amber-700/80 dark:text-amber-400 mt-0.5">
+                  Sécurité 24h avant déblocage
                 </span>
               </div>
 
-              {/* Card 3: Revenus payés */}
+              {/* Card 3: Revenus disponibles */}
               <div className="rounded-2xl 2xl:rounded-[24px] border border-emerald-200/50 dark:border-emerald-900/40 bg-[#F0FDF4] dark:bg-emerald-950/25 p-4 sm:p-5 xl:p-6 2xl:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-center text-center sm:text-left transition-all">
-                {/* Mobile: label top. Desktop/Monitor: label bottom */}
                 <span className="text-xs sm:text-xs xl:text-sm 2xl:text-base font-semibold text-emerald-900/70 dark:text-emerald-300/80 block sm:hidden mb-1">
-                  Revenus payés
+                  Disponible au retrait
                 </span>
                 <span className="text-2xl sm:text-3xl xl:text-3xl 2xl:text-4xl font-black text-slate-900 dark:text-emerald-200 tracking-tight">
                   {formatAmount(paidRevenue)}
                 </span>
                 <span className="text-xs sm:text-xs xl:text-sm 2xl:text-base font-semibold text-emerald-900/70 dark:text-emerald-300/80 hidden sm:block mt-1 2xl:mt-1.5">
-                  Revenus payés
+                  Disponible au retrait
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-emerald-700/80 dark:text-emerald-400 mt-0.5">
+                  Prêt pour retrait Mobile Money
                 </span>
               </div>
             </div>
@@ -345,7 +360,7 @@ export default function DashboardRevenue() {
               <span>Tout</span>
             </button>
 
-            {/* Pill: Payé */}
+            {/* Pill: Disponible au retrait */}
             <button
               onClick={() => setStatusFilter("paid")}
               className={`inline-flex items-center gap-2 2xl:gap-2.5 px-3.5 py-1.5 xl:px-4.5 xl:py-2 2xl:px-5.5 2xl:py-2.5 rounded-full text-xs xl:text-sm 2xl:text-base font-semibold transition-all shrink-0 ${
@@ -355,10 +370,10 @@ export default function DashboardRevenue() {
               }`}
             >
               <span className="h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full bg-emerald-500" />
-              <span>Payé</span>
+              <span>Disponible</span>
             </button>
 
-            {/* Pill: En attente */}
+            {/* Pill: En attente (24h) */}
             <button
               onClick={() => setStatusFilter("pending")}
               className={`inline-flex items-center gap-2 2xl:gap-2.5 px-3.5 py-1.5 xl:px-4.5 xl:py-2 2xl:px-5.5 2xl:py-2.5 rounded-full text-xs xl:text-sm 2xl:text-base font-semibold transition-all shrink-0 ${
@@ -368,20 +383,7 @@ export default function DashboardRevenue() {
               }`}
             >
               <span className="h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full bg-amber-500" />
-              <span>En attente</span>
-            </button>
-
-            {/* Pill: Échoué / Annulé */}
-            <button
-              onClick={() => setStatusFilter("failed")}
-              className={`inline-flex items-center gap-2 2xl:gap-2.5 px-3.5 py-1.5 xl:px-4.5 xl:py-2 2xl:px-5.5 2xl:py-2.5 rounded-full text-xs xl:text-sm 2xl:text-base font-semibold transition-all shrink-0 ${
-                statusFilter === "failed"
-                  ? "bg-red-100 dark:bg-red-950/60 text-red-950 dark:text-red-200 border border-red-300 dark:border-red-700 shadow-2xs"
-                  : "bg-red-50/80 dark:bg-red-950/25 text-red-700 dark:text-red-400 hover:bg-red-100/70"
-              }`}
-            >
-              <span className="h-2 w-2 2xl:h-2.5 2xl:w-2.5 rounded-full bg-red-500" />
-              <span>Échoués / Annulés</span>
+              <span>En attente (24h)</span>
             </button>
           </div>
 
@@ -436,8 +438,8 @@ export default function DashboardRevenue() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200/90 dark:border-slate-800 text-[13px] xl:text-sm 2xl:text-base font-bold text-slate-700 dark:text-slate-300">
-                    <th className="py-3.5 xl:py-4 2xl:py-5 px-3 sm:px-5 2xl:px-7">Montant</th>
-                    <th className="py-3.5 xl:py-4 2xl:py-5 px-3 sm:px-5 2xl:px-7">Dû le</th>
+                    <th className="py-3.5 xl:py-4 2xl:py-5 px-3 sm:px-5 2xl:px-7">Montant net (95%)</th>
+                    <th className="py-3.5 xl:py-4 2xl:py-5 px-3 sm:px-5 2xl:px-7">Disponibilité</th>
                     <th className="py-3.5 xl:py-4 2xl:py-5 px-3 sm:px-5 2xl:px-7 text-right">Statut</th>
                   </tr>
                 </thead>
@@ -447,39 +449,50 @@ export default function DashboardRevenue() {
                       key={item.id}
                       className="hover:bg-slate-50/70 dark:hover:bg-[#1A2234]/50 transition-colors"
                     >
-                      {/* Column 1: Montant */}
+                      {/* Column 1: Montant net */}
                       <td className="py-4 xl:py-5 2xl:py-6 px-3 sm:px-5 2xl:px-7 text-foreground font-bold tracking-tight">
                         <div className="text-[13px] sm:text-sm xl:text-base 2xl:text-lg font-black text-slate-900 dark:text-slate-100">
                           {formatAmount(item.amount)}
                         </div>
-                        {item.title && (
-                          <div className="text-[11px] xl:text-xs 2xl:text-sm font-normal text-muted-foreground truncate max-w-[200px] sm:max-w-md xl:max-w-xl mt-0.5">
-                            {item.title}
+                        <div className="text-[11px] xl:text-xs font-normal text-muted-foreground truncate max-w-[200px] sm:max-w-md xl:max-w-xl mt-0.5">
+                          {item.title} · <span className="opacity-80">{formatAmount(item.grossAmount)} brut (-5% com.)</span>
+                        </div>
+                      </td>
+
+                      {/* Column 2: Disponibilité */}
+                      <td className="py-4 xl:py-5 2xl:py-6 px-3 sm:px-5 2xl:px-7 text-slate-600 dark:text-slate-400 font-medium text-[12px] sm:text-xs xl:text-sm 2xl:text-base">
+                        {item.isAvailable ? (
+                          <div>
+                            <span className="block font-semibold text-foreground">
+                              {format(new Date(item.date), "d MMMM yyyy", { locale: fr })}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              Fonds libérés
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <span className="block font-semibold text-foreground">
+                              {format(new Date(item.availableAt), "d MMMM à HH:mm", { locale: fr })}
+                            </span>
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                              Libération sous 24h
+                            </span>
                           </div>
                         )}
                       </td>
 
-                      {/* Column 2: Dû le */}
-                      <td className="py-4 xl:py-5 2xl:py-6 px-3 sm:px-5 2xl:px-7 text-slate-600 dark:text-slate-400 font-medium text-[12px] sm:text-xs xl:text-sm 2xl:text-base">
-                        {format(new Date(item.date), "d MMMM yyyy", { locale: fr })}
-                      </td>
-
                       {/* Column 3: Statut */}
                       <td className="py-4 xl:py-5 2xl:py-6 px-3 sm:px-5 2xl:px-7 text-right">
-                        {item.status === "paid" ? (
+                        {item.isAvailable ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 xl:px-4 xl:py-1.5 2xl:px-5 2xl:py-2 rounded-full text-[11px] xl:text-xs 2xl:text-sm font-bold bg-[#DCFCE7] dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800/60 ml-auto">
                             <BadgeCheck className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-emerald-600 dark:text-emerald-400" />
-                            <span>Payé</span>
-                          </span>
-                        ) : item.status === "pending" ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 xl:px-4 xl:py-1.5 2xl:px-5 2xl:py-2 rounded-full text-[11px] xl:text-xs 2xl:text-sm font-bold bg-[#FEF3C7] dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/60 ml-auto">
-                            <Clock className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-amber-600 dark:text-amber-400" />
-                            <span>En attente</span>
+                            <span>Disponible</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 xl:px-4 xl:py-1.5 2xl:px-5 2xl:py-2 rounded-full text-[11px] xl:text-xs 2xl:text-sm font-bold bg-red-100 dark:bg-red-950/70 text-red-900 dark:text-red-300 border border-red-300/60 dark:border-red-800/60 ml-auto">
-                            <X className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-red-600 dark:text-red-400" />
-                            <span>Échoué / Annulé</span>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 xl:px-4 xl:py-1.5 2xl:px-5 2xl:py-2 rounded-full text-[11px] xl:text-xs 2xl:text-sm font-bold bg-[#FEF3C7] dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/60 ml-auto">
+                            <Clock className="h-3.5 w-3.5 xl:h-4 xl:w-4 2xl:h-4.5 2xl:w-4.5 text-amber-600 dark:text-amber-400" />
+                            <span>En attente (24h)</span>
                           </span>
                         )}
                       </td>

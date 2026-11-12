@@ -60,15 +60,16 @@ export default function DashboardAnalytics() {
     setVisits(v);
     setOrders(o);
 
-    const uniqueCustomerIds = [...new Set(o.map((ord: any) => ord.customer_id))];
+    const uniqueCustomerIds = [...new Set(o.map((ord: any) => ord.customer_id).filter(Boolean))];
     const uniqueCountries = [...new Set(v.map((vis: any) => vis.country).filter(Boolean))];
 
-    const totalRevenue = o.reduce((sum: number, ord: any) => sum + Number(ord.amount || 0), 0);
-    const convRate = v.length > 0 ? Math.round((o.length / v.length) * 100) : 0;
+    const completedOrders = o.filter((ord: any) => ord.status === "completed");
+    const totalRevenue = completedOrders.reduce((sum: number, ord: any) => sum + Number(ord.amount || 0), 0);
+    const convRate = v.length > 0 ? Math.round((completedOrders.length / v.length) * 100) : 0;
 
     setStats({
       totalVisits: v.length,
-      totalSales: o.length,
+      totalSales: completedOrders.length,
       totalRevenue,
       totalCustomers: uniqueCustomerIds.length,
       conversionRate: convRate,
@@ -79,19 +80,18 @@ export default function DashboardAnalytics() {
     const interval = eachDayOfInterval({ start: subDays(new Date(), effectivePeriod), end: new Date() });
     const chart = interval.map((day) => {
       const dayStr = format(day, "yyyy-MM-dd");
+      const dayCompleted = completedOrders.filter((x: any) => format(new Date(x.created_at), "yyyy-MM-dd") === dayStr);
       return {
         date: format(day, "dd MMM", { locale: fr }),
-        ventes: o.filter((x: any) => format(new Date(x.created_at), "yyyy-MM-dd") === dayStr).length,
-        chiffre: o
-          .filter((x: any) => format(new Date(x.created_at), "yyyy-MM-dd") === dayStr)
-          .reduce((sum: number, ord: any) => sum + Number(ord.amount || 0), 0),
+        ventes: dayCompleted.length,
+        chiffre: dayCompleted.reduce((sum: number, ord: any) => sum + Number(ord.amount || 0), 0),
       };
     });
     setChartData(chart);
 
     // Top Products
     const prodMap: Record<string, { title: string; count: number; revenue: number }> = {};
-    o.forEach((ord: any) => {
+    completedOrders.forEach((ord: any) => {
       const pId = ord.product_id;
       if (!prodMap[pId]) {
         prodMap[pId] = { title: ord.products?.title || "Produit digital", count: 0, revenue: 0 };

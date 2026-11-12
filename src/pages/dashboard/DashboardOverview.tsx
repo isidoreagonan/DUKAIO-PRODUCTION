@@ -57,7 +57,6 @@ export function DashboardOverview() {
             .from("orders")
             .select("id, amount, status, created_at, product_id, customer_id, products(title, thumbnail_url), customers(name, email)")
             .eq("store_owner_id", user.id)
-            .eq("status", "completed")
             .order("created_at", { ascending: false }),
         ]);
 
@@ -186,24 +185,27 @@ export function DashboardOverview() {
     const now = new Date();
     const sevenDaysAgo = subDays(now, 7);
 
+    // Paid orders only for financial calculations
+    const paidOrders = rawOrders.filter((o) => o.status === "completed");
+
     // 7 days revenue
-    const last7Orders = rawOrders.filter((o) => {
+    const last7Orders = paidOrders.filter((o) => {
       const d = parseISO(o.created_at);
       return d >= sevenDaysAgo;
     });
     const rev7 = last7Orders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
 
     // Total lifetime revenue
-    const lifeRev = rawOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
+    const lifeRev = paidOrders.reduce((sum, o) => sum + Number(o.amount || 0), 0);
 
-    // Total unique clients
+    // Total unique clients (all customers who reached checkout)
     const uniqueClients = new Set(
       rawOrders.map((o) => o.customer_id).filter(Boolean)
     ).size;
 
     // Filter chart according to selected period (7, 30, 90 days)
     const periodStart = subDays(now, periodDays - 1);
-    const ordersInPeriod = rawOrders.filter((o) => {
+    const ordersInPeriod = paidOrders.filter((o) => {
       const d = parseISO(o.created_at);
       return isWithinInterval(d, { start: startOfDay(periodStart), end: endOfDay(now) });
     });
@@ -216,7 +218,7 @@ export function DashboardOverview() {
 
     const chart = daysInterval.map((day) => {
       const dayStr = format(day, "yyyy-MM-dd");
-      const dayOrders = rawOrders.filter(
+      const dayOrders = paidOrders.filter(
         (o) => format(parseISO(o.created_at), "yyyy-MM-dd") === dayStr
       );
       return {
@@ -227,9 +229,9 @@ export function DashboardOverview() {
       };
     });
 
-    // Top products calculation
+    // Top products calculation (from paid sales)
     const salesByProduct: Record<string, { total: number; count: number }> = {};
-    rawOrders.forEach((o) => {
+    paidOrders.forEach((o) => {
       const pId = o.product_id;
       if (!pId) return;
       if (!salesByProduct[pId]) salesByProduct[pId] = { total: 0, count: 0 };
@@ -247,12 +249,12 @@ export function DashboardOverview() {
     return {
       sevenDaysRevenue: rev7,
       totalClients: uniqueClients,
-      totalSalesCount: rawOrders.length,
+      totalSalesCount: paidOrders.length,
       lifetimeRevenue: lifeRev,
       chartData: chart,
       periodRevenue: pRev,
       topProducts: enriched.filter((p) => p.salesCount > 0).slice(0, 5),
-      recentSales: rawOrders.slice(0, 5),
+      recentSales: rawOrders.slice(0, 6),
     };
   }, [rawOrders, rawProducts, periodDays]);
 
@@ -569,11 +571,23 @@ export function DashboardOverview() {
                       </div>
                       <div className="text-right shrink-0">
                         <span className="text-xs font-bold text-foreground block">
-                          +{Number(order.amount).toLocaleString("fr-FR")} F
+                          {order.status === "completed"
+                            ? `+${Number(order.amount).toLocaleString("fr-FR")} F`
+                            : `${Number(order.amount).toLocaleString("fr-FR")} F`}
                         </span>
-                        <span className="inline-flex items-center text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-1.5 py-0.2 rounded-full">
-                          Payé
-                        </span>
+                        {order.status === "completed" ? (
+                          <span className="inline-flex items-center text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 px-1.5 py-0.5 rounded-full">
+                            Payé
+                          </span>
+                        ) : order.status === "pending" ? (
+                          <span className="inline-flex items-center text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/40 px-1.5 py-0.5 rounded-full">
+                            En attente
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 px-1.5 py-0.5 rounded-full">
+                            Échoué
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

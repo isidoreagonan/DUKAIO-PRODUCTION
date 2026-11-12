@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, Users, DollarSign, ArrowDownRight, ArrowUpRight, Mail, Phone, Globe, Calendar, Store, Box, CreditCard, Activity } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { isAdminUser } from "@/lib/admin";
 
 interface UserProfile {
   id: string;
@@ -47,7 +48,7 @@ const AdminUsers = () => {
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
-    if (user?.email !== "isidoreagonan@gmail.com") return;
+    if (!isAdminUser(user?.email)) return;
     fetchProfiles();
   }, [user]);
 
@@ -99,7 +100,7 @@ const AdminUsers = () => {
     );
   });
 
-  if (user?.email !== "isidoreagonan@gmail.com") {
+  if (!isAdminUser(user?.email)) {
     return (
       <DashboardLayout>
         <div className="text-center py-20 text-muted-foreground font-medium">Accès non autorisé</div>

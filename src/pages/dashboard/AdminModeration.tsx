@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { isAdminUser } from "@/lib/admin";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -42,7 +43,7 @@ const AdminModeration = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.email !== "isidoreagonan@gmail.com") return;
+    if (!isAdminUser(user?.email)) return;
     fetchData();
   }, [user]);
 
@@ -92,7 +93,7 @@ const AdminModeration = () => {
     return !q || s.name.toLowerCase().includes(q) || s.slug.toLowerCase().includes(q) || getName(s.owner).toLowerCase().includes(q);
   });
 
-  if (user?.email !== "isidoreagonan@gmail.com") {
+  if (!isAdminUser(user?.email)) {
     return <DashboardLayout><div className="text-center py-20 text-muted-foreground">Accès non autorisé</div></DashboardLayout>;
   }
 

@@ -17,8 +17,7 @@ import {
 import {
   Shield, CheckCircle2, XCircle, Clock, Eye, Loader2, Search,
 } from "lucide-react";
-
-const ADMIN_EMAIL = "isidoreagonan@gmail.com";
+import { isAdminUser } from "@/lib/admin";
 
 interface KYCRequest {
   id: string;
@@ -62,7 +61,7 @@ const AdminKYC = () => {
   const [rejectionReason, setRejectionReason] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = isAdminUser(user?.email);
 
   useEffect(() => {
     if (isAdmin) loadRequests();

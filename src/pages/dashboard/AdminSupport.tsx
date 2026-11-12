@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { isAdminUser } from "@/lib/admin";
 import { toast } from "sonner";
 
 interface Conversation {
@@ -38,7 +39,7 @@ const AdminSupport = () => {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (user?.email !== "isidoreagonan@gmail.com") return;
+    if (!isAdminUser(user?.email)) return;
     fetchConversations();
   }, [user]);
 
@@ -84,7 +85,7 @@ const AdminSupport = () => {
 
   const selectedConv = conversations.find((c) => c.id === selected);
 
-  if (user?.email !== "isidoreagonan@gmail.com") {
+  if (!isAdminUser(user?.email)) {
     return <DashboardLayout><div className="text-center py-20 text-muted-foreground">Accès non autorisé</div></DashboardLayout>;
   }
 

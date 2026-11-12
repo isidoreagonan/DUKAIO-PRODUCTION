@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
+import { isAdminUser } from "@/lib/admin";
 
 type Tool = {
   title: string;
@@ -211,7 +212,7 @@ function ToolCard({ tool }: { tool: Tool }) {
 
 export default function DashboardMenu() {
   const { user } = useAuth();
-  const isAdmin = user?.email === "isidoreagonan@gmail.com";
+  const isAdmin = isAdminUser(user?.email);
 
   return (
     <DashboardLayout>

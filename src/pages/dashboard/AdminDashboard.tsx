@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { motion } from "framer-motion";
 import { Users, TrendingUp, Smartphone, Globe, Link as LinkIcon, Monitor, Tablet, Activity, FileText } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { isAdminUser } from "@/lib/admin";
 
 interface TrafficStats {
   totalViews: number;
@@ -58,7 +59,7 @@ const AdminDashboard = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.email !== "isidoreagonan@gmail.com") return;
+    if (!isAdminUser(user?.email)) return;
     fetchStats();
   }, [user]);
 
@@ -82,7 +83,7 @@ const AdminDashboard = () => {
     }
   };
 
-  if (user?.email !== "isidoreagonan@gmail.com") {
+  if (!isAdminUser(user?.email)) {
     return (
       <DashboardLayout>
         <div className="text-center py-20 text-muted-foreground">Accès non autorisé</div>

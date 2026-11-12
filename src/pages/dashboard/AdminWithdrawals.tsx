@@ -11,6 +11,8 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { isAdminUser } from "@/lib/admin";
+
 interface Withdrawal {
   id: string;
   amount: number;
@@ -33,7 +35,7 @@ const AdminWithdrawals = () => {
   const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.email !== "isidoreagonan@gmail.com") return;
+    if (!isAdminUser(user?.email)) return;
     fetchWithdrawals();
   }, [user]);
 
@@ -80,7 +82,7 @@ const AdminWithdrawals = () => {
     return <Badge variant={s.variant} className="text-xs">{s.label}</Badge>;
   };
 
-  if (user?.email !== "isidoreagonan@gmail.com") {
+  if (!isAdminUser(user?.email)) {
     return <DashboardLayout><div className="text-center py-20 text-muted-foreground">Accès non autorisé</div></DashboardLayout>;
   }
 
