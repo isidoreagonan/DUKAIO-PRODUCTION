@@ -360,8 +360,17 @@ export default function CheckoutPage() {
         },
       });
 
-      if (callErr) throw new Error(callErr.message || "Erreur réseau");
-      if (data?.error) throw new Error(data.error);
+      if (callErr) {
+        let msg = callErr.message || "Erreur réseau";
+        try {
+          if ((callErr as any).context && typeof (callErr as any).context.json === "function") {
+            const errJson = await (callErr as any).context.json();
+            if (errJson?.error) msg = typeof errJson.error === "string" ? errJson.error : JSON.stringify(errJson.error);
+          }
+        } catch {}
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(typeof data.error === "string" ? data.error : JSON.stringify(data.error));
 
       setPaymentId(data.paymentId);
       setOrderReference(data.reference);

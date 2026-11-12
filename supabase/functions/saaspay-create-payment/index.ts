@@ -117,22 +117,48 @@ Deno.serve(async (req) => {
 
     const isCardOrCrypto = body.method === "card" || body.method === "crypto";
 
+    // Split customer name
+    const nameParts = name.split(" ").filter(Boolean);
+    const firstName = nameParts[0] || "Client";
+    const lastName = nameParts.slice(1).join(" ") || firstName;
+
+    // Detect country dial code and parse local phone number
+    const countryUpper = body.country.toUpperCase();
+    const dialCodeMap: Record<string, string> = {
+      BJ: "229", CI: "225", SN: "221", TG: "228", CM: "237",
+      BF: "226", ML: "223", GA: "241", CG: "242", CD: "243",
+      NE: "227", GN: "224", FR: "33", US: "1", CA: "1", BE: "32",
+    };
+    const dialCode = dialCodeMap[countryUpper] || "";
+    let localPhone = rawPhone;
+    if (dialCode && localPhone.startsWith(dialCode)) {
+      localPhone = localPhone.slice(dialCode.length);
+    }
+    // Benin: Ensure 10 digits (older numbers were 8 digits, new format adds 01 prefix)
+    if (countryUpper === "BJ" && localPhone.length === 8) {
+      localPhone = `01${localPhone}`;
+    }
+
+    // Determine normalized SaaSPay network code
+    let networkCode = body.method.toLowerCase();
+    if (!networkCode.includes("_") && !isCardOrCrypto) {
+      networkCode = `${networkCode}_${body.country.toLowerCase()}`;
+    }
+
     let saaspayData: any = null;
     let paymentId = "";
     let checkoutUrl = "";
 
     if (isCardOrCrypto) {
-      // Use SaaSPay Checkout Session for 3D-Secure Cards & Blockchain Cryptos
+      // SaaSPay Checkout Sessions (Card & Crypto)
       const sessionPayload = {
         amount: amountFormatted,
         currency,
-        country: body.country.toUpperCase(),
+        country: countryUpper,
         payment_method: body.method === "crypto" ? "crypto" : "card",
-        customer: {
-          name,
-          email,
-          phone: rawPhone ? `+${rawPhone}` : undefined,
-        },
+        customer_name: name,
+        customer_email: email,
+        customer_phone: rawPhone ? `+${rawPhone}` : undefined,
         reference,
         fee_charge_mode: "ADD_ON",
         return_url: body.metadata.return_url || "https://dukaio.com/payment-callback?ref=" + reference,
@@ -154,23 +180,31 @@ Deno.serve(async (req) => {
       console.log("[saaspay-checkout-session] response:", res.status, JSON.stringify(saaspayData));
 
       if (!res.ok) {
-        return json({ error: saaspayData?.detail || saaspayData?.message || "Erreur initialisation session de paiement" }, res.status);
+        const errDetail =
+          saaspayData?.error?.message ||
+          (typeof saaspayData?.error === "string" ? saaspayData.error : null) ||
+          saaspayData?.detail ||
+          saaspayData?.message ||
+          "Erreur initialisation session de paiement";
+        return json({ error: errDetail }, res.status);
       }
 
-      paymentId = saaspayData.id || saaspayData.session_id || reference;
-      checkoutUrl = saaspayData.checkout_url || "";
+      const sessionObj = saaspayData.data || saaspayData;
+      paymentId = sessionObj.id || sessionObj.slug || reference;
+      checkoutUrl = sessionObj.checkout_url || "";
     } else {
-      // Use SaaSPay Softpay Direct Push USSD for Mobile Money
+      // SaaSPay Softpay (Mobile Money Direct Push USSD)
       const softpayPayload = {
         amount: amountFormatted,
         currency,
-        country: body.country.toUpperCase(),
-        payment_method: body.method.toLowerCase(),
-        phone_number: rawPhone,
+        country: countryUpper,
+        network: networkCode,
+        phone_number: localPhone,
         customer: {
-          name,
+          first_name: firstName,
+          last_name: lastName,
           email,
-          phone: rawPhone ? `+${rawPhone}` : undefined,
+          phone: localPhone,
         },
         reference,
         fee_charge_mode: "ADD_ON",
@@ -193,11 +227,18 @@ Deno.serve(async (req) => {
       console.log("[saaspay-softpay] response:", res.status, JSON.stringify(saaspayData));
 
       if (!res.ok) {
-        return json({ error: saaspayData?.detail || saaspayData?.message || "Erreur déclenchement paiement Mobile Money" }, res.status);
+        const errDetail =
+          saaspayData?.error?.message ||
+          (typeof saaspayData?.error === "string" ? saaspayData.error : null) ||
+          saaspayData?.detail ||
+          saaspayData?.message ||
+          "Erreur déclenchement paiement Mobile Money";
+        return json({ error: errDetail }, res.status);
       }
 
-      paymentId = saaspayData.id || saaspayData.payment_id || reference;
-      checkoutUrl = saaspayData.checkout_url || "";
+      const softpayObj = saaspayData.data || saaspayData;
+      paymentId = softpayObj.id || softpayObj.payment_id || reference;
+      checkoutUrl = softpayObj.checkout_url || "";
     }
 
     // Update payment event with SaaSPay transaction ID
