@@ -6,7 +6,8 @@ import {
   Home, Package, ShoppingCart, BarChart3, LayoutGrid,
   Plus, Settings, ChevronRight, ChevronsUpDown, Check,
   ExternalLink, Moon, Sun, LogOut, User as UserIcon,
-  Store, PanelLeft, Folder, ArrowUpRight, X
+  Store, PanelLeft, Folder, ArrowUpRight, X,
+  Users, DollarSign, Wallet
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -104,7 +105,7 @@ export function DashboardSidebar({
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
-  // 5 sleek, compact core menus (vycut proportions)
+  // Sleek, compact core menus (PC vycut proportions)
   const coreMenus = [
     { title: "Accueil", url: "/dashboard", icon: Home, end: true },
     {
@@ -114,6 +115,9 @@ export function DashboardSidebar({
       badge: productsCount > 0 ? String(productsCount) : undefined,
     },
     { title: "Ventes", url: "/dashboard/sales", icon: ShoppingCart },
+    { title: "Clients", url: "/dashboard/clients", icon: Users },
+    { title: "Revenus", url: "/dashboard/revenue", icon: DollarSign },
+    { title: "Wallet", url: "/dashboard/wallet", icon: Wallet },
     { title: "Analytiques", url: "/dashboard/analytics", icon: BarChart3 },
     { title: "Autres outils", url: "/dashboard/menu", icon: LayoutGrid },
   ];
