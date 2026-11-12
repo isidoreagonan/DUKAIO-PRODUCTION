@@ -7,6 +7,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
 import { toast } from "sonner";
+import { extractDownloadUrls } from "@/lib/downloadHelper";
 import {
   SAASPAY_COUNTRIES,
   SAASPAY_METHODS,
@@ -867,24 +868,35 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="mt-6 w-full max-w-sm space-y-2">
-                  {product.download_url ? (
-                    <a
-                      href={product.download_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] text-xs font-bold text-white shadow-sm hover:bg-[#1E293B]"
-                    >
-                      <Package className="h-4 w-4" />
-                      <span>{t("Télécharger mon produit", "Download my product")}</span>
-                    </a>
-                  ) : (
-                    <button
-                      onClick={() => navigate(`/buyer/orders`)}
-                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] text-xs font-bold text-white shadow-sm hover:bg-[#1E293B]"
-                    >
-                      <span>{t("Consulter ma commande", "View my order")}</span>
-                    </button>
-                  )}
+                  {(() => {
+                    const downloadLinks = extractDownloadUrls(product.download_url);
+                    if (downloadLinks.length === 0) {
+                      return (
+                        <button
+                          onClick={() => navigate(`/buyer/orders`)}
+                          className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] text-xs font-bold text-white shadow-sm hover:bg-[#1E293B]"
+                        >
+                          <span>{t("Consulter ma commande", "View my order")}</span>
+                        </button>
+                      );
+                    }
+                    return downloadLinks.map((url, idx) => (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] text-xs font-bold text-white shadow-sm hover:bg-[#1E293B]"
+                      >
+                        <Package className="h-4 w-4" />
+                        <span>
+                          {downloadLinks.length > 1
+                            ? `${t("Télécharger le fichier", "Download file")} ${idx + 1}`
+                            : t("Télécharger mon produit", "Download my product")}
+                        </span>
+                      </a>
+                    ));
+                  })()}
 
                   <button
                     onClick={() => navigate(-1)}

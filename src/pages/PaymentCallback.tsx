@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, Copy, Download, FileText, Key, Loader2, Play, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { extractDownloadUrls } from "@/lib/downloadHelper";
 
 const PaymentCallback = () => {
   const navigate = useNavigate();
@@ -144,13 +145,24 @@ const PaymentCallback = () => {
                     Dès que Moneroo confirme le paiement, l’accès au produit s’affiche ici automatiquement.
                   </div>
                 ) : product.type === "file" ? (
-                  product.download_url ? (
-                    <Button asChild size="lg" className="gap-2">
-                      <a href={product.download_url} target="_blank" rel="noreferrer">
-                        <Download className="h-4 w-4" /> Télécharger maintenant
-                      </a>
-                    </Button>
-                  ) : <p className="text-sm text-muted-foreground">Le fichier n’est pas encore disponible.</p>
+                  (() => {
+                    const downloadLinks = extractDownloadUrls(product.download_url);
+                    if (downloadLinks.length === 0) {
+                      return <p className="text-sm text-muted-foreground">Le fichier n’est pas encore disponible.</p>;
+                    }
+                    return (
+                      <div className="flex flex-col gap-2">
+                        {downloadLinks.map((url, idx) => (
+                          <Button key={idx} asChild size="lg" className="gap-2">
+                            <a href={url} target="_blank" rel="noreferrer">
+                              <Download className="h-4 w-4" />
+                              {downloadLinks.length > 1 ? `Télécharger le fichier ${idx + 1}` : "Télécharger maintenant"}
+                            </a>
+                          </Button>
+                        ))}
+                      </div>
+                    );
+                  })()
                 ) : product.type === "course" ? (
                   <div className="space-y-3">
                     {firstLesson?.video_url ? (

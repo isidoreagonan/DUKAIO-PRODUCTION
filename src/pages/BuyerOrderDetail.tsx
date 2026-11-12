@@ -23,6 +23,7 @@ import logo from "@/assets/dukaio-logo.png";
 
 import BuyerContentDialog from "@/components/BuyerContentDialog";
 import ProductReviewForm from "@/components/buyer/ProductReviewForm";
+import { extractDownloadUrls } from "@/lib/downloadHelper";
 import SupportTicketDialog from "@/components/buyer/SupportTicketDialog";
 import { generateInvoicePDF } from "@/lib/invoice";
 
@@ -198,13 +199,7 @@ const BuyerOrderDetail = () => {
                 <div className="flex flex-wrap gap-2">
                   {product.type === "file" && product.download_url ? (
                     (() => {
-                      let urls: string[] = [];
-                      try {
-                        const parsed = JSON.parse(product.download_url);
-                        urls = Array.isArray(parsed) ? parsed.filter(Boolean) : [product.download_url];
-                      } catch {
-                        urls = [product.download_url];
-                      }
+                      const urls = extractDownloadUrls(product.download_url);
                       return urls.map((u, i) => (
                         <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-[180px]">
                           <Button className="w-full gap-2">

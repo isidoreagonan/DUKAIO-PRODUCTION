@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Download, Play, FileText, Key, Copy, Check, ExternalLink, BookOpen, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { extractDownloadUrls } from "@/lib/downloadHelper";
 
 interface BuyerContentDialogProps {
   open: boolean;
@@ -116,17 +117,8 @@ const BuyerContentDialog = ({ open, onOpenChange, product, customerId }: BuyerCo
     return url;
   };
 
-  const resolveDownloadUrls = (rawUrl?: string | null): string[] => {
-    if (!rawUrl) return [];
-    try {
-      const parsed = JSON.parse(rawUrl);
-      if (Array.isArray(parsed)) return parsed.filter(Boolean);
-    } catch {}
-    return [rawUrl];
-  };
-
   const renderFileContent = () => {
-    const downloadLinks = resolveDownloadUrls(product.download_url);
+    const downloadLinks = extractDownloadUrls(product.download_url);
     return (
       <div className="text-center py-8 space-y-4">
         <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -268,13 +260,16 @@ const BuyerContentDialog = ({ open, onOpenChange, product, customerId }: BuyerCo
               <p className="text-sm font-medium text-foreground line-clamp-1">{bp.title}</p>
               <p className="text-xs text-muted-foreground capitalize">{bp.type}</p>
             </div>
-            {bp.download_url && (
-              <a href={bp.download_url} target="_blank" rel="noopener noreferrer">
-                <Button size="sm" variant="outline" className="gap-1.5">
-                  <Download className="h-3.5 w-3.5" />
-                </Button>
-              </a>
-            )}
+            {(() => {
+              const bUrls = extractDownloadUrls(bp.download_url);
+              return bUrls.map((u, i) => (
+                <a key={i} href={u} target="_blank" rel="noopener noreferrer">
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </a>
+              ));
+            })()}
           </div>
         ))
       )}
