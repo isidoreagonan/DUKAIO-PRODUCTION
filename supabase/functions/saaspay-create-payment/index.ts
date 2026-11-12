@@ -116,6 +116,7 @@ Deno.serve(async (req) => {
     if (eventErr) console.error("payment_events insert warning:", eventErr);
 
     const isCardOrCrypto = body.method === "card" || body.method === "crypto";
+    const isNigerianBank = countryUpper === "NG" || networkCode === "allbanks_ng" || networkCode.includes("bank");
 
     // Split customer name
     const nameParts = name.split(" ").filter(Boolean);
@@ -123,11 +124,10 @@ Deno.serve(async (req) => {
     const lastName = nameParts.slice(1).join(" ") || firstName;
 
     // Detect country dial code and parse local phone number
-    const countryUpper = body.country.toUpperCase();
     const dialCodeMap: Record<string, string> = {
       BJ: "229", CI: "225", SN: "221", TG: "228", CM: "237",
       BF: "226", ML: "223", GA: "241", CG: "242", CD: "243",
-      NE: "227", GN: "224", FR: "33", US: "1", CA: "1", BE: "32",
+      NE: "227", GN: "224", NG: "234", GH: "233", FR: "33", US: "1", CA: "1", BE: "32",
     };
     const dialCode = dialCodeMap[countryUpper] || "";
     let localPhone = rawPhone;
@@ -141,21 +141,23 @@ Deno.serve(async (req) => {
 
     // Determine normalized SaaSPay network code
     let networkCode = body.method.toLowerCase();
-    if (!networkCode.includes("_") && !isCardOrCrypto) {
+    if (!networkCode.includes("_") && !isCardOrCrypto && !isNigerianBank) {
       networkCode = `${networkCode}_${body.country.toLowerCase()}`;
     }
 
     let saaspayData: any = null;
     let paymentId = "";
     let checkoutUrl = "";
+    let checkoutSlug = "";
+    let bankTransfer: any = null;
 
-    if (isCardOrCrypto) {
-      // SaaSPay Checkout Sessions (Card & Crypto)
+    if (isCardOrCrypto || isNigerianBank) {
+      // SaaSPay Checkout Sessions (Card, Crypto & Nigerian Bank Transfer)
       const sessionPayload = {
         amount: amountFormatted,
         currency,
         country: countryUpper,
-        payment_method: body.method === "crypto" ? "crypto" : "card",
+        payment_method: isNigerianBank ? "bank_transfer" : (body.method === "crypto" ? "crypto" : "card"),
         customer_name: name,
         customer_email: email,
         customer_phone: rawPhone ? `+${rawPhone}` : undefined,
@@ -190,8 +192,42 @@ Deno.serve(async (req) => {
       }
 
       const sessionObj = saaspayData.data || saaspayData;
-      paymentId = sessionObj.id || sessionObj.slug || reference;
+      checkoutSlug = sessionObj.slug || sessionObj.id || "";
+      paymentId = checkoutSlug || reference;
       checkoutUrl = sessionObj.checkout_url || "";
+
+      // If Nigerian bank transfer, trigger /checkout/{slug}/pay/ to retrieve dynamic virtual account
+      if (isNigerianBank && checkoutSlug) {
+        try {
+          console.log(`[saaspay-create-payment] fetching dynamic bank transfer details for slug: ${checkoutSlug}`);
+          const payRes = await fetch(`${SAASPAY_BASE_URL}/checkout/${checkoutSlug}/pay/`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              country: "NG",
+              network: "allbanks_ng",
+              customer: {
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                phone: rawPhone ? `+${rawPhone}` : undefined,
+              },
+            }),
+          });
+
+          const payData = await payRes.json();
+          console.log("[saaspay-checkout-pay] response:", payRes.status, JSON.stringify(payData));
+
+          if (payRes.ok && (payData.data?.bank_transfer || payData.bank_transfer)) {
+            bankTransfer = payData.data?.bank_transfer || payData.bank_transfer;
+          }
+        } catch (payErr) {
+          console.warn("[saaspay-create-payment] pay endpoint warning:", payErr);
+        }
+      }
     } else {
       // SaaSPay Softpay (Mobile Money Direct Push USSD)
       const softpayPayload = {
@@ -290,7 +326,9 @@ Deno.serve(async (req) => {
       reference,
       orderId,
       checkoutUrl,
-      directPush: !checkoutUrl, // if no checkout_url, user received USSD prompt on phone
+      checkoutSlug,
+      bankTransfer,
+      directPush: !checkoutUrl && !bankTransfer,
       status: saaspayData.status || "pending",
     });
   } catch (err: any) {

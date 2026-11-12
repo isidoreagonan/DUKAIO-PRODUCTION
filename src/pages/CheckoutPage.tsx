@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Check, ChevronDown, CreditCard, Lock, MessageCircle,
-  Package, ShieldCheck, Smartphone, Loader2, Sparkles, AlertCircle, RefreshCw
+  Package, ShieldCheck, Smartphone, Loader2, Sparkles, AlertCircle, RefreshCw,
+  Landmark, Copy, ExternalLink, Clock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
@@ -207,11 +208,21 @@ export default function CheckoutPage() {
 
   // Payment flow state
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState<"form" | "pending" | "done" | "failed">("form");
+  const [step, setStep] = useState<"form" | "pending" | "bank_transfer" | "done" | "failed">("form");
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [orderReference, setOrderReference] = useState<string>("");
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [bankTransfer, setBankTransfer] = useState<{
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+    amount_expected: string | number;
+    reference?: string;
+    expires_at?: string;
+  } | null>(null);
+  const [bankTransferCheckoutUrl, setBankTransferCheckoutUrl] = useState<string>("");
+  const [countdownSeconds, setCountdownSeconds] = useState<number>(3600);
 
   // Force strict light mode on the checkout experience
   useEffect(() => {
@@ -376,6 +387,15 @@ export default function CheckoutPage() {
       setPaymentId(data.paymentId);
       setOrderReference(data.reference);
 
+      // If dynamic Nigerian bank transfer returned, show native bank transfer UI
+      if (data.bankTransfer) {
+        setBankTransfer(data.bankTransfer);
+        setBankTransferCheckoutUrl(data.checkoutUrl || "");
+        setStep("bank_transfer");
+        toast.info(t("Coordonnées bancaires générées !", "Bank transfer account generated!"));
+        return;
+      }
+
       // If Checkout URL returned (Cards, Crypto, Wave Web), redirect
       if (data.checkoutUrl) {
         toast.info("Redirection vers la passerelle sécurisée...");
@@ -395,14 +415,52 @@ export default function CheckoutPage() {
   };
 
   // -------------------------------------------------------------
-  // Realtime & Polling check when step is 'pending'
+  // Countdown timer for Bank Transfer
   // -------------------------------------------------------------
   useEffect(() => {
-    if (step !== "pending" || !paymentId) return;
+    if (step !== "bank_transfer") return;
+    if (bankTransfer?.expires_at) {
+      const exp = new Date(bankTransfer.expires_at).getTime();
+      const now = Date.now();
+      const diffSec = Math.max(0, Math.floor((exp - now) / 1000));
+      setCountdownSeconds(diffSec > 0 ? diffSec : 3600);
+    } else {
+      setCountdownSeconds(3600);
+    }
+
+    const timer = setInterval(() => {
+      setCountdownSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [step, bankTransfer]);
+
+  const formatCountdown = (totalSec: number) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} ${t("copié dans le presse-papier !", "copied to clipboard!")}`);
+  };
+
+  // -------------------------------------------------------------
+  // Realtime & Polling check when step is 'pending' or 'bank_transfer'
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if ((step !== "pending" && step !== "bank_transfer") || !paymentId) return;
 
     let isSubscribed = true;
 
-    // Polling interval every 2 seconds
+    // Polling interval every 3 seconds
     const interval = setInterval(async () => {
       try {
         const { data } = await supabase.functions.invoke("saaspay-status", {
@@ -424,7 +482,7 @@ export default function CheckoutPage() {
       } catch (pollErr) {
         console.warn("Polling status error:", pollErr);
       }
-    }, 2000);
+    }, 3000);
 
     return () => {
       isSubscribed = false;
@@ -831,6 +889,175 @@ export default function CheckoutPage() {
                   >
                     {t("Annuler ou modifier le numéro", "Cancel or change phone number")}
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* ---------------------------------------------------- */}
+            {/* STEP 2B: BANK TRANSFER (Nigeria Sterling Bank Native) */}
+            {/* ---------------------------------------------------- */}
+            {step === "bank_transfer" && bankTransfer && (
+              <div className="flex min-h-[460px] flex-col items-center justify-center p-2 sm:p-4 animate-in fade-in-50">
+                {/* Language Toggle in top right */}
+                <div className="w-full flex justify-end mb-2">
+                  <div className="inline-flex rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-0.5 text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setLang("fr")}
+                      className={`px-2 py-0.5 rounded-md transition-all ${lang === "fr" ? "bg-white text-[#0F172A] shadow-xs" : "text-[#64748B]"}`}
+                    >
+                      🇫🇷 FR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLang("en")}
+                      className={`px-2 py-0.5 rounded-md transition-all ${lang === "en" ? "bg-white text-[#0F172A] shadow-xs" : "text-[#64748B]"}`}
+                    >
+                      🇬🇧 EN
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bank Icon Header */}
+                <div className="h-14 w-14 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 shadow-2xs border border-purple-100">
+                  <Landmark className="h-7 w-7" />
+                </div>
+
+                <h2 className="text-lg font-extrabold tracking-tight text-[#0F172A]">
+                  {t("Effectue le virement bancaire", "Make the bank transfer")}
+                </h2>
+
+                <p className="mt-1 text-xs text-[#64748B] text-center max-w-sm">
+                  {t(
+                    `Envoie ${fmt(Number(bankTransfer.amount_expected))} NGN vers le compte ci-dessous avant expiration.`,
+                    `Send ${fmt(Number(bankTransfer.amount_expected))} NGN to the account below before expiry.`
+                  )}
+                </p>
+
+                {/* Countdown Badge */}
+                <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/60 text-[11px] font-bold text-amber-800">
+                  <Clock className="h-3.5 w-3.5 text-amber-600" />
+                  <span>{t("Expire dans", "Expires in")} {formatCountdown(countdownSeconds)}</span>
+                </div>
+
+                {/* Bank Account Details Card */}
+                <div className="mt-5 w-full max-w-md rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 divide-y divide-[#E2E8F0]/70 text-xs">
+                  <div className="flex items-center justify-between py-2.5">
+                    <span className="text-[#64748B] font-medium">{t("Banque", "Bank")}</span>
+                    <span className="font-bold text-[#0F172A] text-right">{bankTransfer.bank_name || "Sterling bank"}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2.5 gap-2">
+                    <span className="text-[#64748B] font-medium">{t("Numéro de compte", "Account number")}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-extrabold text-[#0F172A] text-sm tracking-wider select-all">
+                        {bankTransfer.account_number}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(bankTransfer.account_number, "Numéro de compte")}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-lg bg-white border border-[#CBD5E1] text-[#0F172A] hover:bg-slate-50 transition-colors shadow-2xs active:scale-95"
+                        title={t("Copier le numéro de compte", "Copy account number")}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2.5">
+                    <span className="text-[#64748B] font-medium">{t("Bénéficiaire", "Beneficiary")}</span>
+                    <span className="font-bold text-[#0F172A] text-right">{bankTransfer.account_name || "Korapay-PAL AFRICA"}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2.5 gap-2">
+                    <span className="text-[#64748B] font-medium">{t("Montant", "Amount")}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-extrabold text-emerald-700 text-sm tracking-tight">
+                        {fmt(Number(bankTransfer.amount_expected))} NGN
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(String(Math.round(Number(bankTransfer.amount_expected))), "Montant")}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-lg bg-white border border-[#CBD5E1] text-[#0F172A] hover:bg-slate-50 transition-colors shadow-2xs active:scale-95"
+                        title={t("Copier le montant", "Copy amount")}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pulsing Status Pill */}
+                <div className="mt-5 flex flex-col items-center gap-2">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[11px] font-bold text-purple-700">
+                    <Loader2 className="h-3 w-3 animate-spin text-purple-600" />
+                    <span>{t("Vérification en cours", "Verification in progress")}</span>
+                  </div>
+                  <p className="text-[11px] text-[#64748B] text-center max-w-xs">
+                    {t(
+                      "La page se mettra à jour automatiquement dès réception du virement.",
+                      "This page will update automatically once the transfer is received."
+                    )}
+                  </p>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-6 flex flex-col sm:flex-row gap-2.5 w-full max-w-md">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!paymentId) return;
+                      try {
+                        toast.info(t("Vérification du statut bancaire...", "Checking bank status..."));
+                        const { data } = await supabase.functions.invoke("saaspay-status", {
+                          body: { paymentId, reference: orderReference },
+                        });
+                        if (data?.status === "success") {
+                          setCompletedOrderId(data.orderId || null);
+                          setStep("done");
+                          toast.success(t("Paiement validé avec succès !", "Payment successfully approved!"));
+                        } else {
+                          toast.info(t("En attente de réception du virement...", "Awaiting transfer reception..."));
+                        }
+                      } catch {
+                        toast.error(t("Erreur de connexion", "Connection error"));
+                      }
+                    }}
+                    className="flex-1 h-11 rounded-xl bg-[#0F172A] text-xs font-bold text-white hover:bg-[#1E293B] transition-colors flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    <span>{t("J'ai effectué le virement", "I have made the transfer")}</span>
+                  </button>
+
+                  {bankTransferCheckoutUrl && (
+                    <a
+                      href={bankTransferCheckoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 h-11 rounded-xl border border-[#CBD5E1] bg-white text-xs font-bold text-[#0F172A] hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <span>{t("Ouvrir page officielle", "Open official page")}</span>
+                      <ExternalLink className="h-3 w-3 text-[#64748B]" />
+                    </a>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("form");
+                    setPaymentId(null);
+                    setBankTransfer(null);
+                  }}
+                  className="mt-3 text-[11px] font-semibold text-[#64748B] hover:text-[#0F172A] transition-colors cursor-pointer"
+                >
+                  {t("Annuler ou changer de moyen", "Cancel or change method")}
+                </button>
+
+                {/* Footer Security */}
+                <div className="mt-6 flex items-center gap-1.5 text-[10px] text-[#94A3B8]">
+                  <Lock className="h-3 w-3" />
+                  <span>{t("Paiement sécurisé propulsé par SasPay", "Secure payment powered by SasPay")}</span>
                 </div>
               </div>
             )}

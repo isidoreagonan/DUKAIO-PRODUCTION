@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     );
 
     // 1. Check if order is already completed in database (via webhook)
-    let orderQuery = supabase.from("orders").select("id, status, product_id, customer_id");
+    let orderQuery = supabase.from("orders").select("id, status, product_id, customer_id, store_owner_id, amount");
     if (paymentId) {
       orderQuery = orderQuery.or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${paymentId}`);
     } else if (reference) {
@@ -68,6 +68,17 @@ Deno.serve(async (req) => {
           });
         }
 
+        // If not found, try Checkout Status endpoint
+        if (verifyRes.status === 404) {
+          verifyRes = await fetch(`${SAASPAY_BASE_URL}/checkout/${paymentId}/status/`, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+          });
+        }
+
         if (verifyRes.ok) {
           const verifyData = await verifyRes.json();
           const txn = verifyData.data || verifyData;
@@ -76,9 +87,25 @@ Deno.serve(async (req) => {
           console.log(`[saaspay-status] id=${paymentId} rawStatus=${rawStatus}`);
 
           if (rawStatus === "SUCCESS" || rawStatus === "COMPLETED" || rawStatus === "PAID") {
-            // If order not yet created by webhook, finalize it now
             let orderId = existingOrder?.id;
-            if (!orderId) {
+            let grossAmount = 0;
+            let sellerId: string | null = null;
+
+            if (existingOrder) {
+              // Existing pending order! Finalize it now
+              grossAmount = Number(existingOrder.amount || txn.requested_amount || txn.amount || 0);
+              sellerId = (existingOrder as any).store_owner_id;
+
+              await supabase
+                .from("orders")
+                .update({
+                  status: "completed",
+                  payment_provider: "saaspay",
+                  funds_available_at: new Date().toISOString(), // 0-minute hold
+                })
+                .eq("id", existingOrder.id);
+            } else {
+              // Create new order from payment event
               const { data: ev } = await supabase
                 .from("payment_events")
                 .select("*")
@@ -86,8 +113,8 @@ Deno.serve(async (req) => {
                 .maybeSingle();
 
               if (ev) {
-                const grossAmount = Number(ev.amount || txn.requested_amount || txn.amount || 0);
-                const netSeller = Math.round(grossAmount * 0.95);
+                grossAmount = Number(ev.amount || txn.requested_amount || txn.amount || 0);
+                sellerId = ev.store_owner_id;
                 const sessionParts = (ev.session_id || "").split("|");
                 const customerId = sessionParts[1] || null;
 
@@ -104,44 +131,56 @@ Deno.serve(async (req) => {
                     pawapay_deposit_id: paymentId,
                     moneroo_transaction_id: reference || txn.reference,
                     status: "completed",
-                    funds_available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+                    funds_available_at: new Date().toISOString(), // 0-minute hold
                   } as any)
                   .select("id")
                   .single();
 
                 orderId = newOrder?.id;
-
-                await supabase.from("payment_events").update({ status: "success" }).eq("id", ev.id);
-
-                // Credit seller wallet with 95% immediately (0-minute hold)
-                if (ev.store_owner_id) {
-                  await supabase.from("user_wallets").upsert({ user_id: ev.store_owner_id }, { onConflict: "user_id" });
-                  const { data: w } = await supabase
-                    .from("user_wallets")
-                    .select("balance_fcfa")
-                    .eq("user_id", ev.store_owner_id)
-                    .single();
-                  const currentBal = Number(w?.balance_fcfa || 0);
-                  const newBal = currentBal + netSeller;
-                  await supabase
-                    .from("user_wallets")
-                    .update({ balance_fcfa: newBal })
-                    .eq("user_id", ev.store_owner_id);
-
-                  await supabase.from("wallet_transactions").insert({
-                    user_id: ev.store_owner_id,
-                    wallet_currency: "XOF",
-                    type: "sale",
-                    amount: netSeller,
-                    balance_after: newBal,
-                    reference_id: orderId,
-                    reference_type: "order",
-                    status: "completed",
-                    available_at: new Date().toISOString(),
-                    description: `Vente produit (${grossAmount} FCFA brut — net 95% après commission 5% DUKAIO)`,
-                  });
-                }
               }
+            }
+
+            // Update payment event to success
+            await supabase
+              .from("payment_events")
+              .update({ status: "success" })
+              .or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${reference}`);
+
+            // Credit seller wallet with 95% immediately (0-minute hold)
+            if (sellerId && grossAmount > 0) {
+              const netSeller = Math.round(grossAmount * 0.95);
+              await supabase.from("user_wallets").upsert({ user_id: sellerId }, { onConflict: "user_id" });
+              const { data: w } = await supabase
+                .from("user_wallets")
+                .select("balance_fcfa")
+                .eq("user_id", sellerId)
+                .single();
+              const currentBal = Number(w?.balance_fcfa || 0);
+              const newBal = currentBal + netSeller;
+              await supabase
+                .from("user_wallets")
+                .update({ balance_fcfa: newBal })
+                .eq("user_id", sellerId);
+
+              await supabase.from("wallet_transactions").insert({
+                user_id: sellerId,
+                wallet_currency: "XOF",
+                type: "sale",
+                amount: netSeller,
+                balance_after: newBal,
+                reference_id: orderId,
+                reference_type: "order",
+                status: "completed",
+                available_at: new Date().toISOString(),
+                description: `Vente produit (${grossAmount} FCFA brut — net 95% après commission 5% DUKAIO)`,
+              });
+
+              await supabase.from("notifications").insert({
+                user_id: sellerId,
+                title: "Paiement validé avec succès !",
+                message: `Paiement de ${grossAmount} FCFA reçu (+${netSeller} FCFA net ajoutés à votre portefeuille disponible immédiatement).`,
+                type: "success",
+              });
             }
 
             return json({ status: "success", orderId });

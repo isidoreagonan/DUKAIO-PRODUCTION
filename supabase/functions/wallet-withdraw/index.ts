@@ -38,6 +38,9 @@ Deno.serve(async (req) => {
     if (!user) return j({ error: "Non authentifié" }, 401);
 
     const { amount, phone, provider, country } = await req.json();
+    let debited = false;
+    let availableBalance = 0;
+    let createdWithdrawalId: string | null = null;
     if (!amount || amount < 100) return j({ error: "Montant minimum 100 FCFA" }, 400);
     if (!phone || !provider) return j({ error: "Numéro et opérateur requis" }, 400);
 
@@ -53,8 +56,10 @@ Deno.serve(async (req) => {
     const formattedPhone = cleanPhone.startsWith("+") ? cleanPhone : `+${cleanPhone}`;
 
     // Debit wallet first
+    availableBalance = available;
     const newBalance = available - amount;
     await service.from("user_wallets").update({ balance_fcfa: newBalance }).eq("user_id", user.id);
+    debited = true;
 
     const providerCode = String(provider).toLowerCase();
     const operatorName = providerCode.split("_")[0];
@@ -76,6 +81,7 @@ Deno.serve(async (req) => {
       await service.from("user_wallets").update({ balance_fcfa: available }).eq("user_id", user.id);
       return j({ error: insErr.message }, 400);
     }
+    createdWithdrawalId = withdrawal.id;
 
     // Log transaction
     await service.from("wallet_transactions").insert({
@@ -159,8 +165,8 @@ Deno.serve(async (req) => {
 
           await service.from("withdrawals").update({
             status: "pending",
-            notes: isIpBlock ? "IP en attente de whitelist dans SaaSPay" : (data?.error?.message || "En cours de traitement"),
-          } as any).eq("id", withdrawal.id);
+            moneroo_reference: isIpBlock ? "IP_PENDING_WHITELIST" : ((data?.error?.message || "PENDING_REVIEW") as string).slice(0, 100),
+          }).eq("id", withdrawal.id);
 
           await service.from("notifications").insert({
             user_id: user.id,
@@ -216,8 +222,24 @@ Deno.serve(async (req) => {
 
     return j({ success: true, withdrawal_id: withdrawal.id, status: data.status });
   } catch (err: any) {
-    console.error("[wallet-withdraw]", err);
-    return j({ error: err.message }, 500);
+    console.error("[wallet-withdraw] fatal error:", err);
+
+    if (debited && !createdWithdrawalId && user?.id) {
+      // Refund user if money was deducted but withdrawal record failed
+      try {
+        await service.from("user_wallets").update({ balance_fcfa: availableBalance }).eq("user_id", user.id);
+      } catch (refundErr) {
+        console.error("[wallet-withdraw] refund error:", refundErr);
+      }
+    } else if (createdWithdrawalId) {
+      // Ensure withdrawal is in pending state
+      try {
+        await service.from("withdrawals").update({ status: "pending", moneroo_reference: "PENDING_RETRY" }).eq("id", createdWithdrawalId);
+        return j({ success: true, withdrawal_id: createdWithdrawalId, status: "pending_manual" });
+      } catch (_) {}
+    }
+
+    return j({ error: err.message || "Erreur lors du traitement du retrait" }, 500);
   }
 
   function j(b: unknown, s = 200) {

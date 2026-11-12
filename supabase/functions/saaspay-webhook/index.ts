@@ -82,11 +82,15 @@ Deno.serve(async (req) => {
     if (eventType.includes("settlement.") || eventType.includes("payout.")) {
       const payoutStatus = eventType.includes("success") || eventType.includes("approved") ? "completed" : "failed";
       
-      const { data: w } = await supabase
-        .from("withdrawals")
-        .select("id, user_id, amount, status")
-        .or(`pawapay_payout_id.eq.${transactionId},moneroo_transaction_id.eq.${reference}`)
-        .maybeSingle();
+      let wQuery = supabase.from("withdrawals").select("id, user_id, amount, status");
+      if (transactionId && reference) {
+        wQuery = wQuery.or(`pawapay_payout_id.eq.${transactionId},moneroo_payout_id.eq.${reference},moneroo_reference.eq.${reference}`);
+      } else if (transactionId) {
+        wQuery = wQuery.or(`pawapay_payout_id.eq.${transactionId},moneroo_payout_id.eq.${transactionId}`);
+      } else if (reference) {
+        wQuery = wQuery.or(`moneroo_payout_id.eq.${reference},moneroo_reference.eq.${reference}`);
+      }
+      const { data: w } = await wQuery.maybeSingle();
 
       if (w && w.status !== payoutStatus) {
         await supabase.from("withdrawals").update({ status: payoutStatus }).eq("id", w.id);
@@ -172,7 +176,7 @@ Deno.serve(async (req) => {
             pawapay_deposit_id: transactionId,
             moneroo_transaction_id: reference,
             status: "completed",
-            funds_available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+            funds_available_at: new Date().toISOString(),
           } as any)
           .select("id")
           .single();
@@ -188,7 +192,7 @@ Deno.serve(async (req) => {
           .update({
             status: "completed",
             payment_provider: "saaspay",
-            funds_available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+            funds_available_at: new Date().toISOString(),
           })
           .eq("id", orderId);
       }

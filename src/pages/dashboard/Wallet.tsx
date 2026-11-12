@@ -463,7 +463,17 @@ export default function Wallet() {
       });
 
       if (wErr || withdrawRes?.error) {
-        throw new Error(withdrawRes?.error || wErr?.message || "Échec du retrait");
+        let msg = withdrawRes?.error;
+        if (!msg && wErr) {
+          try {
+            if ((wErr as any)?.context?.json) {
+              const errBody = await (wErr as any).context.json();
+              if (errBody?.error) msg = errBody.error;
+            }
+          } catch (_) {}
+          if (!msg) msg = wErr.message;
+        }
+        throw new Error(msg || "Échec du retrait");
       }
 
       const netMeta = getOperatorMeta(targetProvider, targetCountry);
