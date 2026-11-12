@@ -23,7 +23,7 @@ export default {
     extend: {
       fontFamily: {
         serif: ["Fraunces", "Georgia", "serif"],
-        sans: ["Inter", "sans-serif"],
+        sans: ["Manrope", "Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
       colors: {
