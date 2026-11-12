@@ -8,6 +8,7 @@ import { Store, Phone, Globe, Upload, ImageIcon, AlertCircle, FileText, Sparkles
 import RichTextEditor from "@/components/RichTextEditor";
 import StoreSelector from "./StoreSelector";
 import { useActiveStore } from "@/hooks/useActiveStore";
+import { uploadToBunny } from "@/lib/bunnyStorage";
 
 const DashboardProfileTab = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -69,12 +70,15 @@ const DashboardProfileTab = () => {
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `logos/${user.id}/${activeStoreId}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("product-assets").upload(path, file, { upsert: true });
-    if (uploadError) { toast.error("Erreur lors de l'upload"); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from("product-assets").getPublicUrl(path);
-    setLogoUrl(urlData.publicUrl);
-    setUploading(false);
-    toast.success("Logo uploadé !");
+    try {
+      const res = await uploadToBunny(file, path, "media");
+      setLogoUrl(res.url);
+      toast.success("Logo uploadé !");
+    } catch (err: any) {
+      toast.error("Erreur lors de l'upload : " + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSave = async () => {

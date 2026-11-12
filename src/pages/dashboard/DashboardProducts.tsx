@@ -21,6 +21,7 @@ import { MissingContentDialog } from "@/components/dashboard/MissingContentDialo
 import StoreRequiredDialog from "@/components/dashboard/StoreRequiredDialog";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { deleteFromBunny } from "@/lib/bunnyStorage";
 
 type ProductType = "file" | "course" | "license";
 
@@ -177,15 +178,11 @@ export default function DashboardProducts() {
 
       for (const file of filesToDelete) {
         try {
-          const bucketName = file.isPublic
-            ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME
-            : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
           const path = file.url.replace(/^https?:\/\/[^\/]+\//, "");
-          await supabase.functions.invoke("r2-storage", {
-            body: { action: "delete", bucket: bucketName, key: path },
-          });
+          const zone = file.isPublic ? "media" : "files";
+          await deleteFromBunny(path, zone);
         } catch (e) {
-          console.error("Failed to delete file from R2", file.url, e);
+          console.error("Failed to delete file from Bunny", file.url, e);
         }
       }
       toast.success("Produit supprimé");

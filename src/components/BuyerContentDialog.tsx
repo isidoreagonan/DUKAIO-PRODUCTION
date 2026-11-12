@@ -116,27 +116,43 @@ const BuyerContentDialog = ({ open, onOpenChange, product, customerId }: BuyerCo
     return url;
   };
 
-  const renderFileContent = () => (
-    <div className="text-center py-8 space-y-4">
-      <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-        <FileText className="h-8 w-8 text-primary" />
+  const resolveDownloadUrls = (rawUrl?: string | null): string[] => {
+    if (!rawUrl) return [];
+    try {
+      const parsed = JSON.parse(rawUrl);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch {}
+    return [rawUrl];
+  };
+
+  const renderFileContent = () => {
+    const downloadLinks = resolveDownloadUrls(product.download_url);
+    return (
+      <div className="text-center py-8 space-y-4">
+        <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+          <FileText className="h-8 w-8 text-primary" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-foreground">{product.title}</h3>
+          <p className="text-sm text-muted-foreground mt-1">Votre fichier est prêt à être téléchargé</p>
+        </div>
+        {downloadLinks.length > 0 ? (
+          <div className="flex flex-col items-center gap-2">
+            {downloadLinks.map((url, idx) => (
+              <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                <Button size="lg" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  {downloadLinks.length > 1 ? `Télécharger le fichier ${idx + 1}` : "Télécharger"}
+                </Button>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Le fichier n'est pas encore disponible.</p>
+        )}
       </div>
-      <div>
-        <h3 className="font-semibold text-foreground">{product.title}</h3>
-        <p className="text-sm text-muted-foreground mt-1">Votre fichier est prêt à être téléchargé</p>
-      </div>
-      {product.download_url ? (
-        <a href={product.download_url} target="_blank" rel="noopener noreferrer">
-          <Button size="lg" className="gap-2">
-            <Download className="h-4 w-4" />
-            Télécharger
-          </Button>
-        </a>
-      ) : (
-        <p className="text-sm text-muted-foreground">Le fichier n'est pas encore disponible.</p>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderCourseContent = () => (
     <div className="space-y-4">

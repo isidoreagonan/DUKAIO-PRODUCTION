@@ -197,9 +197,22 @@ const BuyerOrderDetail = () => {
               <div className="p-5 space-y-3">
                 <div className="flex flex-wrap gap-2">
                   {product.type === "file" && product.download_url ? (
-                    <a href={product.download_url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-[180px]">
-                      <Button className="w-full gap-2"><Download className="h-4 w-4" /> Télécharger le fichier</Button>
-                    </a>
+                    (() => {
+                      let urls: string[] = [];
+                      try {
+                        const parsed = JSON.parse(product.download_url);
+                        urls = Array.isArray(parsed) ? parsed.filter(Boolean) : [product.download_url];
+                      } catch {
+                        urls = [product.download_url];
+                      }
+                      return urls.map((u, i) => (
+                        <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-[180px]">
+                          <Button className="w-full gap-2">
+                            <Download className="h-4 w-4" /> {urls.length > 1 ? `Télécharger le fichier ${i + 1}` : "Télécharger le fichier"}
+                          </Button>
+                        </a>
+                      ));
+                    })()
                   ) : (
                     <Button onClick={() => setContentOpen(true)} className="flex-1 min-w-[180px] gap-2">
                       <FileText className="h-4 w-4" /> Accéder au contenu

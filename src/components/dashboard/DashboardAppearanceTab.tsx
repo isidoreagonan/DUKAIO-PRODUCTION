@@ -9,6 +9,7 @@ import { Eye, RotateCcw, Save, Paintbrush, Type, MousePointerClick, ArrowUpDown,
 import { cn } from "@/lib/utils";
 import StoreSelector from "./StoreSelector";
 import { useActiveStore } from "@/hooks/useActiveStore";
+import { uploadToBunny } from "@/lib/bunnyStorage";
 
 const BRAND_COLORS = [
   { name: "Bleu", value: "#2563EB" },
@@ -126,13 +127,16 @@ const DashboardAppearanceTab = () => {
     if (!file || !user) return;
     setUploadingBanner(true);
     const ext = file.name.split(".").pop();
-    const path = `${user.id}/banner-${activeStoreId}.${ext}`;
-    const { error } = await supabase.storage.from("product-assets").upload(path, file, { upsert: true });
-    if (error) { toast.error("Erreur lors de l'upload"); setUploadingBanner(false); return; }
-    const { data: urlData } = supabase.storage.from("product-assets").getPublicUrl(path);
-    setBannerUrl(urlData.publicUrl + "?t=" + Date.now());
-    setUploadingBanner(false);
-    toast.success("Bannière uploadée !");
+    const path = `banners/${user.id}/banner-${activeStoreId}.${ext}`;
+    try {
+      const res = await uploadToBunny(file, path, "media");
+      setBannerUrl(res.url + "?t=" + Date.now());
+      toast.success("Bannière uploadée !");
+    } catch (err: any) {
+      toast.error("Erreur lors de l'upload : " + err.message);
+    } finally {
+      setUploadingBanner(false);
+    }
   };
 
   if (isLoading) {

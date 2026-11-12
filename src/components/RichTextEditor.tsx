@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { uploadToBunny } from '@/lib/bunnyStorage';
 
 interface RichTextEditorProps {
   content: string;
@@ -187,19 +188,9 @@ const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps)
         return;
       }
       const ext = file.name.split('.').pop() || 'png';
-      const fileName = `description-images/${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('product-assets')
-        .upload(fileName, file, { contentType: file.type });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('product-assets')
-        .getPublicUrl(fileName);
-
-      editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
+      const fileName = `descriptions/${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+      const res = await uploadToBunny(file, fileName, "media");
+      editor.chain().focus().setImage({ src: res.url }).run();
       toast.success("Image ajoutée !");
     } catch (err: any) {
       console.error("Upload error:", err);

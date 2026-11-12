@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "sonner";
 import { Store, Phone, Globe, Upload, ImageIcon } from "lucide-react";
+import { uploadToBunny } from "@/lib/bunnyStorage";
 
 const DashboardProfile = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -43,23 +44,15 @@ const DashboardProfile = () => {
     const ext = file.name.split(".").pop();
     const path = `logos/${user.id}/store-logo.${ext}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("product-assets")
-      .upload(path, file, { upsert: true });
-
-    if (uploadError) {
-      toast.error("Erreur lors de l'upload");
+    try {
+      const res = await uploadToBunny(file, path, "media");
+      setLogoUrl(res.url);
+      toast.success("Logo uploadé !");
+    } catch (err: any) {
+      toast.error("Erreur lors de l'upload : " + err.message);
+    } finally {
       setUploading(false);
-      return;
     }
-
-    const { data: urlData } = supabase.storage
-      .from("product-assets")
-      .getPublicUrl(path);
-
-    setLogoUrl(urlData.publicUrl);
-    setUploading(false);
-    toast.success("Logo uploadé !");
   };
 
   const handleSave = async () => {

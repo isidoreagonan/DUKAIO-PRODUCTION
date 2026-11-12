@@ -10,6 +10,7 @@ import { Eye, RotateCcw, Save, Paintbrush, Type, RectangleHorizontal, MousePoint
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
+import { uploadToBunny } from "@/lib/bunnyStorage";
 
 const BRAND_COLORS = [
   { name: "Jaune", value: "#EAB308" },
@@ -160,17 +161,16 @@ const DashboardAppearance = () => {
     if (!file || !user) return;
     setUploadingBanner(true);
     const ext = file.name.split(".").pop();
-    const path = `${user.id}/banner.${ext}`;
-    const { error } = await supabase.storage.from("product-assets").upload(path, file, { upsert: true });
-    if (error) {
-      toast.error("Erreur lors de l'upload de la bannière");
+    const path = `banners/${user.id}/banner.${ext}`;
+    try {
+      const res = await uploadToBunny(file, path, "media");
+      setBannerUrl(res.url + "?t=" + Date.now());
+      toast.success("Bannière uploadée !");
+    } catch (err: any) {
+      toast.error("Erreur lors de l'upload de la bannière : " + err.message);
+    } finally {
       setUploadingBanner(false);
-      return;
     }
-    const { data: urlData } = supabase.storage.from("product-assets").getPublicUrl(path);
-    setBannerUrl(urlData.publicUrl + "?t=" + Date.now());
-    setUploadingBanner(false);
-    toast.success("Bannière uploadée !");
   };
 
   const handleRemoveBanner = () => {

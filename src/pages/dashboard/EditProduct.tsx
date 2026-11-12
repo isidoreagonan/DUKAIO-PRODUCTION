@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StoreRequiredDialog from "@/components/dashboard/StoreRequiredDialog";
 import { toast } from "sonner";
+import { uploadToBunny, deleteFromBunny } from "@/lib/bunnyStorage";
 
 type TabKey = "info" | "pricing" | "files" | "description" | "visual" | "faq" | "seo" | "advanced";
 
@@ -264,12 +265,9 @@ const EditProduct = () => {
 
   const deleteFileFromR2 = async (path: string, isPublic: boolean) => {
     try {
-      const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
-      await supabase.functions.invoke("r2-storage", {
-        body: { action: "delete", bucket: bucketName, key: path }
-      });
+      await deleteFromBunny(path, isPublic ? "media" : "files");
     } catch (e) {
-      console.error("Failed to delete", e);
+      console.error("Failed to delete from Bunny", e);
     }
   };
 
@@ -281,28 +279,11 @@ const EditProduct = () => {
     const ext = file.name.split(".").pop();
     const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
     const isPublic = folder === "thumbnails" || folder === "banners" || folder === "seo-images";
-    const bucketName = isPublic ? import.meta.env.VITE_R2_PUBLIC_BUCKET_NAME : import.meta.env.VITE_R2_PRIVATE_BUCKET_NAME;
+    const zone = isPublic ? "media" : "files";
 
     try {
-      const { data, error } = await supabase.functions.invoke("r2-storage", {
-        body: { action: "upload", bucket: bucketName, key: path, contentType: file.type }
-      });
-      if (error || !data?.url) throw new Error(error?.message || "Erreur de génération du lien d'upload R2");
-
-      const uploadRes = await axios.put(data.url, file, {
-        headers: { "Content-Type": file.type },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onProgress(percentCompleted);
-          }
-        }
-      });
-
-      if (uploadRes.status !== 200) throw new Error("Échec de l'upload vers Cloudflare");
-
-      const url = isPublic ? `${import.meta.env.VITE_R2_PUBLIC_URL}/${path}` : path;
-      return { url, path };
+      const res = await uploadToBunny(file, path, zone, onProgress);
+      return { url: res.url, path: res.path };
     } catch (err: any) {
       toast.error(`Erreur upload: ${err.message}`);
       return null;
