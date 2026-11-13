@@ -22,6 +22,7 @@ import {
   SAASPAY_METHODS,
   getSaaSPayNetwork,
 } from "@/data/saaspayProviders";
+import { isAdminUser } from "@/lib/admin";
 
 interface SavedWallet {
   id: string;
@@ -204,14 +205,19 @@ export default function Wallet() {
     setLoading(true);
 
     try {
-      // 0. Fetch KYC verification status
-      const { data: kycRec } = await supabase
-        .from("identity_verifications")
-        .select("status")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const currentKycStatus = kycRec?.status || "none";
-      setKycStatus(currentKycStatus);
+      // 0. Fetch KYC verification status (Admin is automatically approved & exempt)
+      const isAdmin = isAdminUser(user.email);
+      if (isAdmin) {
+        setKycStatus("approved");
+      } else {
+        const { data: kycRec } = await supabase
+          .from("identity_verifications")
+          .select("status")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const currentKycStatus = kycRec?.status || "none";
+        setKycStatus(currentKycStatus);
+      }
 
       // 1. Check if user has PIN
       const { data: pinData } = await supabase
@@ -356,7 +362,8 @@ export default function Wallet() {
   }, [user, authLoading]);
 
   const handleOpenWithdrawModal = () => {
-    if (kycStatus !== "approved") {
+    const isAdmin = isAdminUser(user?.email);
+    if (!isAdmin && kycStatus !== "approved") {
       setKycModalOpen(true);
       return;
     }
@@ -365,14 +372,15 @@ export default function Wallet() {
 
   // Open withdraw modal if ?action=withdraw in query
   useEffect(() => {
+    const isAdmin = isAdminUser(user?.email);
     if (searchParams.get("action") === "withdraw" && !loading) {
-      if (kycStatus !== "approved") {
+      if (!isAdmin && kycStatus !== "approved") {
         setKycModalOpen(true);
       } else {
         setWithdrawModalOpen(true);
       }
     }
-  }, [searchParams, kycStatus, loading]);
+  }, [searchParams, kycStatus, loading, user]);
 
   // Selected Country in Account Form
   const currentCountryConfig = useMemo(() => {
@@ -488,7 +496,8 @@ export default function Wallet() {
   // INITIATE WITHDRAWAL CLICK
   // -------------------------------------------------------------
   const handleInitiateWithdraw = () => {
-    if (kycStatus !== "approved") {
+    const isAdmin = isAdminUser(user?.email);
+    if (!isAdmin && kycStatus !== "approved") {
       setWithdrawModalOpen(false);
       setKycModalOpen(true);
       return;

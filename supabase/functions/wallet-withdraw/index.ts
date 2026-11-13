@@ -49,19 +49,27 @@ Deno.serve(async (req) => {
 
     const { amount, phone, provider, country } = await req.json();
 
-    // Enforce mandatory KYC verification before any withdrawal
-    const { data: kycRecord } = await service
-      .from("identity_verifications")
-      .select("status")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // Enforce mandatory KYC verification before any withdrawal (except for platform admin)
+    const ADMIN_EMAILS = [
+      "isidoreagonan@gmail.com",
+      "dolapoagonan@gmail.com",
+    ];
+    const isAdmin = ADMIN_EMAILS.includes((user.email || "").toLowerCase().trim());
 
-    if (kycRecord?.status !== "approved") {
-      return j({
-        error: "Vérification d'identité (KYC) requise avant tout retrait. Veuillez soumettre votre pièce d'identité dans votre espace KYC.",
-        code: "kyc_required",
-        kyc_status: kycRecord?.status || "none",
-      }, 403);
+    if (!isAdmin) {
+      const { data: kycRecord } = await service
+        .from("identity_verifications")
+        .select("status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (kycRecord?.status !== "approved") {
+        return j({
+          error: "Vérification d'identité (KYC) requise avant tout retrait. Veuillez soumettre votre pièce d'identité dans votre espace KYC.",
+          code: "kyc_required",
+          kyc_status: kycRecord?.status || "none",
+        }, 403);
+      }
     }
     
     // SaaSPay minimum withdrawal is 200 FCFA

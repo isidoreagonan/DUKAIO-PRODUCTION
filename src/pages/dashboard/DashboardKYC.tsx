@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { CountrySelect } from "@/components/ui/CountrySelect";
 import { toast } from "sonner";
+import { isAdminUser } from "@/lib/admin";
 import {
   Shield,
   ShieldCheck,
@@ -360,9 +361,10 @@ export default function DashboardKYC() {
     );
   }
 
-  const isApproved = verification?.status === "approved";
-  const isPending = verification?.status === "pending" && !isEditing;
-  const isRejected = verification?.status === "rejected" && !isEditing;
+  const isAdmin = isAdminUser(user?.email);
+  const isApproved = isAdmin || verification?.status === "approved";
+  const isPending = !isAdmin && verification?.status === "pending" && !isEditing;
+  const isRejected = !isAdmin && verification?.status === "rejected" && !isEditing;
 
   return (
     <DashboardLayout>
@@ -387,29 +389,81 @@ export default function DashboardKYC() {
 
           {/* Quick status pill */}
           <div className="flex items-center gap-2">
-            {isApproved && (
+            {isAdmin ? (
+              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border-blue-300 flex items-center gap-1.5 px-3 py-1 text-xs font-bold">
+                <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+                Admin — Exempté de KYC
+              </Badge>
+            ) : isApproved ? (
               <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 flex items-center gap-1.5 px-3 py-1 text-xs">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                 Compte Vérifié
               </Badge>
-            )}
-            {isPending && (
+            ) : isPending ? (
               <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border-amber-300 flex items-center gap-1.5 px-3 py-1 text-xs">
                 <Clock className="h-3.5 w-3.5 text-amber-600 animate-spin" />
                 En attente d'approbation
               </Badge>
-            )}
-            {isRejected && (
+            ) : isRejected ? (
               <Badge variant="destructive" className="flex items-center gap-1.5 px-3 py-1 text-xs">
                 <ShieldAlert className="h-3.5 w-3.5" />
                 Non validé
               </Badge>
-            )}
+            ) : null}
           </div>
         </div>
 
+        {/* Admin VIP KYC Exemption Banner */}
+        {isAdmin && (
+          <div className="rounded-3xl border border-blue-200 dark:border-blue-900 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/40 dark:via-indigo-950/30 dark:to-purple-950/20 p-6 sm:p-8 space-y-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0 text-2xl font-bold">
+                👑
+              </div>
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-bold text-blue-950 dark:text-blue-100">
+                    Compte Administrateur Dukaio — Exempté de vérification KYC
+                  </h2>
+                  <Badge className="bg-blue-600 text-white text-[11px] font-bold">
+                    Accès Total Illimité
+                  </Badge>
+                </div>
+                <p className="text-sm text-blue-900/80 dark:text-blue-200/80 leading-relaxed">
+                  En tant qu'administrateur de la plateforme Dukaio, l'ensemble de vos boutiques et comptes sont automatiquement validés et exemptés d'obligation de soumission de pièces d'identité. Tous vos retraits, créations de boutiques et fonctionnalités sont actifs sans aucune restriction.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-blue-200/60 dark:border-blue-900/60 text-xs">
+              <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-blue-900">
+                <p className="text-muted-foreground font-medium text-[11px]">Rôle Système</p>
+                <p className="font-bold text-foreground text-sm mt-0.5">Super Administrateur</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-blue-900">
+                <p className="text-muted-foreground font-medium text-[11px]">Statut Boutiques</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">100% Opérationnelles</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/80 dark:bg-slate-900/70 border border-blue-100 dark:border-blue-900">
+                <p className="text-muted-foreground font-medium text-[11px]">Retraits (Payouts)</p>
+                <p className="font-bold text-blue-600 dark:text-blue-400 text-sm mt-0.5">Débloqués en permanence</p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center gap-3">
+              <Button
+                onClick={() => navigate("/dashboard/wallet?action=withdraw")}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold h-9 rounded-xl"
+              >
+                <Wallet className="h-4 w-4 mr-2" />
+                Accéder au Portefeuille de Retrait
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* State Banner: Approved */}
-        {isApproved && (
+        {!isAdmin && isApproved && verification && (
           <div className="rounded-3xl border border-emerald-500/30 bg-card p-6 sm:p-8 space-y-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
