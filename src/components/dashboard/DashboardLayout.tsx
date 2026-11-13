@@ -16,6 +16,7 @@ import { useDukaioTheme } from "@/hooks/useDukaioTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { QuickSearchDialog } from "./QuickSearchDialog";
+import UserAvatar from "@/components/UserAvatar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -293,16 +294,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 onClick={() => navigate("/dashboard/profile")}
                 aria-label="Mon profil"
-                className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center hover:scale-105 transition-transform ml-0.5"
+                className="hover:scale-105 transition-transform ml-0.5 cursor-pointer"
                 title="Mon profil"
               >
-                <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[11px] font-black text-primary overflow-hidden">
-                  {userAvatar ? (
-                    <img src={userAvatar} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    initial
-                  )}
-                </div>
+                <UserAvatar
+                  src={userAvatar}
+                  name={userName}
+                  sizeClassName="h-8 w-8"
+                  textClassName="text-[11px]"
+                />
               </button>
             </div>
           </header>
@@ -386,16 +386,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={() => setProfileSheetOpen(true)}
               aria-label="Profil utilisateur"
-              className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center ml-0.5 active:scale-95 transition-transform"
+              className="ml-0.5 active:scale-95 transition-transform cursor-pointer"
               title="Mon profil"
             >
-              <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-[11px] font-black text-primary overflow-hidden">
-                {userAvatar ? (
-                  <img src={userAvatar} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  initial
-                )}
-              </div>
+              <UserAvatar
+                src={userAvatar}
+                name={userName}
+                sizeClassName="h-8 w-8"
+                textClassName="text-[11px]"
+              />
             </button>
           </div>
         </header>
@@ -492,15 +491,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className="flex items-center justify-between gap-3 p-1 rounded-xl cursor-pointer hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-11 w-11 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center">
-                        <div className="h-full w-full rounded-full bg-card flex items-center justify-center text-sm font-black text-primary overflow-hidden">
-                          {userAvatar ? (
-                            <img src={userAvatar} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            initial
-                          )}
-                        </div>
-                      </div>
+                      <UserAvatar
+                        src={userAvatar}
+                        name={userName}
+                        sizeClassName="h-11 w-11"
+                        textClassName="text-sm"
+                      />
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-foreground truncate uppercase tracking-tight">
                           {userName}

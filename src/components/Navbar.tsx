@@ -8,6 +8,7 @@ import logo from "@/assets/dukaio-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
+import UserAvatar from "@/components/UserAvatar";
 
 const productLinks = [
   { label: "Fichiers", href: "/fichiers", icon: FileText },
@@ -82,12 +83,12 @@ const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/dashboard/profile">
-                <Avatar className="h-8 w-8 cursor-pointer">
-                  <AvatarImage src={profile?.avatar_url || ""} />
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                    {profile?.display_name?.charAt(0)?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  src={profile?.avatar_url || user?.user_metadata?.avatar_url}
+                  name={profile?.display_name || user?.user_metadata?.full_name}
+                  sizeClassName="h-8 w-8"
+                  textClassName="text-xs"
+                />
               </Link>
             </>
           ) : (
@@ -160,12 +161,12 @@ const Navbar = () => {
                 {user && (
                   <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
                     <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-primary to-accent p-4 shadow-lg shadow-primary/25">
-                      <Avatar className="h-10 w-10 border-2 border-white/30">
-                        <AvatarImage src={profile?.avatar_url || ""} />
-                        <AvatarFallback className="bg-white/20 text-white font-bold">
-                          {profile?.display_name?.charAt(0)?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        src={profile?.avatar_url || user?.user_metadata?.avatar_url}
+                        name={profile?.display_name || user?.user_metadata?.full_name}
+                        sizeClassName="h-10 w-10 border-2 border-white/30"
+                        textClassName="text-sm"
+                      />
                       <div className="flex-1">
                         <p className="text-xs text-white/80">Bienvenue</p>
                         <p className="text-sm font-bold text-white truncate">{profile?.display_name || "Vendeur"}</p>

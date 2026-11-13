@@ -351,63 +351,62 @@ export function calculatePayoutFee(
 
   let percent = 0.025;
   let fixed = 50;
-  let minThreshold = 2000;
+  let minThreshold = 1000;
   let label = "Frais opérateur Mobile Money";
 
   if (code.startsWith("mtn_bj")) {
-    percent = 0.022; fixed = 50; minThreshold = 2000;
+    percent = 0.022; fixed = 50; minThreshold = 1000;
     label = "MTN MoMo Bénin (2,2 % + 50 FCFA)";
   } else if (code.startsWith("moov_bj")) {
-    percent = 0.027; fixed = 50; minThreshold = 2000;
+    percent = 0.027; fixed = 50; minThreshold = 1000;
     label = "Moov Money Bénin (2,7 % + 50 FCFA)";
   } else if (code.startsWith("celtiis_bj")) {
-    percent = 0.03; fixed = 50; minThreshold = 2000;
+    percent = 0.03; fixed = 50; minThreshold = 1000;
     label = "Celtiis Cash Bénin (3 % + 50 FCFA)";
   } else if (cc === "ci") {
-    percent = 0.032; fixed = 50; minThreshold = 2000;
+    percent = 0.032; fixed = 50; minThreshold = 1000;
     label = "Mobile Money Côte d'Ivoire (3,2 % + 50 FCFA)";
   } else if (cc === "sn") {
     percent = 0.037; fixed = 0; minThreshold = 1000;
     label = "Mobile Money Sénégal (3,7 %)";
   } else if (cc === "bf") {
-    percent = 0.032; fixed = 50; minThreshold = 2000;
+    percent = 0.032; fixed = 50; minThreshold = 1000;
     label = "Mobile Money Burkina (3,2 % + 50 FCFA)";
   } else if (cc === "ml") {
-    percent = 0.025; fixed = 50; minThreshold = 2000;
+    percent = 0.025; fixed = 50; minThreshold = 1000;
     label = "Mobile Money Mali (2,5 % + 50 FCFA)";
   } else if (cc === "tg") {
-    percent = 0.032; fixed = 50; minThreshold = 2000;
+    percent = 0.032; fixed = 50; minThreshold = 1000;
     label = "Mobile Money Togo (3,2 % + 50 FCFA)";
   } else if (cc === "ne") {
-    percent = 0.045; fixed = 0; minThreshold = 5000;
+    percent = 0.045; fixed = 0; minThreshold = 1000;
     label = "Airtel Niger (4,5 %)";
   } else if (cc === "cm") {
-    // Cameroon fixed telecom fee is 700 XAF! Threshold 10 000 XAF to protect creators
-    percent = 0.01; fixed = 700; minThreshold = 10000;
-    label = "Mobile Money Cameroun (1 % + 700 XAF télécom)";
+    percent = 0.01; fixed = 700; minThreshold = 1000;
+    label = "Mobile Money Cameroun (1 % + 700 XAF)";
   } else if (cc === "ga") {
-    percent = 0.037; fixed = 100; minThreshold = 3000;
+    percent = 0.037; fixed = 100; minThreshold = 1000;
     label = "Mobile Money Gabon (3,7 % + 100 XAF)";
   } else if (cc === "cg") {
-    percent = 0.025; fixed = 50; minThreshold = 2000;
+    percent = 0.025; fixed = 50; minThreshold = 1000;
     label = "Mobile Money Congo (2,5 % + 50 XAF)";
   } else if (cc === "cd") {
-    percent = 0.032; fixed = 50; minThreshold = 2000;
+    percent = 0.032; fixed = 50; minThreshold = 1000;
     label = "Mobile Money RDC (3,2 % + 50 FCFA)";
   } else if (cc === "gh") {
-    percent = 0.03; fixed = 0; minThreshold = 2000;
+    percent = 0.03; fixed = 0; minThreshold = 1000;
     label = "Mobile Money Ghana (3 %)";
   } else if (cc === "ke") {
-    percent = 0.03; fixed = 40; minThreshold = 2000;
+    percent = 0.03; fixed = 40; minThreshold = 1000;
     label = "M-Pesa Kenya (3 % + 40 KES)";
   } else if (cc === "rw") {
-    percent = 0.022; fixed = 50; minThreshold = 2000;
+    percent = 0.022; fixed = 50; minThreshold = 1000;
     label = "Mobile Money Rwanda (2,2 % + 50 RWF)";
   } else if (cc === "zm") {
-    percent = 0.03; fixed = 30; minThreshold = 2000;
+    percent = 0.03; fixed = 30; minThreshold = 1000;
     label = "Mobile Money Zambie (3 % + 30 ZMW)";
   } else {
-    percent = 0.025; fixed = 50; minThreshold = 2000;
+    percent = 0.025; fixed = 50; minThreshold = 1000;
     label = "Mobile Money (2,5 % + 50 FCFA)";
   }
 

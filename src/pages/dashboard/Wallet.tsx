@@ -403,7 +403,7 @@ export default function Wallet() {
     return calculatePayoutFee(numericAmount, activeSelectedWallet.provider_code, activeSelectedWallet.country);
   }, [numericAmount, activeSelectedWallet]);
 
-  const minRequiredAmount = payoutFeeCalc.minThreshold || 2000;
+  const minRequiredAmount = payoutFeeCalc.minThreshold || 1000;
   const isAmountTooHigh = numericAmount > balanceFcfa;
   const isAmountTooLow = numericAmount > 0 && numericAmount < minRequiredAmount;
   const isAmountValid = numericAmount >= minRequiredAmount && numericAmount <= balanceFcfa;
@@ -438,7 +438,7 @@ export default function Wallet() {
       if (isAmountTooHigh) {
         toast.error(`Solde insuffisant. Vous disposez de ${formatFmt(balanceFcfa)} FCFA.`);
       } else if (isAmountTooLow) {
-        toast.error(`Montant minimum de retrait : ${formatFmt(minRequiredAmount)} FCFA pour protéger votre compte des frais fixes opérateur.`);
+        toast.error(`Montant minimum de retrait : ${formatFmt(minRequiredAmount)} FCFA.`);
       } else {
         toast.error("Veuillez saisir un montant valide");
       }
@@ -1133,7 +1133,7 @@ export default function Wallet() {
               {isAmountTooLow && (
                 <p className="mt-1.5 text-xs text-amber-500 font-medium flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  Montant minimum requis : {formatFmt(minRequiredAmount)} FCFA (Ce seuil vous protège contre les frais fixes opérateur).
+                  Montant minimum requis : {formatFmt(minRequiredAmount)} FCFA.
                 </p>
               )}
 

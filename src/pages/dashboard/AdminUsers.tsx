@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { isAdminUser } from "@/lib/admin";
+import UserAvatar from "@/components/UserAvatar";
 
 interface UserProfile {
   id: string;
@@ -190,13 +191,12 @@ const AdminUsers = () => {
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="h-11 w-11 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0 text-white font-bold text-base shadow-sm overflow-hidden">
-                        {avatar ? (
-                          <img src={avatar} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          initial
-                        )}
-                      </div>
+                      <UserAvatar
+                        src={avatar}
+                        name={name}
+                        sizeClassName="h-11 w-11"
+                        textClassName="text-base"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-foreground truncate leading-tight">
                           {name}
@@ -232,19 +232,12 @@ const AdminUsers = () => {
                     <Activity className="h-32 w-32" />
                   </div>
                   <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
-                    <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-border/50 shrink-0 overflow-hidden">
-                      {userDetails.profile.google_avatar || userDetails.profile.avatar_url ? (
-                        <img
-                          src={userDetails.profile.google_avatar || userDetails.profile.avatar_url || ""}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        (userDetails.profile.google_name || userDetails.profile.display_name || "U")
-                          .charAt(0)
-                          .toUpperCase()
-                      )}
-                    </div>
+                    <UserAvatar
+                      src={userDetails.profile.google_avatar || userDetails.profile.avatar_url}
+                      name={userDetails.profile.google_name || userDetails.profile.display_name || "U"}
+                      sizeClassName="h-24 w-24 ring-4 ring-border/50"
+                      textClassName="text-3xl"
+                    />
                     <div className="flex-1 space-y-3">
                       <div>
                         <h2 className="text-2xl font-black text-foreground">
