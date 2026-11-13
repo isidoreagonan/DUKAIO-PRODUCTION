@@ -192,7 +192,8 @@ function CountrySelect({
 
 export default function CheckoutPage() {
   const { productId } = useParams();
-  const [params] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const params = searchParams;
   const navigate = useNavigate();
   const storeSlug = params.get("store");
   const queryCountry = params.get("country");
