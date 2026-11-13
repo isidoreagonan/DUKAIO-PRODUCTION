@@ -162,6 +162,8 @@ Deno.serve(async (req) => {
         const sessionParts = (ev.session_id || "").split("|");
         const customerEmail = sessionParts[0] || data.customer?.email || "";
         const customerId = sessionParts[1] || null;
+        const promoCodeUsed = sessionParts[3] || null;
+        const originalAmount = sessionParts[4] ? Number(sessionParts[4]) : grossAmount;
 
         const { data: createdOrder, error: orderErr } = await supabase
           .from("orders")
@@ -170,6 +172,8 @@ Deno.serve(async (req) => {
             store_owner_id: ev.store_owner_id,
             customer_id: customerId,
             amount: grossAmount,
+            original_amount: originalAmount,
+            promo_code: promoCodeUsed,
             currency: "XOF",
             payment_provider: "saaspay",
             payment_method: data.payment_method || "mobile_money",
@@ -180,6 +184,18 @@ Deno.serve(async (req) => {
           } as any)
           .select("id")
           .single();
+
+        if (promoCodeUsed) {
+          const { data: pData } = await supabase
+            .from("promo_codes")
+            .select("id")
+            .eq("code", promoCodeUsed)
+            .eq("creator_id", ev.store_owner_id)
+            .maybeSingle();
+          if (pData?.id) {
+            await supabase.rpc("increment_promo_code_usage", { p_promo_code_id: pData.id });
+          }
+        }
 
         if (orderErr) {
           console.error("[saaspay-webhook] order creation error:", orderErr);

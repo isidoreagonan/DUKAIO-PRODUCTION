@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Check, ChevronDown, CreditCard, Lock, MessageCircle,
   Package, ShieldCheck, Smartphone, Loader2, Sparkles, AlertCircle, RefreshCw,
-  Landmark, Copy, ExternalLink, Clock
+  Landmark, Copy, ExternalLink, Clock, Tag, X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
@@ -206,6 +206,18 @@ export default function CheckoutPage() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  // Promo code states
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{
+    id: string;
+    code: string;
+    discount_percent: number | null;
+    discount_amount: number | null;
+  } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [showPromoBox, setShowPromoBox] = useState(false);
+
   // Payment flow state
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState<"form" | "pending" | "bank_transfer" | "done" | "failed">("form");
@@ -292,9 +304,106 @@ export default function CheckoutPage() {
     loadProduct();
   }, [productId, storeSlug]);
 
-  const priceAmount = product?.price || 0;
+  const originalPrice = product?.price || 0;
+
+  const discountAmount = useMemo(() => {
+    if (!appliedPromo) return 0;
+    if (appliedPromo.discount_percent) {
+      return Math.round((originalPrice * appliedPromo.discount_percent) / 100);
+    }
+    if (appliedPromo.discount_amount) {
+      return Math.min(originalPrice, Math.round(Number(appliedPromo.discount_amount)));
+    }
+    return 0;
+  }, [appliedPromo, originalPrice]);
+
+  const priceAmount = Math.max(0, originalPrice - discountAmount);
   const currencyCode = country.currency || "XOF";
   const t = (fr: string, en: string) => (lang === "fr" ? fr : en);
+
+  // Auto-apply promo code from URL query param if present (?coupon=... or ?promo=... or ?code=...)
+  useEffect(() => {
+    const queryPromo = params.get("coupon") || params.get("promo") || params.get("code");
+    if (queryPromo && product && !appliedPromo) {
+      const applyInitial = async () => {
+        try {
+          const { data } = await supabase.rpc("validate_promo_code", {
+            p_code: queryPromo.trim().toUpperCase(),
+            p_product_id: product.id,
+            p_creator_id: product.creator_id,
+          });
+          if (data?.valid) {
+            setAppliedPromo({
+              id: data.id,
+              code: data.code,
+              discount_percent: data.discount_percent ? Number(data.discount_percent) : null,
+              discount_amount: data.discount_amount ? Number(data.discount_amount) : null,
+            });
+            setShowPromoBox(true);
+            toast.success(`Code promo ${data.code} appliqué automatiquement !`);
+          }
+        } catch (e) {
+          console.warn("Auto coupon validation failed:", e);
+        }
+      };
+      applyInitial();
+    }
+  }, [product, params]);
+
+  const handleApplyPromo = async () => {
+    const clean = promoInput.trim().toUpperCase();
+    if (!clean) {
+      setPromoError(t("Veuillez saisir un code promo.", "Please enter a promo code."));
+      return;
+    }
+    if (!product) return;
+
+    setPromoLoading(true);
+    setPromoError(null);
+
+    try {
+      const { data, error: rpcErr } = await supabase.rpc("validate_promo_code", {
+        p_code: clean,
+        p_product_id: product.id,
+        p_creator_id: product.creator_id,
+      });
+
+      if (rpcErr) throw rpcErr;
+
+      if (!data?.valid) {
+        const msg = data?.error || t("Code promo invalide", "Invalid promo code");
+        setPromoError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      setAppliedPromo({
+        id: data.id,
+        code: data.code,
+        discount_percent: data.discount_percent ? Number(data.discount_percent) : null,
+        discount_amount: data.discount_amount ? Number(data.discount_amount) : null,
+      });
+
+      const discText = data.discount_percent
+        ? `-${data.discount_percent}%`
+        : `-${fmt(Number(data.discount_amount))} FCFA`;
+      toast.success(t(`Code promo ${data.code} appliqué (${discText}) !`, `Promo code ${data.code} applied (${discText})!`));
+      setShowPromoBox(false);
+      setPromoInput("");
+    } catch (err: any) {
+      const msg = err.message || t("Erreur lors de la validation", "Validation error");
+      setPromoError(msg);
+      toast.error(msg);
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoError(null);
+    toast.info(t("Code promo retiré", "Promo code removed"));
+  };
 
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim());
   const isNameValid = customerName.trim().length >= 2;
@@ -312,7 +421,7 @@ export default function CheckoutPage() {
   const handlePayment = async () => {
     if (!product) return;
 
-    // Handle free product
+    // Handle free product (or 100% discounted product)
     if (priceAmount === 0) {
       setSubmitting(true);
       try {
@@ -321,6 +430,7 @@ export default function CheckoutPage() {
             name: customerName.trim(),
             email: customerEmail.trim().toLowerCase(),
             productId: product.id,
+            promoCode: appliedPromo?.code || null,
           },
         });
         if (freeErr) throw freeErr;
@@ -329,7 +439,7 @@ export default function CheckoutPage() {
         setOrderReference(data?.orderId || "DK-FREE");
         setCompletedOrderId(data?.orderId || null);
         setStep("done");
-        toast.success("Produit gratuit obtenu avec succès !");
+        toast.success(appliedPromo ? "Produit obtenu gratuitement grâce au code promo !" : "Produit gratuit obtenu avec succès !");
       } catch (err: any) {
         toast.error(err.message || "Erreur lors du traitement");
       } finally {
@@ -366,6 +476,8 @@ export default function CheckoutPage() {
             product_id: product.id,
             product_title: product.title,
             store_owner_id: product.creator_id,
+            promo_code: appliedPromo?.code || null,
+            original_price: originalPrice,
             return_url: `${window.location.origin}/checkout/${product.id}?ref=saaspay`,
             cancel_url: window.location.href,
           },
@@ -551,7 +663,7 @@ export default function CheckoutPage() {
             <p className="text-[13px] text-[#64748B] font-medium">
               {t("Montant à payer", "Amount due")}
             </p>
-            <p className="mt-1 flex items-baseline gap-2">
+            <div className="mt-1 flex items-baseline gap-2.5">
               <span className="font-black text-4xl sm:text-5xl leading-none tracking-tight text-[#0F172A]">
                 {priceAmount === 0 ? t("Gratuit", "Free") : fmt(priceAmount)}
               </span>
@@ -560,7 +672,12 @@ export default function CheckoutPage() {
                   {currencyCode}
                 </span>
               )}
-            </p>
+              {appliedPromo && discountAmount > 0 && originalPrice > 0 && (
+                <span className="text-sm font-semibold text-[#94A3B8] line-through decoration-red-400">
+                  {fmt(originalPrice)} {currencyCode}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Product card info */}
@@ -587,14 +704,141 @@ export default function CheckoutPage() {
 
             <Row
               label={t("Sous-total", "Subtotal")}
-              value={priceAmount === 0 ? "0 FCFA" : `${fmt(priceAmount)} ${currencyCode}`}
+              value={originalPrice === 0 ? "0 FCFA" : `${fmt(originalPrice)} ${currencyCode}`}
             />
+            {appliedPromo && discountAmount > 0 && (
+              <div className="flex items-center justify-between gap-4 px-4 py-3 text-[13px] bg-emerald-50/70 border-t border-emerald-100">
+                <span className="flex items-center gap-1.5 font-semibold text-emerald-800">
+                  <Tag className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>{t("Réduction", "Discount")} ({appliedPromo.code})</span>
+                </span>
+                <span className="font-bold text-emerald-700 font-mono">
+                  -{fmt(discountAmount)} {currencyCode}
+                </span>
+              </div>
+            )}
             <Row label={t("Frais de transaction", "Processing fees")} value="0 FCFA (Inclus)" />
             {customerEmail && (
               <Row label={t("Reçu envoyé à", "Receipt sent to")} value={customerEmail} />
             )}
             {orderReference && (
               <Row label={t("Référence", "Reference")} value={orderReference} mono />
+            )}
+          </div>
+
+          {/* Promo Code Box */}
+          <div className="mt-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3.5 transition-all">
+            {!appliedPromo ? (
+              <div>
+                {!showPromoBox ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPromoBox(true);
+                      setPromoError(null);
+                    }}
+                    className="flex w-full items-center justify-between text-xs font-bold text-[#0F172A] hover:text-[#475569] transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag className="h-3.5 w-3.5 text-[#0F172A]" />
+                      <span>{t("Vous avez un code promo ?", "Have a promo code?")}</span>
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#0F172A] underline underline-offset-2">
+                      {t("Ajouter", "Add")}
+                    </span>
+                  </button>
+                ) : (
+                  <div className="space-y-2 animate-in fade-in-50">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
+                        <Tag className="h-3.5 w-3.5 text-[#0F172A]" />
+                        <span>{t("Code promo", "Promo code")}</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPromoBox(false);
+                          setPromoError(null);
+                        }}
+                        className="text-[11px] text-[#64748B] hover:text-[#0F172A]"
+                      >
+                        {t("Fermer", "Close")}
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoInput}
+                        onChange={(e) => {
+                          setPromoInput(e.target.value.toUpperCase());
+                          setPromoError(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleApplyPromo();
+                          }
+                        }}
+                        placeholder="Ex: PROMO20"
+                        className="flex-1 h-10 px-3 rounded-lg border border-[#CBD5E1] bg-white text-xs font-mono font-bold uppercase tracking-wider text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#0F172A] transition-colors"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        disabled={promoLoading || !promoInput.trim()}
+                        onClick={handleApplyPromo}
+                        className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-xs font-bold hover:bg-[#1E293B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                      >
+                        {promoLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <span>{t("Appliquer", "Apply")}</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {promoError && (
+                      <p className="text-[11px] font-medium text-red-600 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 shrink-0" />
+                        <span>{promoError}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-2xs shrink-0">
+                    <Check className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs font-black tracking-wider text-[#0F172A]">
+                        {appliedPromo.code}
+                      </span>
+                      <span className="rounded px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                        {appliedPromo.discount_percent
+                          ? `-${appliedPromo.discount_percent}%`
+                          : `-${fmt(Number(appliedPromo.discount_amount || 0))} FCFA`}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 font-medium">
+                      {t("Code promo actif", "Active promo code")}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleRemovePromo}
+                  className="p-1 rounded-lg text-[#64748B] hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title={t("Retirer ce code", "Remove code")}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             )}
           </div>
 

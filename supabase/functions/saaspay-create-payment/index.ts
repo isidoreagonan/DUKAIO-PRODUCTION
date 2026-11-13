@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
         amount: Number(body.amount),
         product_id: body.metadata.product_id,
         store_owner_id: body.metadata.store_owner_id,
-        session_id: `${email}|${customerId}|${reference}`,
+        session_id: `${email}|${customerId}|${reference}|${body.metadata.promo_code || ""}|${body.metadata.original_price || body.amount}`,
         status: "pending",
       })
       .select("id")
