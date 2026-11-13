@@ -410,7 +410,7 @@ export default function DashboardKYC() {
 
         {/* State Banner: Approved */}
         {isApproved && (
-          <div className="rounded-3xl border border-emerald-200/80 dark:border-emerald-900/60 bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/30 dark:from-emerald-950/30 dark:via-background dark:to-emerald-950/10 p-6 sm:p-8 space-y-6 shadow-sm">
+          <div className="rounded-3xl border border-emerald-500/30 bg-card p-6 sm:p-8 space-y-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
                 <CheckCircle2 className="h-7 w-7 stroke-[2.5]" />
@@ -425,24 +425,55 @@ export default function DashboardKYC() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-emerald-200/60 dark:border-emerald-900/40 text-xs">
-              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-emerald-100 dark:border-emerald-900/30">
-                <p className="text-muted-foreground font-medium">Titulaire validé</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                <p className="text-muted-foreground font-medium text-[11px]">Titulaire validé</p>
                 <p className="font-bold text-foreground text-sm mt-0.5">{verification.full_name}</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-emerald-100 dark:border-emerald-900/30">
-                <p className="text-muted-foreground font-medium">Document officiel</p>
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                <p className="text-muted-foreground font-medium text-[11px]">Document officiel</p>
                 <p className="font-bold text-foreground text-sm mt-0.5 capitalize">
                   {verification.document_type === "cni" ? "Carte d'Identité" : verification.document_type} • {verification.document_number}
                 </p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-emerald-100 dark:border-emerald-900/30">
-                <p className="text-muted-foreground font-medium">Validation DUKAIO</p>
-                <p className="font-bold text-emerald-700 dark:text-emerald-400 text-sm mt-0.5">
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                <p className="text-muted-foreground font-medium text-[11px]">Validation DUKAIO</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">
                   {verification.reviewed_at
                     ? new Date(verification.reviewed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
                     : "Validé"}
                 </p>
+              </div>
+            </div>
+
+            {/* Aperçu des documents validés */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground">Pièces certifiées :</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {verification.document_front_url && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Face Recto</span>
+                    <a href={verification.document_front_url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border overflow-hidden h-24 bg-muted/40 hover:opacity-85 transition-opacity">
+                      <img src={verification.document_front_url} alt="Recto" className="h-full w-full object-cover" />
+                    </a>
+                  </div>
+                )}
+                {verification.document_back_url && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Face Verso</span>
+                    <a href={verification.document_back_url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border overflow-hidden h-24 bg-muted/40 hover:opacity-85 transition-opacity">
+                      <img src={verification.document_back_url} alt="Verso" className="h-full w-full object-cover" />
+                    </a>
+                  </div>
+                )}
+                {verification.selfie_url && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Selfie avec document</span>
+                    <a href={verification.selfie_url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border overflow-hidden h-24 bg-muted/40 hover:opacity-85 transition-opacity">
+                      <img src={verification.selfie_url} alt="Selfie" className="h-full w-full object-cover" />
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -460,7 +491,7 @@ export default function DashboardKYC() {
 
         {/* State Banner: Pending */}
         {isPending && (
-          <div className="rounded-3xl border border-amber-200/80 dark:border-amber-900/60 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/20 dark:from-amber-950/25 dark:via-background dark:to-amber-950/10 p-6 sm:p-8 space-y-6 shadow-sm">
+          <div className="rounded-3xl border border-amber-500/30 bg-card p-6 sm:p-8 space-y-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
                 <Clock className="h-7 w-7 stroke-[2.5]" />
@@ -475,22 +506,53 @@ export default function DashboardKYC() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-amber-200/60 dark:border-amber-900/40 text-xs">
-              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-amber-100 dark:border-amber-900/30">
-                <p className="text-muted-foreground font-medium">Nom complet</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                <p className="text-muted-foreground font-medium text-[11px]">Nom complet</p>
                 <p className="font-bold text-foreground text-sm mt-0.5">{verification.full_name}</p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-amber-100 dark:border-amber-900/30">
-                <p className="text-muted-foreground font-medium">Document soumis</p>
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                <p className="text-muted-foreground font-medium text-[11px]">Document soumis</p>
                 <p className="font-bold text-foreground text-sm mt-0.5 capitalize">
                   {verification.document_type === "cni" ? "Carte d'identité" : verification.document_type} ({verification.document_number})
                 </p>
               </div>
-              <div className="p-3.5 rounded-2xl bg-white/70 dark:bg-slate-900/60 border border-amber-100 dark:border-amber-900/30">
-                <p className="text-muted-foreground font-medium">Date d'envoi</p>
+              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                <p className="text-muted-foreground font-medium text-[11px]">Date d'envoi</p>
                 <p className="font-bold text-foreground text-sm mt-0.5">
                   {new Date(verification.submitted_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
+              </div>
+            </div>
+
+            {/* Aperçu des documents envoyés */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground">Documents transmis :</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {verification.document_front_url && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Face Recto</span>
+                    <a href={verification.document_front_url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border overflow-hidden h-24 bg-muted/40 hover:opacity-85 transition-opacity">
+                      <img src={verification.document_front_url} alt="Recto" className="h-full w-full object-cover" />
+                    </a>
+                  </div>
+                )}
+                {verification.document_back_url && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Face Verso</span>
+                    <a href={verification.document_back_url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border overflow-hidden h-24 bg-muted/40 hover:opacity-85 transition-opacity">
+                      <img src={verification.document_back_url} alt="Verso" className="h-full w-full object-cover" />
+                    </a>
+                  </div>
+                )}
+                {verification.selfie_url && (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted-foreground">Selfie avec document</span>
+                    <a href={verification.selfie_url} target="_blank" rel="noopener noreferrer" className="block rounded-xl border border-border overflow-hidden h-24 bg-muted/40 hover:opacity-85 transition-opacity">
+                      <img src={verification.selfie_url} alt="Selfie" className="h-full w-full object-cover" />
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -804,7 +804,7 @@ export default function Wallet() {
       {/* DIALOG KYC GATE: VÉRIFICATION OBLIGATOIRE                */}
       {/* ======================================================== */}
       <Dialog open={kycModalOpen} onOpenChange={setKycModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white">
+        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-card border-border text-foreground">
           <div className="flex flex-col items-center text-center space-y-4 pt-2">
             <div
               className={`h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg ${
@@ -841,7 +841,7 @@ export default function Wallet() {
               </DialogDescription>
             </div>
 
-            <div className="w-full rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-3.5 text-left text-xs space-y-1.5">
+            <div className="w-full rounded-2xl bg-secondary/50 border border-border p-3.5 text-left text-xs space-y-1.5">
               <div className="flex items-center gap-2 text-foreground font-semibold">
                 <span className="text-base">💡</span>
                 <span>Bon à savoir</span>
