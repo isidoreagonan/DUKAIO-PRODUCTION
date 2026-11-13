@@ -8,6 +8,7 @@ import { Button } from "@/dukaio-site/ui/button";
 import { Input } from "@/dukaio-site/ui/input";
 import { Logo } from "@/dukaio-site/site/Logo";
 import { CountryPicker } from "./CountryPicker";
+import { detectUserCountry } from "@/lib/geo";
 import creator from "@/dukaio-site/assets/creator-studio.jpg";
 
 function GoogleLogo() {
@@ -27,6 +28,12 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
     supabase.auth.getSession().then(({ data }) => { if (data.session) navigate({ to: DASHBOARD_PATH, replace: true }); });
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") navigate({ to: DASHBOARD_PATH, replace: true });
+    });
+    // Auto-detect visitor's country on signup
+    detectUserCountry().then((geo) => {
+      if (geo.countryCode) {
+        setCountry(geo.countryCode.toUpperCase());
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);

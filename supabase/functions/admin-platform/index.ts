@@ -539,7 +539,7 @@ serve(async (req) => {
       const events: any[] = [];
       orders?.forEach(o => {
         events.push({ type: "sale", amount: Number(o.amount), date: o.created_at, status: o.status });
-        events.push({ type: "commission", amount: Number(o.amount) * 0.1, date: o.created_at, status: o.status, detail: "Commission de plateforme" });
+        events.push({ type: "commission", amount: Number(o.amount) * 0.05, date: o.created_at, status: o.status, detail: "Commission de plateforme (5%)" });
       });
       withdrawals?.forEach(w => {
         events.push({ type: "withdrawal", amount: Number(w.net_amount), date: w.created_at, status: w.status, detail: w.operator });

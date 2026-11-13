@@ -135,16 +135,62 @@ export default function Wallet() {
     if (savedWallets.length > 0 && savedWallets[0].country) {
       return savedWallets[0].country.toLowerCase();
     }
-    const profCountry = (profile as any)?.country;
+    const profCountry = (profile as any)?.country_code || (profile as any)?.country;
     if (profCountry) return profCountry.toLowerCase();
+    const metaCountry = user?.user_metadata?.country_code || user?.user_metadata?.country;
+    if (metaCountry) return String(metaCountry).toLowerCase();
     return detectedCountry;
-  }, [savedWallets, profile, detectedCountry]);
+  }, [savedWallets, profile, user, detectedCountry]);
 
   const creatorCurrency = useMemo(() => {
     return getCurrencyForCountry(creatorCountry);
   }, [creatorCountry]);
 
   const isCreatorForeignCurrency = creatorCurrency !== "XOF" && creatorCurrency !== "XAF";
+
+  // Available display currencies for creator
+  const availableCurrencies = useMemo(() => {
+    switch (creatorCountry) {
+      case "cd":
+        return ["CDF", "USD", "XOF"];
+      case "ng":
+        return ["NGN", "USD", "XOF"];
+      case "zm":
+        return ["ZMW", "USD", "XOF"];
+      case "ke":
+        return ["KES", "USD", "XOF"];
+      case "gh":
+        return ["GHS", "USD", "XOF"];
+      case "us":
+        return ["USD", "XOF"];
+      case "fr":
+      case "be":
+        return ["EUR", "USD", "XOF"];
+      default:
+        return ["XOF", "USD", "EUR"];
+    }
+  }, [creatorCountry]);
+
+  const [activeCurrency, setActiveCurrency] = useState<string>("XOF");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("dukaio_wallet_display_currency");
+      if (saved && availableCurrencies.includes(saved)) {
+        setActiveCurrency(saved);
+        return;
+      }
+    } catch {}
+    const defaultCurr = getCurrencyForCountry(creatorCountry);
+    setActiveCurrency(defaultCurr);
+  }, [creatorCountry, availableCurrencies]);
+
+  const handleSelectCurrency = (curr: string) => {
+    setActiveCurrency(curr);
+    try {
+      localStorage.setItem("dukaio_wallet_display_currency", curr);
+    } catch {}
+  };
 
   // Forgot PIN state
   const [forgotStep, setForgotStep] = useState<"send" | "verify">("send");
@@ -621,18 +667,39 @@ export default function Wallet() {
         <div className="relative overflow-hidden rounded-[28px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#111827] shadow-[0_4px_24px_rgba(0,0,0,0.04)] p-6 sm:p-10 text-center">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/5 dark:bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Top Pill: Solde retirable with Flags */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs font-bold text-slate-600 dark:text-slate-300 shadow-2xs">
-            <div className="flex items-center -space-x-1.5">
-              <img src="https://flagcdn.com/w40/bj.png" alt="Bénin" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
-              <img src="https://flagcdn.com/w40/tg.png" alt="Togo" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
-              <img src="https://flagcdn.com/w40/ci.png" alt="Côte d'Ivoire" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
-              <img src="https://flagcdn.com/w40/sn.png" alt="Sénégal" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
-              <img src="https://flagcdn.com/w40/cm.png" alt="Cameroun" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
-              <img src="https://flagcdn.com/w40/ng.png" alt="Nigéria" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+          {/* Top Row: Solde retirable with Flags + Currency Toggle */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs font-bold text-slate-600 dark:text-slate-300 shadow-2xs">
+              <div className="flex items-center -space-x-1.5">
+                <img src="https://flagcdn.com/w40/cd.png" alt="RD Congo" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+                <img src="https://flagcdn.com/w40/bj.png" alt="Bénin" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+                <img src="https://flagcdn.com/w40/ci.png" alt="Côte d'Ivoire" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+                <img src="https://flagcdn.com/w40/ng.png" alt="Nigéria" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+                <img src="https://flagcdn.com/w40/zm.png" alt="Zambie" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+                <img src="https://flagcdn.com/w40/cm.png" alt="Cameroun" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+                <img src="https://flagcdn.com/w40/sn.png" alt="Sénégal" className="h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs" />
+              </div>
+              <span className="tracking-wider uppercase text-[10px]">Solde disponible au retrait</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             </div>
-            <span className="tracking-wider uppercase text-[10px]">Solde disponible au retrait</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+
+            {/* Quick Currency Switcher for Creator */}
+            <div className="inline-flex items-center rounded-full border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 p-0.5 text-[11px] font-bold">
+              {availableCurrencies.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => handleSelectCurrency(c)}
+                  className={`px-2.5 py-1 rounded-full transition-all ${
+                    activeCurrency === c
+                      ? "bg-[#0F172A] text-white dark:bg-white dark:text-[#0F172A] shadow-xs font-black"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  {c === "XOF" ? "FCFA" : c}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Giant Amount Display */}
@@ -645,8 +712,10 @@ export default function Wallet() {
                   </span>
                 ) : hideBalance ? (
                   "••••••••"
+                ) : activeCurrency === "XOF" ? (
+                  `${formatFmt(balanceFcfa)} FCFA`
                 ) : (
-                  `${formatFmt(balanceFcfa)} F`
+                  formatMoney(convertFromXOF(balanceFcfa, activeCurrency), activeCurrency)
                 )}
               </span>
 
@@ -659,10 +728,17 @@ export default function Wallet() {
               </button>
             </div>
 
-            {!loading && !hideBalance && isCreatorForeignCurrency && balanceFcfa > 0 && (
-              <div className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                <span>≈ {formatMoney(convertFromXOF(balanceFcfa, creatorCurrency), creatorCurrency)}</span>
-                <span className="text-[10px] font-normal text-emerald-600/80">({creatorCurrency} en direct)</span>
+            {!loading && !hideBalance && balanceFcfa > 0 && (
+              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                {activeCurrency !== "XOF" ? (
+                  <span>
+                    Équivalent net de <strong className="text-slate-800 dark:text-slate-200">{formatFmt(balanceFcfa)} FCFA</strong> (95% net après 5% de commission)
+                  </span>
+                ) : isCreatorForeignCurrency ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-semibold">
+                    ≈ {formatMoney(convertFromXOF(balanceFcfa, creatorCurrency), creatorCurrency)} ({creatorCurrency} officiel)
+                  </span>
+                ) : null}
               </div>
             )}
           </div>
@@ -724,10 +800,16 @@ export default function Wallet() {
                 Solde disponible (Mobile Money & Banque)
               </span>
               <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 block">
-                {hideBalance ? "••••" : `${formatFmt(balanceFcfa)} F`}
+                {hideBalance
+                  ? "••••"
+                  : activeCurrency === "XOF"
+                  ? `${formatFmt(balanceFcfa)} F`
+                  : formatMoney(convertFromXOF(balanceFcfa, activeCurrency), activeCurrency)}
               </span>
               <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                {isCreatorForeignCurrency && balanceFcfa > 0
+                {activeCurrency !== "XOF" && balanceFcfa > 0
+                  ? `Base : ${formatFmt(balanceFcfa)} FCFA • 100% prêt`
+                  : isCreatorForeignCurrency && balanceFcfa > 0
                   ? `≈ ${formatMoney(convertFromXOF(balanceFcfa, creatorCurrency), creatorCurrency)} • 100% prêt`
                   : "100% prêt au virement"}
               </span>
@@ -743,15 +825,23 @@ export default function Wallet() {
                 Total des gains cumulés (95% net)
               </span>
               <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 block">
-                {hideBalance ? "••••" : `${formatFmt(totalEarned)} F`}
+                {hideBalance
+                  ? "••••"
+                  : activeCurrency === "XOF"
+                  ? `${formatFmt(totalEarned)} F`
+                  : formatMoney(convertFromXOF(totalEarned, activeCurrency), activeCurrency)}
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 {formatFmt(totalWithdrawn)} F déjà retirés
-                {isCreatorForeignCurrency && totalEarned > 0 && (
+                {activeCurrency !== "XOF" && totalEarned > 0 ? (
+                  <span className="ml-1 text-slate-400">
+                    (Base : {formatFmt(totalEarned)} FCFA)
+                  </span>
+                ) : isCreatorForeignCurrency && totalEarned > 0 ? (
                   <span className="ml-1 text-slate-400">
                     (Total : ≈ {formatMoney(convertFromXOF(totalEarned, creatorCurrency), creatorCurrency)})
                   </span>
-                )}
+                ) : null}
               </span>
             </div>
             <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">

@@ -10,8 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   Store, Paintbrush, FileText, Hash, Phone,
-  ArrowRight, ArrowLeft, Check, Sparkles, Rocket,
+  ArrowRight, ArrowLeft, Check, Sparkles, Rocket, Globe,
 } from "lucide-react";
+import { CountryPicker } from "@/dukaio-site/auth/CountryPicker";
+import { detectUserCountry } from "@/lib/geo";
 
 const BRAND_COLORS = [
   { name: "Indigo", value: "#6366F1" },
@@ -26,6 +28,7 @@ const BRAND_COLORS = [
 
 const STEPS = [
   { icon: Store, title: "Nom de votre boutique", subtitle: "Comment vos clients vont vous connaître" },
+  { icon: Globe, title: "Votre pays de résidence", subtitle: "Pour adapter votre devise locale et vos retraits Mobile Money" },
   { icon: Paintbrush, title: "Couleur de votre marque", subtitle: "Choisissez la couleur qui représente votre marque" },
   { icon: FileText, title: "Décrivez votre boutique", subtitle: "Une brève description de ce que vous proposez" },
   { icon: Hash, title: "Mots-clés", subtitle: "Aidez les clients à vous trouver plus facilement" },
@@ -40,18 +43,29 @@ const Onboarding = () => {
 
   // Form data
   const [storeName, setStoreName] = useState("");
+  const [country, setCountry] = useState("BJ");
   const [brandColor, setBrandColor] = useState("#6366F1");
   const [description, setDescription] = useState("");
   const [keywords, setKeywords] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
 
+  // Auto-detect visitor's country on mount
+  useEffect(() => {
+    detectUserCountry().then((geo) => {
+      if (geo.countryCode) {
+        setCountry(geo.countryCode.toUpperCase());
+      }
+    });
+  }, []);
+
   const canNext = () => {
     switch (step) {
       case 0: return storeName.trim().length >= 2;
-      case 1: return !!brandColor;
-      case 2: return description.trim().length >= 5;
-      case 3: return true; // optional
+      case 1: return !!country;
+      case 2: return !!brandColor;
+      case 3: return description.trim().length >= 5;
       case 4: return true; // optional
+      case 5: return true; // optional
       default: return false;
     }
   };
@@ -83,9 +97,16 @@ const Onboarding = () => {
       store_description: description.trim(),
       store_keywords: keywords.trim() || null,
       contact: whatsapp.trim() || null,
+      country_code: country.toLowerCase(),
       onboarding_completed: true,
       updated_at: new Date().toISOString(),
     } as any).eq("id", user.id);
+
+    try {
+      await supabase.auth.updateUser({
+        data: { country_code: country.toLowerCase() },
+      });
+    } catch {}
 
     setSaving(false);
 
@@ -182,6 +203,18 @@ const Onboarding = () => {
                 )}
 
                 {step === 1 && (
+                  <div className="space-y-4 max-w-sm mx-auto">
+                    <CountryPicker
+                      value={country}
+                      onChange={(code) => setCountry(code)}
+                    />
+                    <p className="text-xs text-center text-muted-foreground leading-relaxed">
+                      Votre pays permet d'activer automatiquement vos devises locales (CDF, USD, NGN, XOF) et vos réseaux Mobile Money.
+                    </p>
+                  </div>
+                )}
+
+                {step === 2 && (
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-center gap-4">
                       {BRAND_COLORS.map((c) => (
@@ -216,7 +249,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 2 && (
+                {step === 3 && (
                   <div className="space-y-2">
                     <Textarea
                       value={description}
@@ -230,7 +263,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 3 && (
+                {step === 4 && (
                   <div className="space-y-3">
                     <Input
                       value={keywords}
@@ -246,7 +279,7 @@ const Onboarding = () => {
                   </div>
                 )}
 
-                {step === 4 && (
+                {step === 5 && (
                   <div className="space-y-3">
                     <Input
                       value={whatsapp}
