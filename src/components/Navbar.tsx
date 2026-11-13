@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import UserAvatar from "@/components/UserAvatar";
+import { getDashboardUrl, getBuyerPortalUrl } from "@/lib/subdomain";
 
 const productLinks = [
   { label: "Fichiers", href: "/fichiers", icon: FileText },
@@ -77,35 +78,35 @@ const Navbar = () => {
           <CurrencySwitcher />
           {user ? (
             <>
-              <Link to="/dashboard">
+              <a href={getDashboardUrl("/dashboard")}>
                 <Button variant="ghost" size="sm" className="text-sm font-medium gap-2">
                   <LayoutDashboard className="h-4 w-4" /> Dashboard
                 </Button>
-              </Link>
-              <Link to="/dashboard/profile">
+              </a>
+              <a href={getDashboardUrl("/dashboard/profile")}>
                 <UserAvatar
                   src={profile?.avatar_url || user?.user_metadata?.avatar_url}
                   name={profile?.display_name || user?.user_metadata?.full_name}
                   sizeClassName="h-8 w-8"
                   textClassName="text-xs"
                 />
-              </Link>
+              </a>
             </>
           ) : (
             <>
-              <Link to="/buyer-login">
+              <a href={getBuyerPortalUrl("/mes-achats")}>
                 <Button variant="ghost" size="sm" className="text-sm font-medium gap-2 text-muted-foreground">
                   <ShoppingBag className="h-4 w-4" /> Mes achats
                 </Button>
-              </Link>
-              <Link to="/connexion">
+              </a>
+              <a href={getDashboardUrl("/connexion")}>
                 <Button variant="ghost" size="sm" className="text-sm font-medium text-muted-foreground">Connexion vendeur</Button>
-              </Link>
-              <Link to="/inscription">
+              </a>
+              <a href={getDashboardUrl("/inscription")}>
                 <Button size="sm" className="text-sm font-semibold gap-2">
                   <Store className="h-4 w-4" /> Devenir vendeur
                 </Button>
-              </Link>
+              </a>
             </>
           )}
         </div>
@@ -159,7 +160,7 @@ const Navbar = () => {
                 )}
 
                 {user && (
-                  <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
+                  <a href={getDashboardUrl("/dashboard")} onClick={() => setMobileOpen(false)}>
                     <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-primary to-accent p-4 shadow-lg shadow-primary/25">
                       <UserAvatar
                         src={profile?.avatar_url || user?.user_metadata?.avatar_url}
@@ -173,7 +174,7 @@ const Navbar = () => {
                       </div>
                       <LayoutDashboard className="h-5 w-5 text-white" />
                     </div>
-                  </Link>
+                  </a>
                 )}
 
                 <div>
@@ -230,11 +231,11 @@ const Navbar = () => {
 
               {!user && (
                 <div className="border-t border-border bg-background/95 backdrop-blur px-5 py-3">
-                  <Link to="/connexion" onClick={() => setMobileOpen(false)}>
+                  <a href={getDashboardUrl("/connexion")} onClick={() => setMobileOpen(false)}>
                     <Button variant="outline" className="w-full" size="sm">
                       Connexion vendeur
                     </Button>
-                  </Link>
+                  </a>
                 </div>
               )}
             </motion.div>

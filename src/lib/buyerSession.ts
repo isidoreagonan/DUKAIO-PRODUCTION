@@ -1,4 +1,5 @@
 // Buyer portal session management — 3 days inactivity + 7 days re-OTP
+import { getCrossDomainCookie, setCrossDomainCookie, deleteCrossDomainCookie } from "./crossSubdomainStorage";
 
 export const BUYER_INACTIVITY_LIMIT_MS = 3 * 24 * 60 * 60 * 1000;
 export const BUYER_OTP_VALIDITY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -15,8 +16,21 @@ export interface BuyerSession {
 
 export const getBuyerSession = (): BuyerSession | null => {
   if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(BUYER_SESSION_KEY)
+  let raw = window.localStorage.getItem(BUYER_SESSION_KEY)
     ?? window.sessionStorage.getItem(BUYER_SESSION_KEY);
+
+  // Cross-subdomain cookie fallback (e.g. buyer authenticated on dukaio.com now visiting achat.dukaio.com)
+  if (!raw) {
+    raw = getCrossDomainCookie(BUYER_SESSION_KEY);
+    if (raw) {
+      try {
+        window.localStorage.setItem(BUYER_SESSION_KEY, raw);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<BuyerSession>;
@@ -34,9 +48,12 @@ export const getBuyerSession = (): BuyerSession | null => {
 
 export const setBuyerSession = (session: BuyerSession) => {
   try {
-    window.localStorage.setItem(BUYER_SESSION_KEY, JSON.stringify(session));
+    const raw = JSON.stringify(session);
+    window.localStorage.setItem(BUYER_SESSION_KEY, raw);
     // legacy sessionStorage cleanup
     window.sessionStorage.removeItem(BUYER_SESSION_KEY);
+    // Sync to cross-subdomain cookie so achat.dukaio.com shares the session
+    setCrossDomainCookie(BUYER_SESSION_KEY, raw);
     updateBuyerActivity();
   } catch { /* ignore */ }
 };
@@ -47,6 +64,7 @@ export const clearBuyerSession = () => {
     window.sessionStorage.removeItem(BUYER_SESSION_KEY);
     window.localStorage.removeItem(BUYER_ACTIVITY_KEY);
     window.localStorage.removeItem(BUYER_OTP_KEY);
+    deleteCrossDomainCookie(BUYER_SESSION_KEY);
   } catch { /* ignore */ }
 };
 

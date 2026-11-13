@@ -18,7 +18,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
-import { getStoreSubdomain, getStoreUrl } from "@/lib/subdomain";
+import { getStoreSubdomain, getStoreUrl, getBuyerPortalUrl } from "@/lib/subdomain";
 
 interface StoreInfo {
   id: string;
@@ -339,12 +339,12 @@ const StorePage = () => {
 
           <div className="flex items-center gap-2">
             <CurrencySwitcher />
-            <Link to="/buyer-login">
+            <a href={getBuyerPortalUrl("/mes-achats")}>
               <Button variant="outline" size="sm" className="text-xs gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
                 <ShoppingBag className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Mes achats</span>
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
         {/* Mobile nav */}

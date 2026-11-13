@@ -20,6 +20,14 @@ export const RESERVED_SUBDOMAINS = new Set([
   "assets",
   "static",
   "cdn",
+  "dashboard",
+  "achat",
+  "achats",
+  "buyer",
+  "portal",
+  "account",
+  "checkout",
+  "pay",
 ]);
 
 /**
@@ -62,9 +70,92 @@ export function getStoreSubdomain(): string | null {
 }
 
 /**
+ * Check if the current hostname is the Creator Dashboard subdomain:
+ * e.g. dashboard.dukaio.com, dashboard.ecom-revolt.com, dashboard.localhost
+ */
+export function isDashboardSubdomain(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname.toLowerCase();
+  return (
+    hostname === "dashboard.dukaio.com" ||
+    hostname === "dashboard.ecom-revolt.com" ||
+    hostname === "dashboard.localhost" ||
+    hostname.startsWith("dashboard.")
+  );
+}
+
+/**
+ * Check if the current hostname is the Customer / Buyer portal:
+ * e.g. achat.dukaio.com, achats.dukaio.com, achat.localhost, achats.localhost
+ */
+export function isBuyerSubdomain(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname.toLowerCase();
+  return (
+    hostname === "achat.dukaio.com" ||
+    hostname === "achats.dukaio.com" ||
+    hostname === "achat.ecom-revolt.com" ||
+    hostname === "achats.ecom-revolt.com" ||
+    hostname === "achat.localhost" ||
+    hostname === "achats.localhost" ||
+    hostname.startsWith("achat.") ||
+    hostname.startsWith("achats.")
+  );
+}
+
+/**
+ * Returns the official URL for the Dashboard
+ * e.g. https://dashboard.dukaio.com
+ */
+export function getDashboardUrl(path = ""): string {
+  const cleanPath = path ? (path.startsWith("/") ? path : `/${path}`) : "";
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname.toLowerCase();
+    const port = window.location.port;
+    if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1") {
+      return `http://dashboard.localhost${port ? `:${port}` : ""}${cleanPath}`;
+    }
+  }
+  return `https://dashboard.dukaio.com${cleanPath}`;
+}
+
+/**
+ * Returns the official URL for the Customer / Buyer Portal
+ * e.g. https://achat.dukaio.com
+ */
+export function getBuyerPortalUrl(path = ""): string {
+  const cleanPath = path ? (path.startsWith("/") ? path : `/${path}`) : "";
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname.toLowerCase();
+    const port = window.location.port;
+    if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1") {
+      return `http://achat.localhost${port ? `:${port}` : ""}${cleanPath}`;
+    }
+  }
+  return `https://achat.dukaio.com${cleanPath}`;
+}
+
+/**
+ * Returns the official URL for the Main Website
+ * e.g. https://dukaio.com
+ */
+export function getMainSiteUrl(path = ""): string {
+  const cleanPath = path ? (path.startsWith("/") ? path : `/${path}`) : "";
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname.toLowerCase();
+    const port = window.location.port;
+    if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname === "127.0.0.1") {
+      return `http://localhost${port ? `:${port}` : ""}${cleanPath}`;
+    }
+  }
+  return `https://dukaio.com${cleanPath}`;
+}
+
+/**
  * Returns whether current visitor is viewing a creator store via subdomain
  */
 export function isStoreSubdomain(): boolean {
+  if (isDashboardSubdomain() || isBuyerSubdomain()) return false;
   return Boolean(getStoreSubdomain());
 }
 

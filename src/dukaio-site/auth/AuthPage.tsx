@@ -9,6 +9,7 @@ import { Input } from "@/dukaio-site/ui/input";
 import { Logo } from "@/dukaio-site/site/Logo";
 import { CountryPicker } from "./CountryPicker";
 import { detectUserCountry } from "@/lib/geo";
+import { getDashboardUrl, isDashboardSubdomain } from "@/lib/subdomain";
 import creator from "@/dukaio-site/assets/creator-studio.jpg";
 
 function GoogleLogo() {
@@ -25,9 +26,17 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => { if (data.session) navigate({ to: DASHBOARD_PATH, replace: true }); });
+    const goToDashboard = () => {
+      if (typeof window !== "undefined" && !isDashboardSubdomain()) {
+        window.location.replace(getDashboardUrl("/dashboard"));
+      } else {
+        navigate({ to: DASHBOARD_PATH, replace: true });
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => { if (data.session) goToDashboard(); });
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") navigate({ to: DASHBOARD_PATH, replace: true });
+      if (event === "SIGNED_IN") goToDashboard();
     });
     // Auto-detect visitor's country on signup
     detectUserCountry().then((geo) => {

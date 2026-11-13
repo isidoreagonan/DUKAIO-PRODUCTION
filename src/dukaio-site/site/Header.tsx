@@ -3,6 +3,7 @@ import { SIGNUP_PATH } from "@/dukaio-site/config";
 import { useEffect, useState } from "react";
 import { ChevronDown, FileText, KeyRound, Menu, PlayCircle, Handshake, X } from "lucide-react";
 import { Logo } from "./Logo";
+import { getDashboardUrl } from "@/lib/subdomain";
 
 export const APP_URL = SIGNUP_PATH;
 
@@ -69,16 +70,16 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center lg:flex">
-          <Link
-            to="/connexion"
+          <a
+            href={getDashboardUrl("/connexion")}
             className={`btn overflow-hidden border border-border bg-muted/70 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-muted ${
               scrolled ? "pointer-events-none mr-0 max-w-0 border-transparent opacity-0" : "mr-2 max-w-[8rem] opacity-100"
             }`}
             tabIndex={scrolled ? -1 : 0}
           >
             <span className="whitespace-nowrap">Connexion</span>
-          </Link>
-          <Link to="/inscription" className="btn btn-primary">Commencer</Link>
+          </a>
+          <a href={getDashboardUrl("/inscription")} className="btn btn-primary">Commencer</a>
         </div>
 
         <button className="grid h-10 w-10 place-items-center rounded-md lg:hidden" onClick={() => setOpen((o) => !o)} aria-label="Menu">
@@ -104,8 +105,8 @@ export function Header() {
               </Link>
             ))}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <Link to="/connexion" onClick={() => setOpen(false)} className="btn border border-border">Connexion</Link>
-              <Link to="/inscription" onClick={() => setOpen(false)} className="btn btn-primary">Commencer</Link>
+              <a href={getDashboardUrl("/connexion")} onClick={() => setOpen(false)} className="btn border border-border">Connexion</a>
+              <a href={getDashboardUrl("/inscription")} onClick={() => setOpen(false)} className="btn btn-primary">Commencer</a>
             </div>
           </div>
         </div>

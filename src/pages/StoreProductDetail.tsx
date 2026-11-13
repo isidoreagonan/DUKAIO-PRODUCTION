@@ -39,7 +39,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import ProductReviewsSection from "@/components/store/ProductReviewsSection";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
-import { getStoreSubdomain, getStoreUrl } from "@/lib/subdomain";
+import { getStoreSubdomain, getStoreUrl, getBuyerPortalUrl } from "@/lib/subdomain";
 
 interface Profile {
   id: string;
@@ -333,12 +333,12 @@ const StoreProductDetail = () => {
             <Link to={homePath} className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-xs text-gray-600">Boutique</Button>
             </Link>
-            <Link to="/buyer-login">
+            <a href={getBuyerPortalUrl("/mes-achats")}>
               <Button variant="outline" size="sm" className="text-xs gap-1.5 border-gray-200">
                 <ShoppingBag className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Mes Achats</span>
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </header>
