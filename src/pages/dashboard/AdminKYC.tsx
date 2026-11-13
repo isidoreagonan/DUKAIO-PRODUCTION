@@ -322,7 +322,7 @@ const AdminKYC = () => {
                   )}
                   {selected.selfie_url && (
                     <div>
-                      <p className="text-xs text-muted-foreground mb-1">Selfie</p>
+                      <p className="text-xs text-muted-foreground mb-1 font-semibold">Selfie avec pièce en main</p>
                       <a href={selected.selfie_url} target="_blank" rel="noreferrer">
                         <img src={selected.selfie_url} alt="Selfie" className="rounded-lg border w-full h-32 object-cover" />
                       </a>

@@ -30,6 +30,7 @@ import {
   FileText,
   Eye,
   Info,
+  Camera,
 } from "lucide-react";
 
 type DocumentType = "cni" | "passeport" | "autre";
@@ -41,6 +42,7 @@ interface KYCVerification {
   document_type: string;
   document_front_url: string;
   document_back_url: string | null;
+  selfie_url: string | null;
   status: "pending" | "approved" | "rejected";
   rejection_reason: string | null;
   submitted_at: string;
@@ -80,6 +82,8 @@ export default function DashboardKYC() {
   const [frontPreview, setFrontPreview] = useState<string | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
   const [backPreview, setBackPreview] = useState<string | null>(null);
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
 
   // Auto calculate age from birthDate
@@ -129,6 +133,7 @@ export default function DashboardKYC() {
         setDocumentNumber(data.document_number || "");
         setFrontPreview(data.document_front_url || null);
         setBackPreview(data.document_back_url || null);
+        setSelfiePreview(data.selfie_url || null);
       }
     } catch (err) {
       console.error("Failed to load KYC status:", err);
@@ -167,7 +172,22 @@ export default function DashboardKYC() {
     reader.readAsDataURL(file);
   };
 
-  const uploadFileToStorage = async (file: File, side: "front" | "back"): Promise<string> => {
+  const handleSelfieFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Le selfie dépasse la taille maximale autorisée (10 Mo)");
+      return;
+    }
+
+    setSelfieFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setSelfiePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadFileToStorage = async (file: File, side: "front" | "back" | "selfie"): Promise<string> => {
     if (!user) throw new Error("Utilisateur non connecté");
 
     const fileExt = file.name.split(".").pop() || "jpg";
@@ -231,6 +251,7 @@ export default function DashboardKYC() {
     // Documents check
     const existingFront = verification?.document_front_url;
     const existingBack = verification?.document_back_url;
+    const existingSelfie = verification?.selfie_url;
 
     if (!frontFile && !existingFront) {
       toast.error("Veuillez importer la face Recto (avant) de votre pièce d'identité.");
@@ -242,24 +263,35 @@ export default function DashboardKYC() {
       return;
     }
 
+    if (!selfieFile && !existingSelfie) {
+      toast.error("Veuillez importer votre selfie avec votre document en main.");
+      return;
+    }
+
     setSubmitting(true);
-    setUploadProgress(20);
+    setUploadProgress(15);
 
     try {
       let finalFrontUrl = existingFront || "";
       let finalBackUrl = documentType === "passeport" ? null : (existingBack || null);
+      let finalSelfieUrl = existingSelfie || "";
 
       if (frontFile) {
-        setUploadProgress(40);
+        setUploadProgress(35);
         finalFrontUrl = await uploadFileToStorage(frontFile, "front");
       }
 
       if (backFile && documentType !== "passeport") {
-        setUploadProgress(70);
+        setUploadProgress(65);
         finalBackUrl = await uploadFileToStorage(backFile, "back");
       }
 
-      setUploadProgress(85);
+      if (selfieFile) {
+        setUploadProgress(85);
+        finalSelfieUrl = await uploadFileToStorage(selfieFile, "selfie");
+      }
+
+      setUploadProgress(95);
 
       const payload = {
         user_id: user.id,
@@ -275,6 +307,7 @@ export default function DashboardKYC() {
         document_number: documentNumber.trim(),
         document_front_url: finalFrontUrl,
         document_back_url: finalBackUrl,
+        selfie_url: finalSelfieUrl,
         status: "pending",
         rejection_reason: null,
         submitted_at: new Date().toISOString(),
@@ -306,6 +339,7 @@ export default function DashboardKYC() {
       setIsEditing(false);
       setFrontFile(null);
       setBackFile(null);
+      setSelfieFile(null);
     } catch (err: any) {
       console.error("KYC submission error:", err);
       toast.error(err?.message || "Erreur lors de la soumission de vos documents");
@@ -942,6 +976,79 @@ export default function DashboardKYC() {
                       Seule la page d'identité principale (avec photo et données) est requise. Aucune face verso n'est nécessaire.
                     </p>
                   </div>
+                )}
+              </div>
+
+              {/* Selfie avec le document en main */}
+              <div className="space-y-3 pt-5 border-t border-border/60">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-6 w-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                      <Camera className="h-3.5 w-3.5" />
+                    </div>
+                    <Label className="text-xs font-bold text-foreground">
+                      Selfie avec votre document en main <span className="text-destructive">*</span>
+                    </Label>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-medium">Requis pour tous les types de documents</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-xs text-foreground/90 flex items-start gap-3">
+                  <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed">
+                    Tenez votre <strong>{documentType === "passeport" ? "passeport" : "pièce d'identité"}</strong> à côté de votre visage et prenez une photo bien éclairée. Votre visage et les écritures sur votre pièce doivent être tous deux parfaitement nets et lisibles (sans lunettes de soleil ni filtres).
+                  </p>
+                </div>
+
+                {selfiePreview ? (
+                  <div className="relative rounded-2xl border border-border overflow-hidden bg-slate-950/5 group h-56 flex items-center justify-center">
+                    <img
+                      src={selfiePreview}
+                      alt="Aperçu Selfie"
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <label className="cursor-pointer bg-white text-black px-3.5 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors shadow">
+                        Remplacer le selfie
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleSelfieFileChange}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelfieFile(null);
+                          setSelfiePreview(null);
+                        }}
+                        className="bg-destructive text-white p-2 rounded-lg hover:bg-destructive/90 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="border-2 border-dashed border-border hover:border-primary/60 rounded-2xl p-6 flex flex-col items-center justify-center gap-2.5 cursor-pointer bg-muted/20 hover:bg-muted/40 transition-all h-48">
+                    <div className="h-11 w-11 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                      <Camera className="h-5 w-5" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-foreground">
+                        Prendre ou importer mon selfie avec le document
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        Photo de vous tenant votre document à côté du visage (Max 10 Mo)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleSelfieFileChange}
+                    />
+                  </label>
                 )}
               </div>
             </div>
