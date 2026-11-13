@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -86,7 +87,7 @@ const AdminSupport = () => {
   const selectedConv = conversations.find((c) => c.id === selected);
 
   if (!isAdminUser(user?.email)) {
-    return <DashboardLayout><div className="text-center py-20 text-muted-foreground">Accès non autorisé</div></DashboardLayout>;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (

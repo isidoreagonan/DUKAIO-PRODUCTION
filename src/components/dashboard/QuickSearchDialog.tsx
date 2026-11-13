@@ -10,6 +10,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveStore } from "@/hooks/useActiveStore";
 import { useDukaioTheme } from "@/hooks/useDukaioTheme";
+import { isAdminUser } from "@/lib/admin";
 
 interface QuickSearchDialogProps {
   open: boolean;
@@ -22,7 +23,7 @@ export function QuickSearchDialog({ open, onOpenChange }: QuickSearchDialogProps
   const { user } = useAuth();
   const { activeStore } = useActiveStore();
   const { isDark, toggleTheme } = useDukaioTheme();
-  const isAdmin = user?.email === "isidoreagonan@gmail.com";
+  const isAdmin = isAdminUser(user?.email);
 
   const allPages = [
     { title: "Tableau de bord", group: "Général", url: "/dashboard", icon: LayoutDashboard },

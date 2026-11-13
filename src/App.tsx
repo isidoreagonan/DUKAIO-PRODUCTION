@@ -8,6 +8,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminProtectedRoute from "@/components/AdminProtectedRoute";
 import { dukaioSiteRoutes } from "@/dukaio-site/SiteRoutes";
 
 import SearchPage from "./pages/SearchPage";
@@ -182,14 +183,14 @@ const App = () => (
             <Route path="/dashboard/tools" element={<ProtectedRoute><DashboardTools /></ProtectedRoute>} />
             <Route path="/dashboard/nova" element={<ProtectedRoute><Nova /></ProtectedRoute>} />
 
-            {/* Espace Administration */}
-            <Route path="/dashboard/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-kyc" element={<ProtectedRoute><AdminKYC /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-withdrawals" element={<ProtectedRoute><AdminWithdrawals /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-support" element={<ProtectedRoute><AdminSupport /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-moderation" element={<ProtectedRoute><AdminModeration /></ProtectedRoute>} />
-            <Route path="/dashboard/admin-badges" element={<ProtectedRoute><AdminBadges /></ProtectedRoute>} />
+            {/* Espace Administration - STRICTEMENT RÉSERVÉ À isidoreagonan@gmail.com */}
+            <Route path="/dashboard/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+            <Route path="/dashboard/admin-kyc" element={<AdminProtectedRoute><AdminKYC /></AdminProtectedRoute>} />
+            <Route path="/dashboard/admin-users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+            <Route path="/dashboard/admin-withdrawals" element={<AdminProtectedRoute><AdminWithdrawals /></AdminProtectedRoute>} />
+            <Route path="/dashboard/admin-support" element={<AdminProtectedRoute><AdminSupport /></AdminProtectedRoute>} />
+            <Route path="/dashboard/admin-moderation" element={<AdminProtectedRoute><AdminModeration /></AdminProtectedRoute>} />
+            <Route path="/dashboard/admin-badges" element={<AdminProtectedRoute><AdminBadges /></AdminProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
