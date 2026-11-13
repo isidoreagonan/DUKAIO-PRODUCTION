@@ -38,7 +38,7 @@ export const DEFAULT_EXCHANGE_RATES: Record<string, number> = {
   EUR: 1 / 655.957,       // Official fixed peg: 0.00152449
   USD: 0.001687,          // 1 USD ≈ 592.7 XOF
   CDF: 3.91788,           // 1 XOF ≈ 3.918 CDF (e.g. 3 000 FCFA ≈ 11 754 CDF)
-  NGN: 2.26243,           // 1 XOF ≈ 2.262 NGN (e.g. 3 000 FCFA ≈ 6 787 NGN)
+  NGN: 2.33367,           // 1 XOF ≈ 2.3337 NGN (3 000 FCFA = 7 001 NGN, aligns with SaaSPay gateway clearing rate)
   ZMW: 0.03447,           // 1 XOF ≈ 0.0345 ZMW (e.g. 3 000 FCFA ≈ 103.4 ZMW)
   KES: 0.21981,           // 1 XOF ≈ 0.22 KES (e.g. 3 000 FCFA ≈ 659 KES)
   GHS: 0.01979,           // 1 XOF ≈ 0.0198 GHS
@@ -47,6 +47,12 @@ export const DEFAULT_EXCHANGE_RATES: Record<string, number> = {
   TZS: 4.44012,           // 1 XOF ≈ 4.440 TZS
   GBP: 0.001274,          // 1 GBP ≈ 785 XOF
   CAD: 0.002405,          // 1 CAD ≈ 416 XOF
+};
+
+// SaaSPay official gateway clearing rates must override generic open-market rates
+// so user previews on checkout always match SaaSPay's exact requested amount
+export const SAASPAY_GATEWAY_RATES: Record<string, number> = {
+  NGN: 2.33367, // 3 000 FCFA = 7 001 NGN baseline
 };
 
 // Country Code to Primary Currency Mapping
@@ -118,7 +124,7 @@ export async function getLiveExchangeRates(): Promise<Record<string, number>> {
     if (cached && Date.now() - ts < CACHE_TTL_MS) {
       const parsed = JSON.parse(cached);
       if (parsed && typeof parsed === "object" && parsed.USD) {
-        activeRates = { ...DEFAULT_EXCHANGE_RATES, ...parsed };
+        activeRates = { ...DEFAULT_EXCHANGE_RATES, ...parsed, ...SAASPAY_GATEWAY_RATES };
         return activeRates;
       }
     }
@@ -140,7 +146,7 @@ export async function getLiveExchangeRates(): Promise<Record<string, number>> {
       if (res.ok) {
         const data = await res.json();
         if (data?.rates && typeof data.rates === "object") {
-          activeRates = { ...DEFAULT_EXCHANGE_RATES, ...data.rates };
+          activeRates = { ...DEFAULT_EXCHANGE_RATES, ...data.rates, ...SAASPAY_GATEWAY_RATES };
           try {
             localStorage.setItem(FX_CACHE_KEY, JSON.stringify(activeRates));
             localStorage.setItem(FX_CACHE_TS_KEY, String(Date.now()));
@@ -356,6 +362,74 @@ export function useCurrency(userCountryCode?: string) {
     convert: (amountXof: number) => convertFromXOF(amountXof, currency, rates),
     format: (amount: number, curr?: string) => formatMoney(amount, curr || currency),
     formatDual: (amountXof: number) => formatDualPrice(amountXof, currency, rates),
+  };
+}
+
+export interface PaymentFeeBreakdown {
+  baseAmountLocal: number;      // e.g. 7 001 NGN or 3 000 FCFA
+  feeAmountLocal: number;       // e.g. 538 NGN or 317 NGN
+  totalAmountLocal: number;     // e.g. 7 539 NGN or 7 318 NGN
+  feePercentLabel: string;      // e.g. "Frais de passerelle & virement bancaire"
+  currency: string;
+}
+
+/**
+ * Transparent SaaSPay Add-On Fee Calculation
+ * Accurately models SaaSPay's "Mode de frais : Ajoutés (add-on)"
+ * so the price shown on DUKAIO matches the exact amount debited/requested by the gateway.
+ */
+export function calculateAddonFee(
+  baseAmountXof: number,
+  currencyCode: string,
+  methodId: string,
+  countryCode: string,
+  rates?: Record<string, number>
+): PaymentFeeBreakdown {
+  const isForeign = currencyCode !== "XOF" && currencyCode !== "XAF";
+  const baseLocal = isForeign
+    ? convertFromXOF(baseAmountXof, currencyCode, rates)
+    : baseAmountXof;
+
+  let feeAmount = 0;
+  let feeLabel = "Frais de transaction";
+
+  const cc = (countryCode || "").toLowerCase();
+  const m = (methodId || "").toLowerCase();
+
+  if (cc === "ng") {
+    if (m === "bank") {
+      // Nigerian Bank Transfer via Korapay on SaaSPay:
+      // SaaSPay gateway fee (4.528%) + Korapay dynamic virtual account fee (221 NGN)
+      feeAmount = Math.round(baseLocal * 0.04528 + 221);
+      feeLabel = "Frais passerelle & virement";
+    } else if (m === "card") {
+      // SaaSPay Card client fee (4.528%)
+      feeAmount = Math.round(baseLocal * 0.04528);
+      feeLabel = "Frais de carte (Add-on)";
+    } else if (m === "crypto") {
+      feeAmount = Math.round(baseLocal * 0.02);
+      feeLabel = "Frais de réseau crypto";
+    }
+  } else {
+    // For other countries in SaaSPay add-on mode:
+    if (m === "card") {
+      feeAmount = Math.round(baseLocal * 0.045);
+      feeLabel = "Frais de carte (Add-on)";
+    } else if (m === "crypto") {
+      feeAmount = Math.round(baseLocal * 0.02);
+      feeLabel = "Frais de réseau crypto";
+    } else {
+      feeAmount = 0;
+      feeLabel = "Frais de transaction";
+    }
+  }
+
+  return {
+    baseAmountLocal: baseLocal,
+    feeAmountLocal: feeAmount,
+    totalAmountLocal: baseLocal + feeAmount,
+    feePercentLabel: feeLabel,
+    currency: currencyCode,
   };
 }
 
