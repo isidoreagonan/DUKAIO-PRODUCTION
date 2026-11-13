@@ -310,7 +310,6 @@ const PAYOUT_COUNTRY_DATA: Array<{ code: string; name: string; dial: string; cur
   { code: "cg", name: "Congo Brazzaville", dial: "+242", currency: "XAF", placeholder: "06 000 00 00" },
   { code: "cd", name: "RD Congo", dial: "+243", currency: "CDF", placeholder: "081 000 00 00" },
   { code: "ne", name: "Niger", dial: "+227", currency: "XOF", placeholder: "90 00 00 00" },
-  { code: "ng", name: "Nigéria", dial: "+234", currency: "NGN", placeholder: "080 0000 0000" },
   { code: "gh", name: "Ghana", dial: "+233", currency: "GHS", placeholder: "024 000 0000" },
   { code: "gn", name: "Guinée", dial: "+224", currency: "GNF", placeholder: "620 00 00 00" },
   { code: "ke", name: "Kenya", dial: "+254", currency: "KES", placeholder: "0700 000000" },
@@ -318,10 +317,7 @@ const PAYOUT_COUNTRY_DATA: Array<{ code: string; name: string; dial: string; cur
   { code: "ug", name: "Ouganda", dial: "+256", currency: "UGX", placeholder: "077 000 0000" },
   { code: "tz", name: "Tanzanie", dial: "+255", currency: "TZS", placeholder: "075 000 0000" },
   { code: "zm", name: "Zambie", dial: "+260", currency: "ZMW", placeholder: "097 000 0000" },
-  { code: "mw", name: "Malawi", dial: "+265", currency: "MWK", placeholder: "099 000 0000" },
-  { code: "mz", name: "Mozambique", dial: "+258", currency: "MZN", placeholder: "84 000 0000" },
   { code: "sl", name: "Sierra Leone", dial: "+232", currency: "SLL", placeholder: "76 000 000" },
-  { code: "us", name: "États-Unis (Banque)", dial: "+1", currency: "USD", placeholder: "Routing & Account Number" },
 ];
 
 export const SAASPAY_PAYOUT_COUNTRIES: PayoutCountryConfig[] = PAYOUT_COUNTRY_DATA.map((c) => ({
@@ -332,6 +328,99 @@ export const SAASPAY_PAYOUT_COUNTRIES: PayoutCountryConfig[] = PAYOUT_COUNTRY_DA
 // Helper to resolve network metadata by its exact code
 export function getSaaSPayNetwork(code: string): SaaSPayNetworkItem | undefined {
   return SAASPAY_ACTIVE_NETWORKS.find((n) => n.code.toLowerCase() === code.toLowerCase());
+}
+
+export interface PayoutFeeCalculation {
+  payoutFee: number;
+  netPayout: number;
+  minThreshold: number;
+  ruleLabel: string;
+}
+
+/**
+ * Real-time SaaSPay payout / disbursement fee calculation
+ * Based on official SaaSPay pricing grid per operator and country
+ */
+export function calculatePayoutFee(
+  amountXof: number,
+  providerCode: string,
+  countryCode: string
+): PayoutFeeCalculation {
+  const code = (providerCode || "").toLowerCase();
+  const cc = (countryCode || "").toLowerCase();
+
+  let percent = 0.025;
+  let fixed = 50;
+  let minThreshold = 2000;
+  let label = "Frais opérateur Mobile Money";
+
+  if (code.startsWith("mtn_bj")) {
+    percent = 0.022; fixed = 50; minThreshold = 2000;
+    label = "MTN MoMo Bénin (2,2 % + 50 FCFA)";
+  } else if (code.startsWith("moov_bj")) {
+    percent = 0.027; fixed = 50; minThreshold = 2000;
+    label = "Moov Money Bénin (2,7 % + 50 FCFA)";
+  } else if (code.startsWith("celtiis_bj")) {
+    percent = 0.03; fixed = 50; minThreshold = 2000;
+    label = "Celtiis Cash Bénin (3 % + 50 FCFA)";
+  } else if (cc === "ci") {
+    percent = 0.032; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money Côte d'Ivoire (3,2 % + 50 FCFA)";
+  } else if (cc === "sn") {
+    percent = 0.037; fixed = 0; minThreshold = 1000;
+    label = "Mobile Money Sénégal (3,7 %)";
+  } else if (cc === "bf") {
+    percent = 0.032; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money Burkina (3,2 % + 50 FCFA)";
+  } else if (cc === "ml") {
+    percent = 0.025; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money Mali (2,5 % + 50 FCFA)";
+  } else if (cc === "tg") {
+    percent = 0.032; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money Togo (3,2 % + 50 FCFA)";
+  } else if (cc === "ne") {
+    percent = 0.045; fixed = 0; minThreshold = 5000;
+    label = "Airtel Niger (4,5 %)";
+  } else if (cc === "cm") {
+    // Cameroon fixed telecom fee is 700 XAF! Threshold 10 000 XAF to protect creators
+    percent = 0.01; fixed = 700; minThreshold = 10000;
+    label = "Mobile Money Cameroun (1 % + 700 XAF télécom)";
+  } else if (cc === "ga") {
+    percent = 0.037; fixed = 100; minThreshold = 3000;
+    label = "Mobile Money Gabon (3,7 % + 100 XAF)";
+  } else if (cc === "cg") {
+    percent = 0.025; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money Congo (2,5 % + 50 XAF)";
+  } else if (cc === "cd") {
+    percent = 0.032; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money RDC (3,2 % + 50 FCFA)";
+  } else if (cc === "gh") {
+    percent = 0.03; fixed = 0; minThreshold = 2000;
+    label = "Mobile Money Ghana (3 %)";
+  } else if (cc === "ke") {
+    percent = 0.03; fixed = 40; minThreshold = 2000;
+    label = "M-Pesa Kenya (3 % + 40 KES)";
+  } else if (cc === "rw") {
+    percent = 0.022; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money Rwanda (2,2 % + 50 RWF)";
+  } else if (cc === "zm") {
+    percent = 0.03; fixed = 30; minThreshold = 2000;
+    label = "Mobile Money Zambie (3 % + 30 ZMW)";
+  } else {
+    percent = 0.025; fixed = 50; minThreshold = 2000;
+    label = "Mobile Money (2,5 % + 50 FCFA)";
+  }
+
+  const rawFee = Math.round(amountXof * percent + fixed);
+  const payoutFee = amountXof > 0 ? Math.min(amountXof, rawFee) : 0;
+  const netPayout = Math.max(0, amountXof - payoutFee);
+
+  return {
+    payoutFee,
+    netPayout,
+    minThreshold,
+    ruleLabel: label,
+  };
 }
 
 // -----------------------------------------------------------------------------

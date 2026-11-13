@@ -21,6 +21,7 @@ import {
   SAASPAY_PAYOUT_COUNTRIES,
   SAASPAY_METHODS,
   getSaaSPayNetwork,
+  calculatePayoutFee,
 } from "@/data/saaspayProviders";
 import { isAdminUser } from "@/lib/admin";
 
@@ -245,13 +246,20 @@ export default function Wallet() {
         .eq("user_id", user.id)
         .order("is_default", { ascending: false });
 
-      // 6. Fetch wallet_transactions
+      // 6. Fetch wallet_transactions (recent 30 for UI list)
       const { data: txList } = await supabase
         .from("wallet_transactions")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(30);
+
+      // 7. Fetch all withdrawal transactions to ensure 100% accurate financial reconciliation
+      const { data: allWithdrawalTxs } = await supabase
+        .from("wallet_transactions")
+        .select("amount, status, type")
+        .eq("user_id", user.id)
+        .eq("type", "withdrawal");
 
       // Calculations
       const totalNetEarned = (completedOrders || []).reduce((acc, o) => {
@@ -260,9 +268,16 @@ export default function Wallet() {
       }, 0);
 
       // All withdrawals that were initiated and not cancelled/rejected must be deducted
-      const totalActiveWithdrawn = (userWithdrawals || [])
+      const withdrawnFromTable = (userWithdrawals || [])
         .filter((w) => w.status !== "rejected" && w.status !== "failed" && w.status !== "cancelled")
         .reduce((acc, w) => acc + Number(w.amount || 0), 0);
+
+      // Also reconcile completed withdrawals logged directly in wallet_transactions
+      const withdrawnFromTx = (allWithdrawalTxs || [])
+        .filter((t) => t.status === "completed" || t.status === "validé" || t.status === "valide" || t.status === "processing")
+        .reduce((acc, t) => acc + Math.abs(Number(t.amount || 0)), 0);
+
+      const totalActiveWithdrawn = Math.max(withdrawnFromTable, withdrawnFromTx);
 
       const realAvailable = Math.max(0, totalNetEarned - totalActiveWithdrawn);
       let currentBal = Number(uw?.balance_fcfa ?? 0);
@@ -369,11 +384,29 @@ export default function Wallet() {
     }
   }, [searchParams, navigate]);
 
-  // Handle Amount validation
+  // Selected Wallet & Operator Metadata
+  const activeSelectedWallet = useMemo(() => {
+    return (
+      savedWallets.find((w) => w.id === selectedWalletId) ||
+      savedWallets.find((w) => w.is_default) ||
+      savedWallets[0]
+    );
+  }, [savedWallets, selectedWalletId]);
+
+  // Handle Amount validation and Dynamic Payout Telecom Fee Calculation
   const numericAmount = parseFloat(withdrawAmount) || 0;
+
+  const payoutFeeCalc = useMemo(() => {
+    if (!activeSelectedWallet) {
+      return { payoutFee: 0, netPayout: numericAmount, minThreshold: 2000, ruleLabel: "" };
+    }
+    return calculatePayoutFee(numericAmount, activeSelectedWallet.provider_code, activeSelectedWallet.country);
+  }, [numericAmount, activeSelectedWallet]);
+
+  const minRequiredAmount = payoutFeeCalc.minThreshold || 2000;
   const isAmountTooHigh = numericAmount > balanceFcfa;
-  const isAmountTooLow = numericAmount > 0 && numericAmount < 200;
-  const isAmountValid = numericAmount >= 200 && numericAmount <= balanceFcfa;
+  const isAmountTooLow = numericAmount > 0 && numericAmount < minRequiredAmount;
+  const isAmountValid = numericAmount >= minRequiredAmount && numericAmount <= balanceFcfa;
 
   // Percentage quick shortcuts
   const applyPercent = (pct: number) => {
@@ -383,9 +416,8 @@ export default function Wallet() {
   };
 
   const withdrawalCountry = useMemo(() => {
-    const sw = savedWallets.find((w) => w.id === selectedWalletId) || savedWallets.find((w) => w.is_default) || savedWallets[0];
-    return sw ? sw.country.toLowerCase() : "bj";
-  }, [selectedWalletId, savedWallets]);
+    return activeSelectedWallet ? activeSelectedWallet.country.toLowerCase() : "bj";
+  }, [activeSelectedWallet]);
 
   const withdrawalCurrency = useMemo(() => {
     return getCurrencyForCountry(withdrawalCountry);
@@ -406,7 +438,7 @@ export default function Wallet() {
       if (isAmountTooHigh) {
         toast.error(`Solde insuffisant. Vous disposez de ${formatFmt(balanceFcfa)} FCFA.`);
       } else if (isAmountTooLow) {
-        toast.error("Montant minimum de retrait : 200 FCFA");
+        toast.error(`Montant minimum de retrait : ${formatFmt(minRequiredAmount)} FCFA pour protéger votre compte des frais fixes opérateur.`);
       } else {
         toast.error("Veuillez saisir un montant valide");
       }
@@ -1101,29 +1133,45 @@ export default function Wallet() {
               {isAmountTooLow && (
                 <p className="mt-1.5 text-xs text-amber-500 font-medium flex items-center gap-1">
                   <AlertCircle className="h-3.5 w-3.5" />
-                  Montant minimum requis : 200 FCFA
+                  Montant minimum requis : {formatFmt(minRequiredAmount)} FCFA (Ce seuil vous protège contre les frais fixes opérateur).
                 </p>
               )}
 
-              {numericAmount >= 200 && withdrawalCurrency !== "XOF" && withdrawalCurrency !== "XAF" && (
+              {numericAmount >= minRequiredAmount && withdrawalCurrency !== "XOF" && withdrawalCurrency !== "XAF" && (
                 <div className="mt-2.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/40 p-2.5 text-xs flex items-center justify-between text-blue-900 dark:text-blue-200 font-semibold">
                   <span>💡 Contre-valeur reçue sur votre compte :</span>
                   <span className="font-mono text-sm font-black text-blue-700 dark:text-blue-300">
-                    ≈ {formatMoney(convertFromXOF(numericAmount, withdrawalCurrency), withdrawalCurrency)}
+                    ≈ {formatMoney(convertFromXOF(payoutFeeCalc.netPayout, withdrawalCurrency), withdrawalCurrency)}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Fee Transparency Box */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-3 space-y-1.5 text-xs">
+            {/* Realtime Operator Fee Transparency Box */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                <span>Montant débité de votre solde :</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {numericAmount > 0 ? `${formatFmt(numericAmount)} FCFA` : "0 FCFA"}
+                </span>
+              </div>
               <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Frais de plateforme DUKAIO :</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">0 FCFA (Gratuit)</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">0 FCFA (Offert)</span>
               </div>
-              <div className="flex justify-between text-slate-900 dark:text-white font-bold pt-1 border-t border-slate-200 dark:border-slate-800">
-                <span>Montant transféré :</span>
-                <span>{numericAmount > 0 ? `${formatFmt(numericAmount)} FCFA` : "0 FCFA"}</span>
+              {numericAmount > 0 && payoutFeeCalc.payoutFee > 0 && (
+                <div className="flex justify-between text-slate-600 dark:text-slate-400">
+                  <span>Frais de transfert réseau ({payoutFeeCalc.ruleLabel}) :</span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">
+                    -{formatFmt(payoutFeeCalc.payoutFee)} FCFA
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between text-slate-900 dark:text-white font-bold pt-2 border-t border-slate-200 dark:border-slate-800 text-[13px]">
+                <span>Montant net versé sur votre compte :</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-mono text-sm">
+                  {numericAmount > 0 ? `${formatFmt(payoutFeeCalc.netPayout)} FCFA` : "0 FCFA"}
+                </span>
               </div>
             </div>
           </div>
@@ -1139,7 +1187,9 @@ export default function Wallet() {
                   <Loader2 className="h-4 w-4 animate-spin" /> Traitement...
                 </span>
               ) : (
-                "Confirmer le retrait"
+                numericAmount > 0 && isAmountValid
+                  ? `Confirmer le retrait de ${formatFmt(payoutFeeCalc.netPayout)} FCFA`
+                  : "Confirmer le retrait"
               )}
             </Button>
           </DialogFooter>

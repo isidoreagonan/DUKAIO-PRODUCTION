@@ -106,7 +106,18 @@ Deno.serve(async (req) => {
         0
       );
 
-      const realAvailable = Math.max(0, totalEarnedNet - totalDisbursed);
+      const { data: allWithdrawalTxs } = await service
+        .from("wallet_transactions")
+        .select("amount, status")
+        .eq("user_id", user.id)
+        .eq("type", "withdrawal");
+
+      const disbursedFromTx = (allWithdrawalTxs || [])
+        .filter((t: any) => t.status === "completed" || t.status === "validé" || t.status === "valide" || t.status === "processing")
+        .reduce((sum: number, t: any) => sum + Math.abs(Number(t.amount || 0)), 0);
+
+      const realDisbursed = Math.max(totalDisbursed, disbursedFromTx);
+      const realAvailable = Math.max(0, totalEarnedNet - realDisbursed);
       if (realAvailable > available) {
         available = realAvailable;
         await service.from("user_wallets").upsert({
