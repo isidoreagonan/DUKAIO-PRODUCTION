@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { CountrySelect } from "@/components/ui/CountrySelect";
 import { toast } from "sonner";
 import {
   Shield,
@@ -634,18 +635,12 @@ export default function DashboardKYC() {
                   <Label htmlFor="birthCountry" className="text-xs font-semibold text-foreground">
                     Pays de naissance <span className="text-destructive">*</span>
                   </Label>
-                  <select
+                  <CountrySelect
                     id="birthCountry"
                     value={birthCountry}
-                    onChange={(e) => setBirthCountry(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    {countries.map((c) => (
-                      <option key={c.code} value={c.name}>
-                        {c.flag} {c.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(name) => setBirthCountry(name)}
+                    placeholder="Sélectionnez votre pays de naissance"
+                  />
                 </div>
 
                 {/* Nationalité */}
@@ -661,6 +656,39 @@ export default function DashboardKYC() {
                     required
                     className="rounded-xl h-11"
                   />
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-muted-foreground mr-1">Suggestions rapides :</span>
+                    {[
+                      { label: "Béninoise", code: "bj" },
+                      { label: "Ivoirienne", code: "ci" },
+                      { label: "Sénégalaise", code: "sn" },
+                      { label: "Togolaise", code: "tg" },
+                      { label: "Camerounaise", code: "cm" },
+                      { label: "Malienne", code: "ml" },
+                      { label: "Burkinabè", code: "bf" },
+                      { label: "Congolaise", code: "cd" },
+                      { label: "Gabonaise", code: "ga" },
+                      { label: "Française", code: "fr" },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setNationality(item.label)}
+                        className={`text-[11px] px-2 py-0.5 rounded-lg border flex items-center gap-1.5 transition-colors ${
+                          nationality === item.label
+                            ? "bg-primary/10 border-primary text-primary font-semibold"
+                            : "bg-muted/40 border-border text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <img
+                          src={`https://flagcdn.com/w20/${item.code}.png`}
+                          alt={item.label}
+                          className="h-2.5 w-3.5 rounded-[1px] object-cover"
+                        />
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
