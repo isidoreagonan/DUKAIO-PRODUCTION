@@ -6,13 +6,15 @@
     <script>
       (function() {
         try {
-          var saved = localStorage.getItem('dukaio-theme');
-          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          if (saved === 'dark' || (!saved && prefersDark)) {
-            document.documentElement.classList.add('dark');
-          } else {
-            document.documentElement.classList.remove('dark');
+          var path = window.location.pathname || '';
+          if (path.startsWith('/dashboard')) {
+            var saved = localStorage.getItem('dukaio-theme');
+            if (saved === 'dark') {
+              document.documentElement.classList.add('dark');
+              return;
+            }
           }
+          document.documentElement.classList.remove('dark');
         } catch (e) {}
       })();
     </script>

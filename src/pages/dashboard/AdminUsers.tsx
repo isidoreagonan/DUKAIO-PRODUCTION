@@ -151,7 +151,7 @@ const AdminUsers = () => {
             placeholder="Rechercher par nom, email, téléphone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 rounded-xl bg-card border-border text-foreground placeholder:text-muted-foreground shadow-2xs focus-visible:ring-primary/20"
+            className="pl-10 rounded-xl bg-white dark:bg-[#151C2B] border-[#E2E8F0] dark:border-[#263043] text-foreground placeholder:text-muted-foreground shadow-2xs focus-visible:ring-primary/20"
           />
         </div>
 
@@ -163,7 +163,7 @@ const AdminUsers = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground text-sm bg-card rounded-2xl border border-border">
+              <div className="text-center py-10 text-muted-foreground text-sm bg-white dark:bg-[#151C2B] rounded-2xl border border-[#E2E8F0] dark:border-[#263043]">
                 Aucun utilisateur trouvé
               </div>
             ) : (
@@ -186,7 +186,7 @@ const AdminUsers = () => {
                     className={`w-full text-left p-3.5 sm:p-4 rounded-2xl border transition-all duration-200 cursor-pointer ${
                       isSelected
                         ? "border-primary bg-primary/10 text-foreground shadow-md ring-1 ring-primary/30"
-                        : "border-border/80 hover:border-primary/40 hover:bg-muted/40 bg-card text-card-foreground shadow-2xs"
+                        : "border-[#E2E8F0] dark:border-[#263043] hover:border-primary/40 hover:bg-slate-50 dark:hover:bg-[#1E2536] bg-white dark:bg-[#151C2B] text-foreground shadow-2xs"
                     }`}
                   >
                     <div className="flex items-center gap-3.5">
@@ -215,19 +215,19 @@ const AdminUsers = () => {
           {/* User detail + events */}
           <div className="lg:col-span-2">
             {!selectedUserId ? (
-              <div className="flex flex-col items-center justify-center py-32 text-muted-foreground bg-card/60 rounded-3xl border border-dashed border-border">
+              <div className="flex flex-col items-center justify-center py-32 text-muted-foreground bg-white/60 dark:bg-[#151C2B]/60 rounded-3xl border border-dashed border-[#E2E8F0] dark:border-[#263043]">
                 <Users className="h-12 w-12 text-muted-foreground/60 mb-4" />
                 <p className="font-medium text-sm">Sélectionnez un utilisateur pour voir ses détails complets</p>
               </div>
             ) : loadingDetails ? (
-              <div className="flex flex-col items-center justify-center py-32 bg-card rounded-3xl border border-border shadow-sm">
+              <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-[#151C2B] rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4"></div>
                 <p className="text-muted-foreground font-medium animate-pulse text-sm">Chargement des données...</p>
               </div>
             ) : userDetails ? (
               <div className="space-y-6">
                 {/* Header Profile */}
-                <div className="bg-card rounded-3xl p-6 md:p-8 border border-border shadow-sm relative overflow-hidden">
+                <div className="bg-white dark:bg-[#151C2B] rounded-3xl p-6 md:p-8 border border-[#E2E8F0] dark:border-[#263043] shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none text-foreground">
                     <Activity className="h-32 w-32" />
                   </div>
@@ -260,19 +260,19 @@ const AdminUsers = () => {
 
                       <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 text-xs font-medium">
                         {userDetails.profile.phone && (
-                          <div className="flex items-center gap-1.5 text-foreground bg-muted/50 px-3 py-1.5 rounded-xl border border-border/70">
+                          <div className="flex items-center gap-1.5 text-foreground bg-slate-100 dark:bg-[#1E2536] px-3 py-1.5 rounded-xl border border-[#E2E8F0] dark:border-[#263043]">
                             <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                             <span>{userDetails.profile.phone}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-1.5 text-foreground bg-muted/50 px-3 py-1.5 rounded-xl border border-border/70">
+                        <div className="flex items-center gap-1.5 text-foreground bg-slate-100 dark:bg-[#1E2536] px-3 py-1.5 rounded-xl border border-[#E2E8F0] dark:border-[#263043]">
                           <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="flex items-center gap-1.5">
                             {getFlagImg(userDetails.profile.country_code, 14)}{" "}
                             {userDetails.profile.country_code || "N/A"}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-foreground bg-muted/50 px-3 py-1.5 rounded-xl border border-border/70">
+                        <div className="flex items-center gap-1.5 text-foreground bg-slate-100 dark:bg-[#1E2536] px-3 py-1.5 rounded-xl border border-[#E2E8F0] dark:border-[#263043]">
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                           <span>
                             Inscrit le{" "}
@@ -286,7 +286,7 @@ const AdminUsers = () => {
 
                 {/* KPI Stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="bg-card p-5 rounded-3xl border border-border shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
+                  <div className="bg-white dark:bg-[#151C2B] p-5 rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
                     <div className="h-10 w-10 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <DollarSign className="h-5 w-5" />
                     </div>
@@ -299,7 +299,7 @@ const AdminUsers = () => {
                     </p>
                   </div>
 
-                  <div className="bg-card p-5 rounded-3xl border border-border shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
+                  <div className="bg-white dark:bg-[#151C2B] p-5 rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
                     <div className="h-10 w-10 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <CreditCard className="h-5 w-5" />
                     </div>
@@ -309,7 +309,7 @@ const AdminUsers = () => {
                     </p>
                   </div>
 
-                  <div className="bg-card p-5 rounded-3xl border border-border shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
+                  <div className="bg-white dark:bg-[#151C2B] p-5 rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
                     <div className="h-10 w-10 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <Store className="h-5 w-5" />
                     </div>
@@ -319,7 +319,7 @@ const AdminUsers = () => {
                     </p>
                   </div>
 
-                  <div className="bg-card p-5 rounded-3xl border border-border shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
+                  <div className="bg-white dark:bg-[#151C2B] p-5 rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm flex flex-col items-center justify-center text-center group hover:border-primary/40 transition-colors">
                     <div className="h-10 w-10 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                       <Box className="h-5 w-5" />
                     </div>
@@ -333,7 +333,7 @@ const AdminUsers = () => {
                 {/* Stores & Products overview */}
                 {(userDetails.stores.length > 0 || userDetails.products.length > 0) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="bg-card rounded-3xl border border-border shadow-sm p-5">
+                    <div className="bg-white dark:bg-[#151C2B] rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm p-5">
                       <h3 className="font-bold text-foreground flex items-center gap-2 mb-4 text-base">
                         <Store className="h-5 w-5 text-purple-500" /> Boutiques
                       </h3>
@@ -344,9 +344,9 @@ const AdminUsers = () => {
                           {userDetails.stores.map((store: any) => (
                             <div
                               key={store.id}
-                              className="flex items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-border/80"
+                              className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-[#E2E8F0] dark:border-[#263043]"
                             >
-                              <div className="h-10 w-10 rounded-xl bg-background shadow-2xs border border-border flex items-center justify-center overflow-hidden shrink-0">
+                              <div className="h-10 w-10 rounded-xl bg-white dark:bg-[#151C2B] shadow-2xs border border-[#E2E8F0] dark:border-[#263043] flex items-center justify-center overflow-hidden shrink-0">
                                 {store.logo_url ? (
                                   <img src={store.logo_url} alt="" className="h-full w-full object-cover" />
                                 ) : (
@@ -370,7 +370,7 @@ const AdminUsers = () => {
                       )}
                     </div>
 
-                    <div className="bg-card rounded-3xl border border-border shadow-sm p-5">
+                    <div className="bg-white dark:bg-[#151C2B] rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm p-5">
                       <h3 className="font-bold text-foreground flex items-center gap-2 mb-4 text-base">
                         <Box className="h-5 w-5 text-orange-500" /> Produits Récents
                       </h3>
@@ -381,9 +381,9 @@ const AdminUsers = () => {
                           {userDetails.products.slice(0, 10).map((prod: any) => (
                             <div
                               key={prod.id}
-                              className="flex items-center gap-3 p-3 bg-muted/40 rounded-2xl border border-border/80"
+                              className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-[#E2E8F0] dark:border-[#263043]"
                             >
-                              <div className="h-10 w-10 rounded-xl bg-background shadow-2xs border border-border flex items-center justify-center overflow-hidden shrink-0">
+                              <div className="h-10 w-10 rounded-xl bg-white dark:bg-[#151C2B] shadow-2xs border border-[#E2E8F0] dark:border-[#263043] flex items-center justify-center overflow-hidden shrink-0">
                                 {prod.thumbnail_url ? (
                                   <img src={prod.thumbnail_url} alt="" className="h-full w-full object-cover" />
                                 ) : (
@@ -405,8 +405,8 @@ const AdminUsers = () => {
                 )}
 
                 {/* Events */}
-                <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
-                  <div className="p-5 border-b border-border bg-muted/30 flex items-center gap-2">
+                <div className="bg-white dark:bg-[#151C2B] rounded-3xl border border-[#E2E8F0] dark:border-[#263043] shadow-sm overflow-hidden">
+                  <div className="p-5 border-b border-[#E2E8F0] dark:border-[#263043] bg-slate-50 dark:bg-[#1E2536] flex items-center gap-2">
                     <Activity className="h-5 w-5 text-primary" />
                     <h3 className="font-bold text-foreground">Événements financiers</h3>
                   </div>
@@ -415,11 +415,11 @@ const AdminUsers = () => {
                       Aucun événement pour cet utilisateur
                     </div>
                   ) : (
-                    <div className="divide-y divide-border max-h-[500px] overflow-y-auto custom-scrollbar">
+                    <div className="divide-y divide-[#E2E8F0] dark:divide-[#263043] max-h-[500px] overflow-y-auto custom-scrollbar">
                       {userDetails.events.map((ev, i) => (
                         <div
                           key={i}
-                          className="flex items-center gap-4 px-6 py-4 hover:bg-muted/40 transition-colors"
+                          className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 dark:hover:bg-[#1E2536] transition-colors"
                         >
                           <div
                             className={`h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm ${

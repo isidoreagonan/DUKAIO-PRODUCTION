@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,6 +29,11 @@ export default function BuyerLogin() {
   const [customerName, setCustomerName] = useState("");
   const navigate = useNavigate();
 
+  // Force strict light mode on buyer portal
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   const handleSendOtp = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
@@ -41,9 +46,20 @@ export default function BuyerLogin() {
       const { data, error } = await supabase.functions.invoke("send-buyer-otp", {
         body: { email: cleanEmail },
       });
-      if (error) throw error;
-      if (data?.error) {
-        toast.error(data.error);
+      if (error) {
+        let msg = "Erreur lors de l'envoi du code.";
+        try {
+          if ((error as any).context && typeof (error as any).context.json === "function") {
+            const body = await (error as any).context.json();
+            if (body?.error) msg = body.error;
+          }
+        } catch {}
+        toast.error(msg);
+        setLoading(false);
+        return;
+      }
+      if (data?.error || data?.success === false) {
+        toast.error(data.error || "Impossible d'envoyer le code.");
         setLoading(false);
         return;
       }
@@ -69,9 +85,20 @@ export default function BuyerLogin() {
       const { data, error } = await supabase.functions.invoke("verify-buyer-otp", {
         body: { email: email.trim().toLowerCase(), code: cleanOtp },
       });
-      if (error) throw error;
-      if (data?.error) {
-        toast.error(data.error);
+      if (error) {
+        let msg = "Code de vérification invalide ou expiré.";
+        try {
+          if ((error as any).context && typeof (error as any).context.json === "function") {
+            const body = await (error as any).context.json();
+            if (body?.error) msg = body.error;
+          }
+        } catch {}
+        toast.error(msg);
+        setLoading(false);
+        return;
+      }
+      if (data?.error || data?.success === false) {
+        toast.error(data.error || "Code de vérification incorrect.");
         setLoading(false);
         return;
       }

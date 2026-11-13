@@ -136,7 +136,7 @@ const AdminModeration = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    className="rounded-xl border border-border/60 bg-card p-3 flex items-center gap-3"
+                    className="rounded-xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-3 flex items-center gap-3"
                   >
                     <div className="h-10 w-10 rounded-lg bg-secondary shrink-0 overflow-hidden">
                       {p.thumbnail_url && <img src={p.thumbnail_url} alt="" className="h-full w-full object-cover" />}
@@ -199,7 +199,7 @@ const AdminModeration = () => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.02 }}
-                    className="rounded-xl border border-border/60 bg-card p-3 flex items-center gap-3"
+                    className="rounded-xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-3 flex items-center gap-3"
                   >
                     <div className="h-10 w-10 rounded-lg bg-secondary shrink-0 overflow-hidden flex items-center justify-center">
                       {s.logo_url ? <img src={s.logo_url} alt="" className="h-full w-full object-cover" /> : <Store className="h-5 w-5 text-muted-foreground" />}

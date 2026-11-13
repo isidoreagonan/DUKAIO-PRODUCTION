@@ -113,7 +113,7 @@ const AdminSupport = () => {
                   key={c.id}
                   onClick={() => selectConversation(c.id)}
                   className={`w-full text-left p-3 rounded-xl border transition-colors ${
-                    selected === c.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 bg-card"
+                    selected === c.id ? "border-primary bg-primary/10" : "border-[#E2E8F0] dark:border-[#263043] hover:border-primary/30 bg-white dark:bg-[#151C2B]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -137,7 +137,7 @@ const AdminSupport = () => {
           </div>
 
           {/* Messages */}
-          <div className="lg:col-span-2 rounded-2xl border border-border/60 bg-card flex flex-col">
+          <div className="lg:col-span-2 rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] flex flex-col">
             {!selected ? (
               <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
                 Sélectionnez une conversation

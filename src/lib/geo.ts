@@ -13,7 +13,7 @@ const TIMEZONE_COUNTRY_MAP: Record<string, string> = {
   // Central & East Africa
   "Africa/Kinshasa": "cd",
   "Africa/Lubumbashi": "cd",
-  "Africa/Lagos": "ng",
+  "Africa/Lagos": "bj", // Default WAT (West Africa Time UTC+1) safely to Benin (XOF)
   "Africa/Nairobi": "ke",
   "Africa/Lusaka": "zm",
   "Africa/Kigali": "rw",

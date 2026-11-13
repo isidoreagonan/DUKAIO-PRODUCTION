@@ -158,7 +158,7 @@ const AdminKYC = () => {
               key={key}
               onClick={() => setFilter(key)}
               className={`p-4 rounded-xl border text-left transition-all ${
-                filter === key ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"
+                filter === key ? "border-primary bg-primary/10" : "border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] hover:border-primary/30"
               }`}
             >
               <p className="text-2xl font-bold text-foreground">{counts[key]}</p>
@@ -190,7 +190,7 @@ const AdminKYC = () => {
             Aucune demande trouvée
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-card overflow-hidden">
+          <div className="rounded-xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>

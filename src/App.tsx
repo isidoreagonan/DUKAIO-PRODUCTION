@@ -97,6 +97,27 @@ const ScrollToHashElement = () => {
   return null;
 };
 
+// Strict theme isolation: Dark mode ONLY on /dashboard routes, NEVER on public pages
+const ThemeRouteSync = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const isDashboard = pathname.startsWith("/dashboard");
+    if (!isDashboard) {
+      document.documentElement.classList.remove("dark");
+    } else {
+      const saved = localStorage.getItem("dukaio-theme");
+      if (saved === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, [pathname]);
+
+  return null;
+};
+
 const ConditionalSupportChatbot = () => {
   const { pathname } = useLocation();
   const isMarketing = pathname === "/" || pathname.startsWith("/produits") || pathname.startsWith("/legal") || pathname === "/connexion" || pathname === "/inscription" || pathname === "/reinitialiser-mot-de-passe";
@@ -110,6 +131,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <ThemeRouteSync />
         <AnalyticsWrapper />
         <ScrollToTop />
         <ScrollToHashElement />

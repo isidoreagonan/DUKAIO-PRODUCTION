@@ -129,7 +129,7 @@ const AdminDashboard = () => {
           <>
             {/* KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Activity className="h-4 w-4 text-blue-500" />
                   <span className="text-sm font-medium">Vues de pages</span>
@@ -137,7 +137,7 @@ const AdminDashboard = () => {
                 <p className="text-3xl font-bold">{stats.totalViews.toLocaleString()}</p>
               </motion.div>
               
-              <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Users className="h-4 w-4 text-indigo-500" />
                   <span className="text-sm font-medium">Visiteurs uniques</span>
@@ -145,7 +145,7 @@ const AdminDashboard = () => {
                 <p className="text-3xl font-bold">{stats.uniqueVisitors.toLocaleString()}</p>
               </motion.div>
               
-              <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Smartphone className="h-4 w-4 text-purple-500" />
                   <span className="text-sm font-medium">Taux Mobile</span>
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
                 <p className="text-3xl font-bold">{stats.mobileRate}%</p>
               </motion.div>
 
-              <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <div className="flex items-center gap-2 text-muted-foreground mb-2">
                   <TrendingUp className="h-4 w-4 text-emerald-500" />
                   <span className="text-sm font-medium">Conversion (Onboarding)</span>
@@ -165,7 +165,7 @@ const AdminDashboard = () => {
             {/* Middle Section: Chart & Funnel */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Traffic Chart */}
-              <motion.div custom={4} initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-2 rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={4} initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-2 rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6">Trafic & Visiteurs</h3>
                 <div className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
@@ -189,7 +189,7 @@ const AdminDashboard = () => {
               </motion.div>
 
               {/* Conversion Funnel */}
-              <motion.div custom={5} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col">
+              <motion.div custom={5} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm flex flex-col">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-6">Entonnoir de conversion</h3>
                 
                 <div className="space-y-6 flex-1">
@@ -233,7 +233,7 @@ const AdminDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
               {/* Devices */}
-              <motion.div custom={6} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm flex flex-col items-center">
+              <motion.div custom={6} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm flex flex-col items-center">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2 self-start">Appareils</h3>
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -255,7 +255,7 @@ const AdminDashboard = () => {
               </motion.div>
 
               {/* Referrers */}
-              <motion.div custom={7} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={7} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Sources de Trafic</h3>
                 <div className="space-y-4">
                   {stats.topReferrers.map((ref, i) => (
@@ -273,7 +273,7 @@ const AdminDashboard = () => {
               </motion.div>
 
               {/* Pages */}
-              <motion.div custom={8} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={8} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Pages les plus visitées</h3>
                 <div className="space-y-4">
                   {stats.topPages.map((page, i) => (
@@ -291,7 +291,7 @@ const AdminDashboard = () => {
               </motion.div>
 
               {/* Browsers */}
-              <motion.div custom={9} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <motion.div custom={9} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Navigateurs</h3>
                 <div className="space-y-4">
                   {stats.topBrowsers.map((b, i) => (
@@ -304,7 +304,7 @@ const AdminDashboard = () => {
               </motion.div>
 
               {/* Countries */}
-              <motion.div custom={10} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-border bg-card p-5 shadow-sm md:col-span-2">
+              <motion.div custom={10} initial="hidden" animate="visible" variants={cardVariants} className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-5 shadow-sm md:col-span-2">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Pays & Localisation</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {stats.topCountries.map((c, i) => (

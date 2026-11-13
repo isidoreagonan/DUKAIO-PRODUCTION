@@ -18,7 +18,8 @@ export function useDukaioTheme() {
   const applyTheme = useCallback((newTheme: ThemeMode) => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    if (newTheme === "dark") {
+    const isDashboard = typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard");
+    if (newTheme === "dark" && isDashboard) {
       root.classList.add("dark");
     } else {
       root.classList.remove("dark");

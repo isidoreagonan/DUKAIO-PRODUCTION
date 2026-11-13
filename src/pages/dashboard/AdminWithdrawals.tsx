@@ -126,7 +126,7 @@ const AdminWithdrawals = () => {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className="rounded-2xl border border-border/60 bg-card p-4"
+                className="rounded-2xl border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] p-4 shadow-2xs"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex-1 min-w-0">

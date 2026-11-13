@@ -13,8 +13,8 @@ Deno.serve(async (req) => {
   try {
     const { email, code } = await req.json();
     if (!email || !code) {
-      return new Response(JSON.stringify({ error: "Email et code requis" }), {
-        status: 400,
+      return new Response(JSON.stringify({ success: false, error: "Email et code requis" }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 1. Verify OTP
+    // 1. Verify OTP in buyer_otps
     const { data: otp } = await admin
       .from("buyer_otps")
       .select("*")
@@ -39,8 +39,8 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!otp) {
-      return new Response(JSON.stringify({ error: "Code invalide ou expiré" }), {
-        status: 401,
+      return new Response(JSON.stringify({ success: false, error: "Code de vérification invalide ou expiré." }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -61,77 +61,65 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!customer) {
-      return new Response(JSON.stringify({ error: "Client non trouvé" }), {
-        status: 404,
+      return new Response(JSON.stringify({ success: false, error: "Aucun profil acheteur trouvé pour cet email." }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 3. Generate magic link to obtain session
+    // 3. Optional: Attempt to establish Supabase Auth session
     let authUserId = customer.auth_id as string | null;
+    let sessionPayload: any = null;
 
-    let { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email: normalizedEmail,
-    });
-
-    // If user does not exist in auth.users yet, create them and retry generateLink
-    if (linkErr && (linkErr.message?.toLowerCase().includes("user not found") || (linkErr as any).status === 404)) {
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email: normalizedEmail,
-        email_confirm: true,
-        user_metadata: { buyer: true, name: customer.name },
-      });
-      if (createErr || !created?.user) {
-        console.error("createUser error:", createErr);
-        return new Response(JSON.stringify({ error: "Impossible de créer le compte acheteur: " + createErr?.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      authUserId = created.user.id;
-
-      const retryRes = await admin.auth.admin.generateLink({
+    try {
+      let { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
         type: "magiclink",
         email: normalizedEmail,
       });
-      linkData = retryRes.data;
-      linkErr = retryRes.error;
+
+      if (linkErr && (linkErr.message?.toLowerCase().includes("user not found") || (linkErr as any).status === 404)) {
+        const { data: created } = await admin.auth.admin.createUser({
+          email: normalizedEmail,
+          email_confirm: true,
+          user_metadata: { buyer: true, name: customer.name },
+        });
+        if (created?.user) {
+          authUserId = created.user.id;
+          const retryRes = await admin.auth.admin.generateLink({
+            type: "magiclink",
+            email: normalizedEmail,
+          });
+          linkData = retryRes.data;
+          linkErr = retryRes.error;
+        }
+      }
+
+      if (!linkErr && linkData?.properties?.hashed_token) {
+        if (linkData?.user?.id) {
+          authUserId = linkData.user.id;
+        }
+        if (authUserId && customer.auth_id !== authUserId) {
+          await admin.from("customers").update({ auth_id: authUserId }).eq("id", customer.id);
+        }
+
+        const anonClient = createClient(SUPABASE_URL, ANON_KEY);
+        const { data: verifyData } = await anonClient.auth.verifyOtp({
+          type: "magiclink",
+          token_hash: linkData.properties.hashed_token,
+        });
+
+        if (verifyData?.session) {
+          sessionPayload = {
+            access_token: verifyData.session.access_token,
+            refresh_token: verifyData.session.refresh_token,
+          };
+        }
+      }
+    } catch (authErr) {
+      console.warn("Non-fatal session establishment issue:", authErr);
     }
 
-    if (linkErr || !linkData?.properties?.hashed_token) {
-      console.error("generateLink error:", linkErr);
-      return new Response(JSON.stringify({ error: linkErr?.message || "Impossible de générer la session" }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (linkData?.user?.id) {
-      authUserId = linkData.user.id;
-    }
-
-    // Link customer.auth_id if not yet set
-    if (authUserId && customer.auth_id !== authUserId) {
-      await admin.from("customers").update({ auth_id: authUserId }).eq("id", customer.id);
-    }
-
-    // 4. Use anon client to verify token hash and obtain active JWT session
-    const anonClient = createClient(SUPABASE_URL, ANON_KEY);
-    const { data: verifyData, error: verifyErr } = await anonClient.auth.verifyOtp({
-      type: "magiclink",
-      token_hash: linkData.properties.hashed_token,
-    });
-
-    if (verifyErr || !verifyData?.session) {
-      console.error("verifyOtp error:", verifyErr);
-      return new Response(JSON.stringify({ error: verifyErr?.message || "Impossible d'établir la session" }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // 5. Get orders enriched
+    // 4. Get customer orders
     const { data: orders } = await admin
       .from("orders")
       .select("id, amount, status, created_at, product_id, store_owner_id")
@@ -162,17 +150,15 @@ Deno.serve(async (req) => {
       success: true,
       customer: { ...customer, auth_id: authUserId },
       orders: enrichedOrders,
-      session: {
-        access_token: verifyData.session.access_token,
-        refresh_token: verifyData.session.refresh_token,
-      },
+      session: sessionPayload,
     }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error("Fatal verify-buyer-otp error:", error);
-    return new Response(JSON.stringify({ error: error.message || "Erreur serveur" }), {
-      status: 500,
+    return new Response(JSON.stringify({ success: false, error: error.message || "Erreur de validation du code" }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

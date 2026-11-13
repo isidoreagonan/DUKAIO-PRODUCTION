@@ -16,7 +16,6 @@ import { useTrackingPixels, trackEvent } from "@/hooks/useTrackingPixels";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
-import { useCurrency, formatMoney, convertFromXOF } from "@/lib/currency";
 
 interface StoreInfo {
   id: string;
@@ -74,8 +73,12 @@ type StoreTab = "products" | "about" | "contact" | "reviews";
 
 const StorePage = () => {
   const { slug } = useParams();
-  const { currency, rates } = useCurrency();
   const [store, setStore] = useState<StoreInfo | null>(null);
+
+  // Always force clean light mode on public store pages
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
   const [ownerProfile, setOwnerProfile] = useState<OwnerProfile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
@@ -446,7 +449,7 @@ const StorePage = () => {
                               {reviewsEnabled ? "Avis publics sur la boutique" : "Produit numérique"}
                             </span>
                           </div>
-                          <div className="flex items-baseline gap-2 flex-wrap">
+                          <div className="flex items-baseline gap-2">
                             {product.original_price && product.original_price > product.price && (
                               <span className="text-xs line-through text-gray-300">
                                 {product.original_price.toLocaleString()} FCFA
@@ -455,11 +458,6 @@ const StorePage = () => {
                             <span className="text-base font-bold" style={{ color: brandColor }}>
                               {product.price.toLocaleString()} FCFA
                             </span>
-                            {currency !== "XOF" && currency !== "XAF" && (
-                              <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                                ≈ {formatMoney(convertFromXOF(product.price, currency, rates), currency)}
-                              </span>
-                            )}
                           </div>
                           {showBuyBtn && (
                             <button

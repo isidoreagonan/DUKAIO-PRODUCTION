@@ -37,7 +37,6 @@ import { toast } from "sonner";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import ProductReviewsSection from "@/components/store/ProductReviewsSection";
-import { useCurrency } from "@/lib/currency";
 
 interface Profile {
   id: string;
@@ -104,6 +103,11 @@ const StoreProductDetail = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const { grade: ownerBadge, expiresAt: ownerBadgeExpires } = useUserBadge(profile?.id);
+
+  // Always force clean light mode on public store pages
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -202,8 +206,6 @@ const StoreProductDetail = () => {
   const brandColor = storeInfo?.brand_color || "#2563EB";
   const storeName = storeInfo?.name || profile.display_name || "Boutique";
   const logoUrl = storeInfo?.logo_url || profile.store_logo_url || profile.avatar_url || "";
-  const { formatDual } = useCurrency();
-  const dualPrice = formatDual(product.price);
   const discount = product.original_price && product.original_price > product.price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : null;
@@ -343,18 +345,13 @@ const StoreProductDetail = () => {
                 <h1 className="text-2xl font-extrabold text-gray-900 leading-tight">
                   {product.title}
                 </h1>
-                <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+                <div className="mt-3 flex items-baseline gap-2">
                   <span className="text-2xl font-extrabold" style={{ color: brandColor }}>
                     {product.price.toLocaleString()} FCFA
                   </span>
                   {product.original_price && product.original_price > product.price && (
                     <span className="text-sm text-gray-400 line-through">
                       {product.original_price.toLocaleString()} FCFA
-                    </span>
-                  )}
-                  {dualPrice.isLocalDifferent && dualPrice.localPriceFormatted && (
-                    <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                      ≈ {dualPrice.localPriceFormatted}
                     </span>
                   )}
                 </div>
@@ -573,12 +570,6 @@ const StoreProductDetail = () => {
                       </span>
                     )}
                   </div>
-                  {dualPrice.isLocalDifferent && dualPrice.localPriceFormatted && (
-                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                      <span>≈ {dualPrice.localPriceFormatted}</span>
-                      <span className="text-[10px] text-blue-600/80 font-normal">({dualPrice.targetCurrency} en direct)</span>
-                    </div>
-                  )}
                   <div className="flex items-center gap-3 mt-3">
                     {discount && (
                       <span className="rounded-full bg-emerald-100/80 px-2.5 py-1 text-xs font-bold text-emerald-700">
@@ -784,11 +775,6 @@ const StoreProductDetail = () => {
               <span className="text-xl font-extrabold text-gray-900 leading-none">{product.price.toLocaleString()}</span>
               <span className="text-sm font-bold text-gray-900">FCFA</span>
             </div>
-            {dualPrice.isLocalDifferent && dualPrice.localPriceFormatted && (
-              <span className="text-[10px] font-bold text-blue-600 leading-none mt-0.5">
-                ≈ {dualPrice.localPriceFormatted}
-              </span>
-            )}
           </div>
           <button
             className="flex-1 text-sm font-bold py-3.5 rounded-xl text-white transition-all active:scale-[0.98] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"

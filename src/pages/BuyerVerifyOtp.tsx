@@ -22,6 +22,7 @@ const BuyerVerifyOtp = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    document.documentElement.classList.remove("dark");
     const session = getBuyerSession();
     if (!session) {
       navigate("/buyer-login", { replace: true });
@@ -60,8 +61,21 @@ const BuyerVerifyOtp = () => {
       const { data, error } = await supabase.functions.invoke("verify-buyer-otp", {
         body: { email, code: otp.trim() },
       });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
+      if (error) {
+        let msg = "Code invalide ou expiré";
+        try {
+          if ((error as any).context && typeof (error as any).context.json === "function") {
+            const body = await (error as any).context.json();
+            if (body?.error) msg = body.error;
+          }
+        } catch {}
+        toast.error(msg);
+        return;
+      }
+      if (data?.error || data?.success === false) {
+        toast.error(data.error || "Code invalide");
+        return;
+      }
       setBuyerOtpVerified();
       toast.success("Vérification réussie !");
       navigate("/mes-achats", { replace: true });

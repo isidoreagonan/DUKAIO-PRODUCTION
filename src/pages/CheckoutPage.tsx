@@ -248,9 +248,11 @@ export default function CheckoutPage() {
       root.classList.remove("dark");
     }
     return () => {
-      const savedTheme = localStorage.getItem("dukaio-theme");
-      if (savedTheme === "dark") {
-        root.classList.add("dark");
+      if (window.location.pathname.startsWith("/dashboard")) {
+        const savedTheme = localStorage.getItem("dukaio-theme");
+        if (savedTheme === "dark") {
+          root.classList.add("dark");
+        }
       }
     };
   }, []);
