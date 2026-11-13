@@ -1225,6 +1225,122 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                {/* Promo Code Box (Mobile & Form Column) */}
+                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3.5 transition-all">
+                  {!appliedPromo ? (
+                    <div>
+                      {!showPromoBox ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPromoBox(true);
+                            setPromoError(null);
+                          }}
+                          className="flex w-full items-center justify-between text-xs font-bold text-[#0F172A] hover:text-primary transition-colors"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Tag className="h-3.5 w-3.5 text-primary" />
+                            <span>{t("Vous avez un code promo ?", "Have a promo code?")}</span>
+                          </span>
+                          <span className="text-xs font-bold text-primary underline underline-offset-2">
+                            {t("Ajouter un code", "Add code")}
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="space-y-2 animate-in fade-in-50">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5">
+                              <Tag className="h-3.5 w-3.5 text-[#0F172A]" />
+                              <span>{t("Code promo", "Promo code")}</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowPromoBox(false);
+                                setPromoError(null);
+                              }}
+                              className="text-[11px] text-[#64748B] hover:text-[#0F172A]"
+                            >
+                              {t("Fermer", "Close")}
+                            </button>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={promoInput}
+                              onChange={(e) => {
+                                setPromoInput(e.target.value.toUpperCase());
+                                setPromoError(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleApplyPromo();
+                                }
+                              }}
+                              placeholder="Ex: PROMO20"
+                              className="flex-1 h-10 px-3 rounded-lg border border-[#CBD5E1] bg-white text-xs font-mono font-bold uppercase tracking-wider text-[#0F172A] placeholder:text-[#94A3B8] outline-none focus:border-[#0F172A] transition-colors"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              disabled={promoLoading || !promoInput.trim()}
+                              onClick={handleApplyPromo}
+                              className="h-10 px-4 rounded-lg bg-[#0F172A] text-white text-xs font-bold hover:bg-[#1E293B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shrink-0"
+                            >
+                              {promoLoading ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <span>{t("Appliquer", "Apply")}</span>
+                              )}
+                            </button>
+                          </div>
+
+                          {promoError && (
+                            <p className="text-[11px] font-medium text-red-600 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3 shrink-0" />
+                              <span>{promoError}</span>
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-2xs shrink-0">
+                          <Check className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-black tracking-wider text-[#0F172A]">
+                              {appliedPromo.code}
+                            </span>
+                            <span className="rounded px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                              {appliedPromo.discount_percent
+                                ? `-${appliedPromo.discount_percent}%`
+                                : `-${fmt(Number(appliedPromo.discount_amount || 0))} FCFA`}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-emerald-700 font-medium">
+                            {t("Code promo appliqué", "Promo code applied")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleRemovePromo}
+                        className="p-1 rounded-lg text-[#64748B] hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title={t("Retirer ce code", "Remove code")}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {/* Submit Button */}
                 <button
                   type="button"

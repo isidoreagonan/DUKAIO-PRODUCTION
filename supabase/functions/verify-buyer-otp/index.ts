@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
 
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || "sb_publishable_CEN7ofi1v_Bik6IMGmvHMQ_pyNU-0a9";
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const normalizedEmail = email.toLowerCase().trim();
@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       .from("buyer_otps")
       .select("*")
       .eq("email", normalizedEmail)
-      .eq("code", code)
+      .eq("code", String(code).trim())
       .eq("used", false)
       .gte("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
@@ -67,62 +67,65 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Get or create Supabase auth user for this email
+    // 3. Generate magic link to obtain session
     let authUserId = customer.auth_id as string | null;
 
-    if (!authUserId) {
-      // Try to find existing auth user
-      const { data: existing } = await admin.auth.admin.listUsers({
-        page: 1,
-        perPage: 200,
-      });
-      const found = existing?.users?.find((u: any) => (u.email || "").toLowerCase() === normalizedEmail);
-      if (found) {
-        authUserId = found.id;
-      } else {
-        const { data: created, error: createErr } = await admin.auth.admin.createUser({
-          email: normalizedEmail,
-          email_confirm: true,
-          user_metadata: { buyer: true, name: customer.name },
-        });
-        if (createErr || !created.user) {
-          console.error("createUser error:", createErr);
-          return new Response(JSON.stringify({ error: "Impossible de créer la session" }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        authUserId = created.user.id;
-      }
-
-      // Link customer.auth_id
-      await admin.from("customers").update({ auth_id: authUserId }).eq("id", customer.id);
-    }
-
-    // 4. Generate magic link, then verify token to obtain session
-    const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+    let { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: "magiclink",
       email: normalizedEmail,
     });
 
+    // If user does not exist in auth.users yet, create them and retry generateLink
+    if (linkErr && (linkErr.message?.toLowerCase().includes("user not found") || (linkErr as any).status === 404)) {
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email: normalizedEmail,
+        email_confirm: true,
+        user_metadata: { buyer: true, name: customer.name },
+      });
+      if (createErr || !created?.user) {
+        console.error("createUser error:", createErr);
+        return new Response(JSON.stringify({ error: "Impossible de créer le compte acheteur: " + createErr?.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      authUserId = created.user.id;
+
+      const retryRes = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: normalizedEmail,
+      });
+      linkData = retryRes.data;
+      linkErr = retryRes.error;
+    }
+
     if (linkErr || !linkData?.properties?.hashed_token) {
       console.error("generateLink error:", linkErr);
-      return new Response(JSON.stringify({ error: "Impossible de générer la session" }), {
+      return new Response(JSON.stringify({ error: linkErr?.message || "Impossible de générer la session" }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Use anon client to verify the OTP hash and obtain a session
+    if (linkData?.user?.id) {
+      authUserId = linkData.user.id;
+    }
+
+    // Link customer.auth_id if not yet set
+    if (authUserId && customer.auth_id !== authUserId) {
+      await admin.from("customers").update({ auth_id: authUserId }).eq("id", customer.id);
+    }
+
+    // 4. Use anon client to verify token hash and obtain active JWT session
     const anonClient = createClient(SUPABASE_URL, ANON_KEY);
     const { data: verifyData, error: verifyErr } = await anonClient.auth.verifyOtp({
       type: "magiclink",
       token_hash: linkData.properties.hashed_token,
     });
 
-    if (verifyErr || !verifyData.session) {
+    if (verifyErr || !verifyData?.session) {
       console.error("verifyOtp error:", verifyErr);
-      return new Response(JSON.stringify({ error: "Impossible d'établir la session" }), {
+      return new Response(JSON.stringify({ error: verifyErr?.message || "Impossible d'établir la session" }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -166,9 +169,9 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error) {
-    console.error("Error:", error);
-    return new Response(JSON.stringify({ error: "Erreur serveur" }), {
+  } catch (error: any) {
+    console.error("Fatal verify-buyer-otp error:", error);
+    return new Response(JSON.stringify({ error: error.message || "Erreur serveur" }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

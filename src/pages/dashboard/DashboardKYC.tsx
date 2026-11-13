@@ -426,17 +426,17 @@ export default function DashboardKYC() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
-              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+              <div className="p-4 rounded-2xl bg-muted/40 dark:bg-slate-900/70 border border-border/80">
                 <p className="text-muted-foreground font-medium text-[11px]">Titulaire validé</p>
                 <p className="font-bold text-foreground text-sm mt-0.5">{verification.full_name}</p>
               </div>
-              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+              <div className="p-4 rounded-2xl bg-muted/40 dark:bg-slate-900/70 border border-border/80">
                 <p className="text-muted-foreground font-medium text-[11px]">Document officiel</p>
                 <p className="font-bold text-foreground text-sm mt-0.5 capitalize">
                   {verification.document_type === "cni" ? "Carte d'Identité" : verification.document_type} • {verification.document_number}
                 </p>
               </div>
-              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+              <div className="p-4 rounded-2xl bg-muted/40 dark:bg-slate-900/70 border border-border/80">
                 <p className="text-muted-foreground font-medium text-[11px]">Validation DUKAIO</p>
                 <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm mt-0.5">
                   {verification.reviewed_at
@@ -507,17 +507,17 @@ export default function DashboardKYC() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border text-xs">
-              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+              <div className="p-4 rounded-2xl bg-muted/40 dark:bg-slate-900/70 border border-border/80">
                 <p className="text-muted-foreground font-medium text-[11px]">Nom complet</p>
                 <p className="font-bold text-foreground text-sm mt-0.5">{verification.full_name}</p>
               </div>
-              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+              <div className="p-4 rounded-2xl bg-muted/40 dark:bg-slate-900/70 border border-border/80">
                 <p className="text-muted-foreground font-medium text-[11px]">Document soumis</p>
                 <p className="font-bold text-foreground text-sm mt-0.5 capitalize">
                   {verification.document_type === "cni" ? "Carte d'identité" : verification.document_type} ({verification.document_number})
                 </p>
               </div>
-              <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+              <div className="p-4 rounded-2xl bg-muted/40 dark:bg-slate-900/70 border border-border/80">
                 <p className="text-muted-foreground font-medium text-[11px]">Date d'envoi</p>
                 <p className="font-bold text-foreground text-sm mt-0.5">
                   {new Date(verification.submitted_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
