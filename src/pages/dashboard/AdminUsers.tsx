@@ -378,26 +378,38 @@ const AdminUsers = () => {
                         <p className="text-sm text-muted-foreground italic">Aucun produit créé</p>
                       ) : (
                         <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                          {userDetails.products.slice(0, 10).map((prod: any) => (
-                            <div
-                              key={prod.id}
-                              className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-[#E2E8F0] dark:border-[#263043]"
-                            >
-                              <div className="h-10 w-10 rounded-xl bg-white dark:bg-[#151C2B] shadow-2xs border border-[#E2E8F0] dark:border-[#263043] flex items-center justify-center overflow-hidden shrink-0">
-                                {prod.thumbnail_url ? (
-                                  <img src={prod.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                  <Box className="h-5 w-5 text-muted-foreground" />
-                                )}
+                          {userDetails.products.slice(0, 10).map((prod: any) => {
+                            const firstStore = userDetails.stores[0];
+                            const prodSlug = firstStore?.slug || userDetails.profile.store_slug;
+                            const prodUrl = prodSlug ? `/store/${prodSlug}/${prod.id}` : `/product/${prod.id}`;
+                            return (
+                              <div
+                                key={prod.id}
+                                className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-[#1E2536] rounded-2xl border border-[#E2E8F0] dark:border-[#263043]"
+                              >
+                                <div className="h-10 w-10 rounded-xl bg-white dark:bg-[#151C2B] shadow-2xs border border-[#E2E8F0] dark:border-[#263043] flex items-center justify-center overflow-hidden shrink-0">
+                                  {prod.thumbnail_url ? (
+                                    <img src={prod.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                                  ) : (
+                                    <Box className="h-5 w-5 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <a
+                                    href={prodUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="font-bold text-sm text-foreground hover:text-primary hover:underline truncate block"
+                                  >
+                                    {prod.title}
+                                  </a>
+                                  <p className="text-xs font-semibold text-muted-foreground mt-0.5">
+                                    {prod.price.toLocaleString()} FCFA
+                                  </p>
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-sm text-foreground truncate">{prod.title}</p>
-                                <p className="text-xs font-semibold text-muted-foreground mt-0.5">
-                                  {prod.price.toLocaleString()} FCFA
-                                </p>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

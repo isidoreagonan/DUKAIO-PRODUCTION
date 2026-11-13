@@ -37,6 +37,7 @@ import { toast } from "sonner";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import ProductReviewsSection from "@/components/store/ProductReviewsSection";
+import { useCurrency } from "@/lib/currency";
 
 interface Profile {
   id: string;
@@ -103,6 +104,7 @@ const StoreProductDetail = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const { grade: ownerBadge, expiresAt: ownerBadgeExpires } = useUserBadge(profile?.id);
+  const { formatDual, countryCode } = useCurrency();
 
   // Always force clean light mode on public store pages
   useEffect(() => {
@@ -111,75 +113,132 @@ const StoreProductDetail = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: storeData } = await supabase
-        .from("stores")
-        .select("owner_id, brand_color, logo_url, name, footer_disclaimer")
-        .eq("slug", slug)
-        .eq("is_archived", false)
-        .maybeSingle();
+      try {
+        const rawSlug = slug ? decodeURIComponent(slug).trim() : "";
+        const cleanSlug = rawSlug.toLowerCase().replace(/\s+/g, "-");
+        const cleanProductId = (productId || "").trim().replace(/\s+/g, "-");
 
-      let ownerId: string | null = null;
+        // 1. Find store by slug or name
+        let { data: storeData } = await supabase
+          .from("stores")
+          .select("owner_id, brand_color, logo_url, name, footer_disclaimer")
+          .or(`slug.eq."${cleanSlug}",slug.eq."${rawSlug}"`)
+          .eq("is_archived", false)
+          .maybeSingle();
 
-      if (storeData) {
-        ownerId = storeData.owner_id;
-        setStoreInfo(storeData as StoreInfo);
-      }
+        if (!storeData && rawSlug) {
+          const { data: storeByName } = await supabase
+            .from("stores")
+            .select("owner_id, brand_color, logo_url, name, footer_disclaimer")
+            .ilike("name", rawSlug.replace(/-/g, " "))
+            .eq("is_archived", false)
+            .maybeSingle();
+          if (storeByName) storeData = storeByName;
+        }
 
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
-        .eq(storeData ? "id" : "store_slug", storeData ? storeData.owner_id : slug)
-        .single();
+        let ownerId: string | null = storeData?.owner_id || null;
+        if (storeData) {
+          setStoreInfo(storeData as StoreInfo);
+        }
 
-      if (!prof) { setNotFound(true); setLoading(false); return; }
-      setProfile(prof as Profile);
-      ownerId = prof.id;
+        // 2. Find profile
+        let prof: any = null;
+        if (ownerId) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
+            .eq("id", ownerId)
+            .maybeSingle();
+          prof = data;
+        } else {
+          const { data } = await supabase
+            .from("profiles")
+            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
+            .or(`store_slug.eq."${cleanSlug}",store_slug.eq."${rawSlug}"`)
+            .maybeSingle();
+          prof = data;
+          if (prof) ownerId = prof.id;
+        }
 
-      const { data: prod } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", productId)
-        .eq("creator_id", ownerId)
-        .eq("is_published", true)
-        .single();
+        // 3. Find product: try cleanProductId directly first
+        let prod: any = null;
+        const { data: directProd } = await supabase
+          .from("products")
+          .select("*")
+          .eq("id", cleanProductId)
+          .eq("is_published", true)
+          .maybeSingle();
 
-      if (!prod) { setNotFound(true); setLoading(false); return; }
-      setProduct(prod as Product);
+        if (directProd) {
+          prod = directProd;
+          if (!prof) {
+            const { data: creatorProf } = await supabase
+              .from("profiles")
+              .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
+              .eq("id", directProd.creator_id)
+              .maybeSingle();
+            if (creatorProf) {
+              prof = creatorProf;
+              ownerId = creatorProf.id;
+            }
+          }
+        } else if (ownerId) {
+          const { data: creatorProd } = await supabase
+            .from("products")
+            .select("*")
+            .eq("creator_id", ownerId)
+            .eq("is_published", true)
+            .maybeSingle();
+          prod = creatorProd;
+        }
 
-      trackEvent("ViewContent", {
-        content_name: (prod as Product).title,
-        content_ids: [productId],
-        content_type: "product",
-        value: (prod as Product).price,
-        currency: "XOF",
-      });
+        if (!prod || !prof) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
 
-      const { data: faqData } = await supabase
-        .from("product_faqs")
-        .select("question, answer")
-        .eq("product_id", productId)
-        .order("position");
-      if (faqData) setFaqs(faqData as any);
+        setProfile(prof as Profile);
+        setProduct(prod as Product);
 
-      if ((prod as Product).type === "course") {
-        const { data: lessonsData } = await supabase
-          .from("course_lessons")
-          .select("title, description, duration_minutes, position")
-          .eq("product_id", productId)
+        trackEvent("ViewContent", {
+          content_name: (prod as Product).title,
+          content_ids: [cleanProductId],
+          content_type: "product",
+          value: (prod as Product).price,
+          currency: "XOF",
+        });
+
+        const { data: faqData } = await supabase
+          .from("product_faqs")
+          .select("question, answer")
+          .eq("product_id", prod.id)
           .order("position");
-        if (lessonsData) setLessons(lessonsData as any);
+        if (faqData) setFaqs(faqData as any);
+
+        if ((prod as Product).type === "course") {
+          const { data: lessonsData } = await supabase
+            .from("course_lessons")
+            .select("title, description, duration_minutes, position")
+            .eq("product_id", prod.id)
+            .order("position");
+          if (lessonsData) setLessons(lessonsData as any);
+        }
+
+        const { data: related } = await supabase
+          .from("products")
+          .select("*")
+          .eq("creator_id", ownerId)
+          .eq("is_published", true)
+          .neq("id", prod.id)
+          .limit(4);
+        if (related) setRelatedProducts(related as Product[]);
+      } catch (e) {
+        console.error("Error loading product detail:", e);
+        setNotFound(true);
+      } finally {
+        setLoading(false);
       }
-
-      const { data: related } = await supabase
-        .from("products")
-        .select("*")
-        .eq("creator_id", ownerId)
-        .eq("is_published", true)
-        .neq("id", productId)
-        .limit(4);
-      if (related) setRelatedProducts(related as Product[]);
-
-      setLoading(false);
     };
     fetchData();
   }, [slug, productId]);
@@ -214,6 +273,7 @@ const StoreProductDetail = () => {
   const isBestseller = !hideSales && salesCount >= 10;
   const salesLimit = product.sales_limit || 0;
   const isSoldOut = salesLimit > 0 && salesCount >= salesLimit;
+  const dualPrice = product ? formatDual(product.price) : null;
 
   const handleShare = () => {
     if (navigator.share) {
@@ -234,7 +294,7 @@ const StoreProductDetail = () => {
       content_type: "product", value: product.price, currency: "XOF",
     });
     const storeRef = profile?.store_slug || slug;
-    const url = `/checkout/${product.id}${storeRef ? `?store=${encodeURIComponent(storeRef)}` : ""}`;
+    const url = `/checkout/${product.id}?store=${encodeURIComponent(storeRef || "")}&country=${countryCode}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -345,13 +405,18 @@ const StoreProductDetail = () => {
                 <h1 className="text-2xl font-extrabold text-gray-900 leading-tight">
                   {product.title}
                 </h1>
-                <div className="mt-3 flex items-baseline gap-2">
+                <div className="mt-3 flex items-baseline gap-2 flex-wrap">
                   <span className="text-2xl font-extrabold" style={{ color: brandColor }}>
                     {product.price.toLocaleString()} FCFA
                   </span>
                   {product.original_price && product.original_price > product.price && (
                     <span className="text-sm text-gray-400 line-through">
                       {product.original_price.toLocaleString()} FCFA
+                    </span>
+                  )}
+                  {dualPrice?.isLocalDifferent && dualPrice?.localPriceFormatted && (
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
+                      ≈ {dualPrice.localPriceFormatted}
                     </span>
                   )}
                 </div>
@@ -570,6 +635,11 @@ const StoreProductDetail = () => {
                       </span>
                     )}
                   </div>
+                  {dualPrice?.isLocalDifferent && dualPrice?.localPriceFormatted && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-bold">
+                      <span>≈ {dualPrice.localPriceFormatted}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 mt-3">
                     {discount && (
                       <span className="rounded-full bg-emerald-100/80 px-2.5 py-1 text-xs font-bold text-emerald-700">

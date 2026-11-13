@@ -271,10 +271,11 @@ export function formatDualPrice(
   }
 
   const converted = convertFromXOF(amountXof, targetCurrency, rates);
-  const localFormatted = formatMoney(converted, targetCurrency);
+  const formattedConverted = formatMoney(converted, targetCurrency);
+  const localFormatted = targetCurrency === "USD" ? `${formattedConverted} USD` : formattedConverted;
 
-  // If visitor is in USA / Europe / RDC / Nigeria, show local price prominently with XOF reference
-  const fullBadge = `${baseFormatted} (~${localFormatted})`;
+  // If visitor is in USA / Europe / RDC / Zambia, show local price with XOF reference
+  const fullBadge = `${baseFormatted} (≈ ${localFormatted})`;
 
   return {
     basePriceFormatted: baseFormatted,
@@ -306,6 +307,19 @@ export function useCurrency(userCountryCode?: string) {
           setLoading(false);
         }
       });
+
+      const handleGeo = (e: Event) => {
+        const customEvent = e as CustomEvent<{ countryCode: string }>;
+        if (customEvent.detail?.countryCode && isMounted) {
+          setCountryCode(customEvent.detail.countryCode);
+        }
+      };
+      window.addEventListener("dukaio_geo_change", handleGeo);
+
+      return () => {
+        isMounted = false;
+        window.removeEventListener("dukaio_geo_change", handleGeo);
+      };
     } else {
       setCountryCode(userCountryCode);
       setLoading(false);

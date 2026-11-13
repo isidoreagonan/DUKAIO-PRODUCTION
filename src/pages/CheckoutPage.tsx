@@ -193,6 +193,7 @@ export default function CheckoutPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const storeSlug = params.get("store");
+  const queryCountry = params.get("country");
 
   const [lang, setLang] = useState<"fr" | "en">("fr");
   const [product, setProduct] = useState<Product | null>(null);
@@ -201,9 +202,26 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form states
-  const [country, setCountry] = useState<SaaSPayCountry>(SAASPAY_COUNTRIES[0]);
-  const [method, setMethod] = useState<MethodId>("mtn");
+  // Form states: auto-select country from query params, session storage, or default
+  const resolveInitialCountry = (): SaaSPayCountry => {
+    if (queryCountry) {
+      const matchQuery = SAASPAY_COUNTRIES.find((c) => c.code.toLowerCase() === queryCountry.toLowerCase());
+      if (matchQuery) return matchQuery;
+    }
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("dukaio_geo_country_code") || localStorage.getItem("dukaio_geo_country_code");
+      if (saved) {
+        const matchSaved = SAASPAY_COUNTRIES.find((c) => c.code.toLowerCase() === saved.toLowerCase());
+        if (matchSaved) return matchSaved;
+      }
+    }
+    return SAASPAY_COUNTRIES[0];
+  };
+
+  const initialC = resolveInitialCountry();
+  const [country, setCountry] = useState<SaaSPayCountry>(initialC);
+  const [userManuallySelectedCountry, setUserManuallySelectedCountry] = useState(Boolean(queryCountry));
+  const [method, setMethod] = useState<MethodId>(initialC.methods[0] || "mtn");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -257,11 +275,12 @@ export default function CheckoutPage() {
     };
   }, []);
 
-  // Detect visitor's country on mount and auto-select optimal payment methods
+  // Detect visitor's country on mount and on live network/VPN change
   useEffect(() => {
     let isMounted = true;
+
     detectUserCountry().then((geo) => {
-      if (!isMounted) return;
+      if (!isMounted || userManuallySelectedCountry) return;
       const matched = SAASPAY_COUNTRIES.find((c) => c.code.toLowerCase() === geo.countryCode.toLowerCase());
       if (matched) {
         setCountry(matched);
@@ -270,17 +289,33 @@ export default function CheckoutPage() {
         }
       }
     });
+
+    const handleGeoChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ countryCode: string }>;
+      if (customEvent.detail?.countryCode && isMounted && !userManuallySelectedCountry) {
+        const matched = SAASPAY_COUNTRIES.find((c) => c.code.toLowerCase() === customEvent.detail.countryCode.toLowerCase());
+        if (matched) {
+          setCountry(matched);
+          if (matched.methods.length > 0) {
+            setMethod(matched.methods[0]);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("dukaio_geo_change", handleGeoChange);
     return () => {
       isMounted = false;
+      window.removeEventListener("dukaio_geo_change", handleGeoChange);
     };
-  }, []);
+  }, [userManuallySelectedCountry]);
 
   // Automatically select first method when country changes
   useEffect(() => {
-    if (country.methods.length > 0) {
+    if (country.methods.length > 0 && !country.methods.includes(method)) {
       setMethod(country.methods[0]);
     }
-  }, [country]);
+  }, [country, method]);
 
   // Load product from Supabase
   useEffect(() => {
@@ -1131,7 +1166,13 @@ export default function CheckoutPage() {
                       {t("Adapte les réseaux Mobile Money disponibles", "Adapts available Mobile Money networks")}
                     </span>
                   </div>
-                  <CountrySelect value={country} onChange={setCountry} />
+                  <CountrySelect
+                    value={country}
+                    onChange={(c) => {
+                      setUserManuallySelectedCountry(true);
+                      setCountry(c);
+                    }}
+                  />
                 </div>
 
                 {/* Customer Information (Name & Email) */}

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Star, Users, ShoppingCart, CheckCircle } from "lucide-react";
@@ -6,6 +7,7 @@ import Footer from "@/components/Footer";
 import { products, formatPrice } from "@/data/products";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 const categoryLabels: Record<string, string> = {
   course: "Cours",
@@ -19,6 +21,32 @@ const ProductDetail = () => {
   const product = products.find((p) => p.id === id);
   const { addToCart, items } = useCart();
   const inCart = product ? items.some((i) => i.product.id === product.id) : false;
+
+  useEffect(() => {
+    if (!product && id) {
+      supabase
+        .from("products")
+        .select("id, creator_id")
+        .eq("id", id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            supabase
+              .from("stores")
+              .select("slug")
+              .eq("owner_id", data.creator_id)
+              .maybeSingle()
+              .then(({ data: st }) => {
+                if (st?.slug) {
+                  window.location.replace(`/store/${st.slug}/${data.id}`);
+                } else {
+                  window.location.replace(`/checkout/${data.id}`);
+                }
+              });
+          }
+        });
+    }
+  }, [id, product]);
 
   if (!product) {
     return (

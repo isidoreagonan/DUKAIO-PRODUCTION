@@ -239,7 +239,7 @@ export default function DashboardProducts() {
   };
 
   const handleCopyLink = (p: Product) => {
-    const slug = profile?.store_slug;
+    const slug = (profile?.store_slug || "").trim().toLowerCase().replace(/\s+/g, "-");
     const url = slug
       ? `${window.location.origin}/store/${slug}/${p.id}`
       : `${window.location.origin}/products/${p.id}`;
@@ -248,7 +248,7 @@ export default function DashboardProducts() {
   };
 
   const handleShare = (p: Product) => {
-    const slug = profile?.store_slug;
+    const slug = (profile?.store_slug || "").trim().toLowerCase().replace(/\s+/g, "-");
     const url = slug
       ? `${window.location.origin}/store/${slug}/${p.id}`
       : `${window.location.origin}/products/${p.id}`;
@@ -563,7 +563,7 @@ export default function DashboardProducts() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => {
-                                const slug = profile?.store_slug;
+                                const slug = (profile?.store_slug || "").trim().toLowerCase().replace(/\s+/g, "-");
                                 if (slug) {
                                   window.open(`/store/${slug}/${p.id}`, "_blank");
                                 } else {

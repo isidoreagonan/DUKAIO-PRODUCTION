@@ -16,6 +16,7 @@ import { useTrackingPixels, trackEvent } from "@/hooks/useTrackingPixels";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
+import { useCurrency } from "@/lib/currency";
 
 interface StoreInfo {
   id: string;
@@ -87,88 +88,115 @@ const StorePage = () => {
   const [notFound, setNotFound] = useState(false);
   
   const [activeTab, setActiveTab] = useState<StoreTab>("products");
+  const { formatDual, countryCode } = useCurrency();
 
   useEffect(() => {
     const fetchStore = async () => {
-      const { data: storeData } = await supabase
-        .from("stores")
-        .select("*")
-        .eq("slug", slug)
-        .eq("is_archived", false)
-        .maybeSingle();
+      try {
+        const rawSlug = slug ? decodeURIComponent(slug).trim() : "";
+        const cleanSlug = rawSlug.toLowerCase().replace(/\s+/g, "-");
 
-      if (storeData) {
-        setStore(storeData as any);
-        const { data: prof } = await supabase
+        let { data: storeData } = await supabase
+          .from("stores")
+          .select("*")
+          .or(`slug.eq."${cleanSlug}",slug.eq."${rawSlug}"`)
+          .eq("is_archived", false)
+          .maybeSingle();
+
+        if (!storeData && rawSlug) {
+          const { data: storeByName } = await supabase
+            .from("stores")
+            .select("*")
+            .ilike("name", rawSlug.replace(/-/g, " "))
+            .eq("is_archived", false)
+            .maybeSingle();
+          if (storeByName) storeData = storeByName;
+        }
+
+        if (storeData) {
+          setStore(storeData as any);
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("id, display_name, bio, avatar_url, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
+            .eq("id", storeData.owner_id)
+            .maybeSingle();
+          if (prof) setOwnerProfile(prof as OwnerProfile);
+
+          // Track visit asynchronously without blocking
+          (async () => {
+            let userCountry = null;
+            try {
+              const res = await fetch("https://api.country.is/");
+              if (res.ok) {
+                const data = await res.json();
+                userCountry = data.country;
+              }
+            } catch (e) {}
+
+            supabase.from("store_visits").insert({
+              store_owner_id: storeData.owner_id,
+              page_path: `/store/${slug}`,
+              referrer: document.referrer || null,
+              user_agent: navigator.userAgent || null,
+              device_type: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
+              country: userCountry
+            } as any).then();
+          })();
+
+          const { data: prods } = await supabase
+            .from("products")
+            .select("*")
+            .eq("creator_id", storeData.owner_id)
+            .eq("is_published", true)
+            .or("hide_from_store.is.null,hide_from_store.eq.false")
+            .order("created_at", { ascending: false });
+          setProducts((prods as Product[]) || []);
+          setLoading(false);
+          return;
+        }
+
+        // Fallback: profiles by store_slug or display_name
+        let { data: prof } = await supabase
           .from("profiles")
-          .select("id, display_name, bio, avatar_url, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
-          .eq("id", storeData.owner_id)
-          .single();
-        if (prof) setOwnerProfile(prof as OwnerProfile);
+          .select("*")
+          .or(`store_slug.eq."${cleanSlug}",store_slug.eq."${rawSlug}"`)
+          .maybeSingle();
 
-        // Track visit asynchronously without blocking
-        (async () => {
-          let countryCode = null;
-          try {
-            const res = await fetch("https://ipapi.co/json/");
-            if (res.ok) {
-              const data = await res.json();
-              countryCode = data.country_code; // e.g., "FR", "CI"
-            }
-          } catch (e) {
-            console.error("Failed to fetch country", e);
-          }
+        if (!prof && rawSlug) {
+          const { data: profByName } = await supabase
+            .from("profiles")
+            .select("*")
+            .ilike("display_name", rawSlug.replace(/-/g, " "))
+            .maybeSingle();
+          if (profByName) prof = profByName;
+        }
 
-          supabase.from("store_visits").insert({
-            store_owner_id: storeData.owner_id,
-            page_path: `/store/${slug}`,
-            referrer: document.referrer || null,
-            user_agent: navigator.userAgent || null,
-            device_type: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? "Mobile" : "Desktop",
-            country: countryCode
-          } as any).then();
-        })();
+        if (!prof) { setNotFound(true); setLoading(false); return; }
+        const p = prof as any;
+        setStore({
+          id: p.id, owner_id: p.id, name: p.display_name || "Boutique", slug: p.store_slug || cleanSlug,
+          description: p.store_description, logo_url: p.store_logo_url, banner_url: p.store_banner_url,
+          brand_color: p.store_brand_color, font: p.store_font, corner_style: p.store_corner_style,
+          button_animation: p.store_button_animation, show_buy_button: p.store_show_buy_button,
+          show_featured: p.store_show_featured, product_layout: p.store_product_layout,
+          sort_order: p.store_sort_order, theme: p.store_theme, keywords: p.store_keywords,
+        });
+        setOwnerProfile({
+          id: p.id, display_name: p.display_name, bio: p.bio, avatar_url: p.avatar_url,
+          facebook_pixel_id: p.facebook_pixel_id, tiktok_pixel_id: p.tiktok_pixel_id, google_ads_id: p.google_ads_id,
+        });
 
         const { data: prods } = await supabase
-          .from("products")
-          .select("*")
-          .eq("creator_id", storeData.owner_id)
-          .eq("is_published", true)
+          .from("products").select("*").eq("creator_id", p.id).eq("is_published", true)
           .or("hide_from_store.is.null,hide_from_store.eq.false")
           .order("created_at", { ascending: false });
         setProducts((prods as Product[]) || []);
+      } catch (err) {
+        console.error("Error loading store:", err);
+        setNotFound(true);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      // Fallback: profiles
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("store_slug", slug)
-        .single();
-
-      if (!prof) { setNotFound(true); setLoading(false); return; }
-      const p = prof as any;
-      setStore({
-        id: p.id, owner_id: p.id, name: p.display_name || "Boutique", slug: p.store_slug,
-        description: p.store_description, logo_url: p.store_logo_url, banner_url: p.store_banner_url,
-        brand_color: p.store_brand_color, font: p.store_font, corner_style: p.store_corner_style,
-        button_animation: p.store_button_animation, show_buy_button: p.store_show_buy_button,
-        show_featured: p.store_show_featured, product_layout: p.store_product_layout,
-        sort_order: p.store_sort_order, theme: p.store_theme, keywords: p.store_keywords,
-      });
-      setOwnerProfile({
-        id: p.id, display_name: p.display_name, bio: p.bio, avatar_url: p.avatar_url,
-        facebook_pixel_id: p.facebook_pixel_id, tiktok_pixel_id: p.tiktok_pixel_id, google_ads_id: p.google_ads_id,
-      });
-
-      const { data: prods } = await supabase
-        .from("products").select("*").eq("creator_id", p.id).eq("is_published", true)
-        .or("hide_from_store.is.null,hide_from_store.eq.false")
-        .order("created_at", { ascending: false });
-      setProducts((prods as Product[]) || []);
-      setLoading(false);
     };
     fetchStore();
   }, [slug]);
@@ -253,7 +281,7 @@ const StorePage = () => {
       content_name: product.title, content_ids: [product.id],
       content_type: "product", value: product.price, currency: "XOF",
     });
-    const url = `/checkout/${product.id}${slug ? `?store=${encodeURIComponent(slug)}` : ""}`;
+    const url = `/checkout/${product.id}?store=${encodeURIComponent(slug || "")}&country=${countryCode}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -406,6 +434,7 @@ const StorePage = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                   {filtered.map((product, i) => {
                     const disc = discount(product);
+                    const dual = formatDual(product.price);
                     return (
                       <motion.div
                         key={product.id}
@@ -414,7 +443,7 @@ const StorePage = () => {
                         transition={{ delay: i * 0.04 }}
                         className="group bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-gray-100/80 transition-all duration-300"
                       >
-                        <Link to={`/store/${slug}/${product.id}`}>
+                        <Link to={`/store/${slug}/${product.id}?country=${countryCode}`}>
                           <div className="relative aspect-square overflow-hidden bg-gray-50">
                             {product.thumbnail_url ? (
                               <img
@@ -438,7 +467,7 @@ const StorePage = () => {
                           </div>
                         </Link>
                         <div className="p-4 space-y-2">
-                          <Link to={`/store/${slug}/${product.id}`}>
+                          <Link to={`/store/${slug}/${product.id}?country=${countryCode}`}>
                             <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 hover:opacity-70 transition-opacity">
                               {product.title}
                             </h3>
@@ -449,15 +478,22 @@ const StorePage = () => {
                               {reviewsEnabled ? "Avis publics sur la boutique" : "Produit numérique"}
                             </span>
                           </div>
-                          <div className="flex items-baseline gap-2">
-                            {product.original_price && product.original_price > product.price && (
-                              <span className="text-xs line-through text-gray-300">
-                                {product.original_price.toLocaleString()} FCFA
+                          <div className="flex flex-col">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              {product.original_price && product.original_price > product.price && (
+                                <span className="text-xs line-through text-gray-300">
+                                  {product.original_price.toLocaleString()} FCFA
+                                </span>
+                              )}
+                              <span className="text-base font-bold" style={{ color: brandColor }}>
+                                {product.price.toLocaleString()} FCFA
+                              </span>
+                            </div>
+                            {dual.isLocalDifferent && dual.localPriceFormatted && (
+                              <span className="text-xs font-semibold text-blue-600 mt-0.5">
+                                ≈ {dual.localPriceFormatted}
                               </span>
                             )}
-                            <span className="text-base font-bold" style={{ color: brandColor }}>
-                              {product.price.toLocaleString()} FCFA
-                            </span>
                           </div>
                           {showBuyBtn && (
                             <button

@@ -1,12 +1,12 @@
 /**
  * Dukaio IP Geolocation Engine
- * Fast, reliable, client-side IP-to-Country detection with multi-tier fallbacks and session caching.
+ * Real-time, ultra-fast client-side IP-to-Country detection.
+ * Prioritizes live network IP detection so VPN switches (e.g. USA, RD Congo, Europe) are detected immediately.
  */
 import { useEffect, useState } from "react";
 
 const GEO_STORAGE_KEY = "dukaio_geo_country_code";
 const GEO_TTL_KEY = "dukaio_geo_timestamp";
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Timezone to Country Code fallback mapping
 const TIMEZONE_COUNTRY_MAP: Record<string, string> = {
@@ -69,115 +69,185 @@ export interface UserGeo {
   countryCode: string; // 2-letter lowercase ISO code (bj, cd, ng, zm, ke, us, fr, etc.)
   countryName?: string;
   ip?: string;
-  source: "cache" | "country.is" | "ipwho.is" | "timezone" | "default";
+  source: "country.is" | "ipwho.is" | "freeipapi" | "cache" | "timezone" | "default";
 }
 
+let cachedInFlight: Promise<UserGeo> | null = null;
+let currentGeo: UserGeo | null = null;
+let lastGeoDetectedAt = 0;
+const LIVE_GEO_TTL_MS = 15 * 1000; // 15s cache in-memory so VPN changes are detected within seconds
+
 /**
- * Detect user country code via cached session or fastest available IP service
+ * Detect user country code via real-time live IP check.
+ * Immediately adapts when user switches VPN (e.g. USA, Canada, Congo, etc.).
  */
-export async function detectUserCountry(): Promise<UserGeo> {
+export async function detectUserCountry(forceRefresh = false): Promise<UserGeo> {
   if (typeof window === "undefined") {
     return { countryCode: "bj", source: "default" };
   }
 
-  // 1. Check cached detection (in sessionStorage or localStorage)
-  try {
-    const cachedCode = sessionStorage.getItem(GEO_STORAGE_KEY) || localStorage.getItem(GEO_STORAGE_KEY);
-    const cachedTime = Number(localStorage.getItem(GEO_TTL_KEY) || 0);
-    if (cachedCode && cachedCode.length === 2 && Date.now() - cachedTime < CACHE_TTL_MS) {
-      return { countryCode: cachedCode.toLowerCase(), source: "cache" };
-    }
-  } catch {}
-
-  // 2. Primary Fast Service: country.is (ultra lightweight ~50ms JSON { ip, country })
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-    const res = await fetch("https://api.country.is/", {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.country && typeof data.country === "string" && data.country.length === 2) {
-        const code = data.country.toLowerCase();
-        saveGeoCache(code);
-        return { countryCode: code, ip: data.ip, source: "country.is" };
-      }
-    }
-  } catch (err) {
-    // Non-blocking, continue to fallback
+  // Fast return only if fresh detection occurred in the last 15 seconds
+  if (currentGeo && !forceRefresh && (Date.now() - lastGeoDetectedAt < LIVE_GEO_TTL_MS)) {
+    return currentGeo;
   }
 
-  // 3. Secondary Service: ipwho.is (fallback)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-
-    const res = await fetch("https://ipwho.is/", {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.country_code && typeof data.country_code === "string" && data.country_code.length === 2) {
-        const code = data.country_code.toLowerCase();
-        saveGeoCache(code);
-        return { countryCode: code, countryName: data.country, ip: data.ip, source: "ipwho.is" };
-      }
-    }
-  } catch (err) {
-    // Non-blocking, continue to fallback
+  if (cachedInFlight && !forceRefresh) {
+    return cachedInFlight;
   }
 
-  // 4. Intelligent Fallback: Browser Timezone
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz && TIMEZONE_COUNTRY_MAP[tz]) {
-      const code = TIMEZONE_COUNTRY_MAP[tz];
-      saveGeoCache(code);
-      return { countryCode: code, source: "timezone" };
-    }
-  } catch {}
+  cachedInFlight = (async (): Promise<UserGeo> => {
+    // 1. Primary Live Service: country.is (ultra-fast ~50-100ms)
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1800);
+      const res = await fetch("https://api.country.is/", {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      clearTimeout(timer);
 
-  // 5. Ultimate default: Benin (bj)
-  saveGeoCache("bj");
-  return { countryCode: "bj", source: "default" };
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.country && typeof data.country === "string" && data.country.length === 2) {
+          const code = data.country.toLowerCase();
+          const geo: UserGeo = { countryCode: code, ip: data.ip, source: "country.is" };
+          saveGeoCache(geo);
+          return geo;
+        }
+      }
+    } catch {}
+
+    // 2. Secondary Live Service: ipwho.is (fast fallback)
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2000);
+      const res = await fetch("https://ipwho.is/", {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.country_code && typeof data.country_code === "string" && data.country_code.length === 2) {
+          const code = data.country_code.toLowerCase();
+          const geo: UserGeo = { countryCode: code, countryName: data.country, ip: data.ip, source: "ipwho.is" };
+          saveGeoCache(geo);
+          return geo;
+        }
+      }
+    } catch {}
+
+    // 3. Tertiary Live Service: freeipapi.com
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2000);
+      const res = await fetch("https://freeipapi.com/api/json", {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.countryCode && typeof data.countryCode === "string" && data.countryCode.length === 2) {
+          const code = data.countryCode.toLowerCase();
+          const geo: UserGeo = { countryCode: code, countryName: data.countryName, ip: data.ipAddress, source: "freeipapi" };
+          saveGeoCache(geo);
+          return geo;
+        }
+      }
+    } catch {}
+
+    // 4. Session cache fallback (if network requests failed)
+    try {
+      const sessionCode = sessionStorage.getItem(GEO_STORAGE_KEY) || localStorage.getItem(GEO_STORAGE_KEY);
+      if (sessionCode && sessionCode.length === 2) {
+        return { countryCode: sessionCode.toLowerCase(), source: "cache" };
+      }
+    } catch {}
+
+    // 5. Intelligent Fallback: Browser Timezone
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz && TIMEZONE_COUNTRY_MAP[tz]) {
+        const code = TIMEZONE_COUNTRY_MAP[tz];
+        return { countryCode: code, source: "timezone" };
+      }
+    } catch {}
+
+    // 6. Default fallback: Benin (bj)
+    return { countryCode: "bj", source: "default" };
+  })();
+
+  const result = await cachedInFlight;
+  currentGeo = result;
+  lastGeoDetectedAt = Date.now();
+  cachedInFlight = null;
+  return result;
 }
 
-function saveGeoCache(code: string) {
+function saveGeoCache(geo: UserGeo) {
   try {
-    sessionStorage.setItem(GEO_STORAGE_KEY, code.toLowerCase());
-    localStorage.setItem(GEO_STORAGE_KEY, code.toLowerCase());
+    const prev = sessionStorage.getItem(GEO_STORAGE_KEY) || "";
+    currentGeo = geo;
+    lastGeoDetectedAt = Date.now();
+    sessionStorage.setItem(GEO_STORAGE_KEY, geo.countryCode.toLowerCase());
+    localStorage.setItem(GEO_STORAGE_KEY, geo.countryCode.toLowerCase());
     localStorage.setItem(GEO_TTL_KEY, String(Date.now()));
+    window.dispatchEvent(new CustomEvent("dukaio_geo_change", { detail: geo }));
   } catch {}
 }
 
 /**
- * React Hook to get the user's detected country
+ * Clear cached country (useful when testing with VPN)
+ */
+export function clearGeoCache() {
+  currentGeo = null;
+  cachedInFlight = null;
+  try {
+    sessionStorage.removeItem(GEO_STORAGE_KEY);
+    localStorage.removeItem(GEO_STORAGE_KEY);
+    localStorage.removeItem(GEO_TTL_KEY);
+  } catch {}
+}
+
+/**
+ * React Hook to get the user's detected country in real-time
  */
 export function useUserCountry() {
-  const [countryCode, setCountryCode] = useState<string>("bj");
+  const [countryCode, setCountryCode] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem(GEO_STORAGE_KEY) || localStorage.getItem(GEO_STORAGE_KEY);
+      if (saved && saved.length === 2) return saved.toLowerCase();
+    }
+    return "bj";
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+
     detectUserCountry().then((geo) => {
       if (isMounted) {
         setCountryCode(geo.countryCode);
         setLoading(false);
       }
     });
+
+    const handleGeoChange = (e: Event) => {
+      const customEvent = e as CustomEvent<UserGeo>;
+      if (customEvent.detail?.countryCode && isMounted) {
+        setCountryCode(customEvent.detail.countryCode);
+      }
+    };
+
+    window.addEventListener("dukaio_geo_change", handleGeoChange);
     return () => {
       isMounted = false;
+      window.removeEventListener("dukaio_geo_change", handleGeoChange);
     };
   }, []);
 
   return { countryCode, loading };
 }
-
