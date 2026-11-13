@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useActiveStore } from "@/hooks/useActiveStore";
 import { useDukaioTheme } from "@/hooks/useDukaioTheme";
 import { isAdminUser } from "@/lib/admin";
+import { getStoreUrl } from "@/lib/subdomain";
 
 interface QuickSearchDialogProps {
   open: boolean;
@@ -136,7 +137,7 @@ export function QuickSearchDialog({ open, onOpenChange }: QuickSearchDialogProps
             <span>Navigation rapide</span>
             {activeStore?.slug && (
               <a
-                href={`/store/${activeStore.slug}`}
+                href={getStoreUrl(activeStore.slug)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-foreground inline-flex items-center gap-1"

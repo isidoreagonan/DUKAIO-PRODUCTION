@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "react-router-dom";
 import { uploadToBunny } from "@/lib/bunnyStorage";
+import { getStoreUrl } from "@/lib/subdomain";
 
 const BRAND_COLORS = [
   { name: "Jaune", value: "#EAB308" },
@@ -218,7 +219,7 @@ const DashboardAppearance = () => {
           <div className="flex items-center gap-3">
             {storeSlug && (
               <Button variant="outline" size="sm" className="gap-2" asChild>
-                <a href={`/store/${storeSlug}`} target="_blank" rel="noopener noreferrer">
+                <a href={getStoreUrl(storeSlug)} target="_blank" rel="noopener noreferrer">
                   <Eye className="h-4 w-4" />
                   Voir ma boutique
                 </a>
@@ -507,7 +508,7 @@ const DashboardAppearance = () => {
                   <div className="h-2 w-2 rounded-full bg-yellow-500/50" />
                   <div className="h-2 w-2 rounded-full bg-green-500/50" />
                 </div>
-                <span>{storeSlug ? `${window.location.origin}/store/${storeSlug}` : "votre-boutique.dukaio.app"}</span>
+                <span>{storeSlug ? getStoreUrl(storeSlug) : "votre-boutique.dukaio.com"}</span>
               </div>
               <div className="h-[650px] overflow-y-auto">
                 <RealStorePreview

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle, Copy, Download, FileText, Key, Loader2, Play, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { extractDownloadUrls } from "@/lib/downloadHelper";
+import { getStoreUrl } from "@/lib/subdomain";
 
 const PaymentCallback = () => {
   const navigate = useNavigate();
@@ -203,7 +204,7 @@ const PaymentCallback = () => {
               </div>
               <div className="pt-3 flex flex-col gap-2">
                 <Button onClick={() => navigate("/mes-achats")} variant="outline">Mes achats</Button>
-                {order.profiles?.store_slug && <Button asChild variant="ghost"><Link to={`/store/${order.profiles.store_slug}`}>Retour boutique</Link></Button>}
+                {order.profiles?.store_slug && <Button asChild variant="ghost"><a href={getStoreUrl(order.profiles.store_slug)}>Retour boutique</a></Button>}
               </div>
             </aside>
           </div>

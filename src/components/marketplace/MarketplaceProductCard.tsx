@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge, type BadgeGrade } from "@/components/VerifiedBadge";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
+import { getStoreProductUrl } from "@/lib/subdomain";
 
 export interface MarketplaceProduct {
   id: string;
@@ -43,7 +44,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
   const cat = getCategoryByKey(product.category);
   const storeSlug = product.store?.store_slug;
   const href = storeSlug
-    ? `/store/${storeSlug}/${product.id}?country=${countryCode}`
+    ? `${getStoreProductUrl(storeSlug, product.id)}?country=${countryCode}`
     : `/checkout/${product.id}?country=${countryCode}`;
 
   const hasDiscount =
@@ -68,7 +69,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
         fixedWidth ? "w-[220px] shrink-0 sm:w-auto" : "w-full"
       }`}
     >
-      <Link to={href} className="flex flex-col flex-1">
+      <a href={href} className="flex flex-col flex-1">
         {/* Image */}
         <div className="relative aspect-square w-full bg-secondary overflow-hidden">
           {product.thumbnail_url ? (
@@ -165,7 +166,7 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
             Acheter maintenant
           </div>
         </div>
-      </Link>
+      </a>
     </motion.div>
   );
 };

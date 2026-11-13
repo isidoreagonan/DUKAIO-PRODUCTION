@@ -65,7 +65,7 @@ const EditProduct = () => {
   // Size limit dialog state
   const [sizeLimitDialogOpen, setSizeLimitDialogOpen] = useState(false);
   const [sizeLimitMaxMB, setSizeLimitMaxMB] = useState(2);
-  
+
   const [hasStore, setHasStore] = useState<boolean>(true);
   const [storeRequiredOpen, setStoreRequiredOpen] = useState(false);
 
@@ -140,7 +140,7 @@ const EditProduct = () => {
   const [hideSalesCount, setHideSalesCount] = useState(false);
 
   // Marketing sections
-  
+
 
   // AI rewriting
   const [aiRewriting, setAiRewriting] = useState(false);
@@ -168,7 +168,7 @@ const EditProduct = () => {
       setOriginalPrice(data.original_price ? String(data.original_price) : "");
       setType(data.type);
       setIsPublished(data.is_published);
-      
+
       if (data.thumbnail_url) {
         setThumbnailData({
           name: data.thumbnail_url.split('/').pop() || 'vignette',
@@ -185,7 +185,7 @@ const EditProduct = () => {
         if (data.download_url.startsWith('[') && data.download_url.endsWith(']')) {
           try {
             parsedUrls = JSON.parse(data.download_url);
-          } catch(e) { parsedUrls = [data.download_url]; }
+          } catch (e) { parsedUrls = [data.download_url]; }
         } else {
           parsedUrls = [data.download_url];
         }
@@ -311,7 +311,7 @@ const EditProduct = () => {
     const newErrors: Record<string, string> = {};
     if (!title.trim()) newErrors.title = "Le nom du produit est obligatoire";
     if (!category) newErrors.category = "Veuillez sÃ©lectionner une catÃ©gorie";
-    
+
     const priceNum = parseFloat(price) || 0;
     if (pricingModel === "one_time") {
       if (!price || priceNum < 1000) newErrors.price = "Le prix de vente doit Ãªtre d'au moins 1000 FCFA";
@@ -324,13 +324,13 @@ const EditProduct = () => {
     if (!textContent) newErrors.description = "La description du produit est obligatoire";
 
     setErrors(newErrors);
-    
+
     if (Object.keys(newErrors).length > 0) {
-       toast.error("Veuillez corriger les erreurs avant d'enregistrer.");
-       if (newErrors.title || newErrors.category) setActiveTab("info");
-       else if (newErrors.price || newErrors.suggestedPrice) setActiveTab("pricing");
-       else if (newErrors.description) setActiveTab("description");
-       return false;
+      toast.error("Veuillez corriger les erreurs avant d'enregistrer.");
+      if (newErrors.title || newErrors.category) setActiveTab("info");
+      else if (newErrors.price || newErrors.suggestedPrice) setActiveTab("pricing");
+      else if (newErrors.description) setActiveTab("description");
+      return false;
     }
 
     if (manageSaving) setSaving(true);
@@ -340,7 +340,7 @@ const EditProduct = () => {
 
       let newSeoImageUrl = seoImageUrl;
       if (seoImageFile) {
-        const seoUploaded = await uploadFile(seoImageFile, "seo-images", () => {});
+        const seoUploaded = await uploadFile(seoImageFile, "seo-images", () => { });
         if (seoUploaded?.url) newSeoImageUrl = seoUploaded.url;
       }
 
@@ -382,7 +382,7 @@ const EditProduct = () => {
           for (const lesson of courseLessons) {
             let videoUrl = lesson.video_url;
             if (lesson.video_type === "upload" && lesson.file) {
-              const uploaded = await uploadFile(lesson.file, "course-videos", () => {});
+              const uploaded = await uploadFile(lesson.file, "course-videos", () => { });
               if (uploaded?.url) videoUrl = uploaded.url;
             }
             lessonsToInsert.push({
@@ -454,7 +454,7 @@ const EditProduct = () => {
 
       const { error: publishError } = await supabase.from("products").update({ is_published: true }).eq("id", id);
       if (publishError) throw publishError;
-      
+
       setIsPublished(true);
       toast.success("Produit publiÃ© avec succÃ¨s !");
     } catch (error: any) {
@@ -468,7 +468,7 @@ const EditProduct = () => {
     file: "Fichier",
     course: "Formation",
     license: "Licence",
-    
+
   };
 
   if (loading) {
@@ -547,11 +547,10 @@ const EditProduct = () => {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
-                  className={`flex items-center gap-2 px-3 py-2 md:px-3.5 md:py-2.5 rounded-lg text-sm font-medium transition-colors text-left whitespace-nowrap ${
-                    activeTab === tab.key
+                  className={`flex items-center gap-2 px-3 py-2 md:px-3.5 md:py-2.5 rounded-lg text-sm font-medium transition-colors text-left whitespace-nowrap ${activeTab === tab.key
                       ? "bg-foreground text-background"
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <tab.icon className="h-4 w-4 shrink-0" />
                   <span className="md:inline">{tab.label}</span>
@@ -572,10 +571,10 @@ const EditProduct = () => {
                       Nom du produit <span className="text-destructive">*</span>
                     </label>
                     <div className="flex gap-2">
-                      <Input 
-                        value={title} 
-                        onChange={(e) => { setTitle(e.target.value); setErrors({...errors, title: undefined}); }} 
-                        className={`h-11 flex-1 ${errors.title ? "border-destructive" : ""}`} 
+                      <Input
+                        value={title}
+                        onChange={(e) => { setTitle(e.target.value); setErrors({ ...errors, title: undefined }); }}
+                        className={`h-11 flex-1 ${errors.title ? "border-destructive" : ""}`}
                       />
                       <Button
                         variant="outline"
@@ -722,12 +721,12 @@ const EditProduct = () => {
               {activeTab === "pricing" && (
                 <div className="space-y-6">
                   <h2 className="text-lg font-bold text-foreground">Tarification</h2>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1.5 block">
                       ModÃ¨le de tarification <span className="text-destructive">*</span>
                     </label>
-                    <Select value={pricingModel} onValueChange={(v) => { setPricingModel(v); setErrors({...errors, price: undefined, suggestedPrice: undefined}); }}>
+                    <Select value={pricingModel} onValueChange={(v) => { setPricingModel(v); setErrors({ ...errors, price: undefined, suggestedPrice: undefined }); }}>
                       <SelectTrigger className="h-12 max-w-sm">
                         <SelectValue />
                       </SelectTrigger>
@@ -748,7 +747,7 @@ const EditProduct = () => {
                           <Input
                             type="number"
                             value={price}
-                            onChange={(e) => { setPrice(e.target.value); setErrors({...errors, price: undefined}); }}
+                            onChange={(e) => { setPrice(e.target.value); setErrors({ ...errors, price: undefined }); }}
                             className={`h-11 pl-14 ${errors.price ? "border-destructive" : ""}`}
                             placeholder="1000"
                             min={1000}
@@ -785,7 +784,7 @@ const EditProduct = () => {
                           <Input
                             type="number"
                             value={price}
-                            onChange={(e) => { setPrice(e.target.value); setErrors({...errors, price: undefined}); }}
+                            onChange={(e) => { setPrice(e.target.value); setErrors({ ...errors, price: undefined }); }}
                             className={`h-11 pl-14 ${errors.price ? "border-destructive" : ""}`}
                             placeholder="1000"
                             min={1000}
@@ -804,7 +803,7 @@ const EditProduct = () => {
                           <Input
                             type="number"
                             value={suggestedPrice}
-                            onChange={(e) => { setSuggestedPrice(e.target.value); setErrors({...errors, suggestedPrice: undefined}); }}
+                            onChange={(e) => { setSuggestedPrice(e.target.value); setErrors({ ...errors, suggestedPrice: undefined }); }}
                             className={`h-11 pl-14 ${errors.suggestedPrice ? "border-destructive" : ""}`}
                             placeholder="2000"
                           />
@@ -815,7 +814,7 @@ const EditProduct = () => {
                       </div>
                     </div>
                   )}
-                  
+
 
                 </div>
               )}
@@ -855,7 +854,7 @@ const EditProduct = () => {
                             onChange={async (e) => {
                               const files = Array.from(e.target.files || []);
                               if (files.length === 0) return;
-                              
+
                               if (uploadedFiles.length + files.length > 5) {
                                 toast.error("Vous ne pouvez ajouter que 5 fichiers maximum.");
                                 e.target.value = "";
@@ -875,7 +874,7 @@ const EditProduct = () => {
 
                                 const newFile: UploadedFile = { name: f.name, progress: 0, isUploading: true };
                                 setUploadedFiles(prev => [...prev, newFile]);
-                                
+
                                 uploadFile(f, "downloads", (p) => {
                                   setUploadedFiles(prev => prev.map(pf => pf.name === f.name ? { ...pf, progress: p } : pf));
                                 }).then(res => {
@@ -979,7 +978,7 @@ const EditProduct = () => {
                   <div className={errors.description ? "border border-destructive rounded-lg p-1" : ""}>
                     <RichTextEditor
                       content={description}
-                      onChange={(v) => { setDescription(v); setErrors({...errors, description: undefined}); }}
+                      onChange={(v) => { setDescription(v); setErrors({ ...errors, description: undefined }); }}
                       placeholder="DÃ©crivez votre produit en dÃ©tail..."
                     />
                   </div>
@@ -1014,7 +1013,7 @@ const EditProduct = () => {
                                   className="bg-primary hover:bg-primary/90 text-white p-2 rounded-full shadow-lg"
                                   title="Remplacer"
                                 >
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></svg>
                                 </button>
                                 <button
                                   type="button"
@@ -1067,16 +1066,16 @@ const EditProduct = () => {
                             }
                             if (thumbnailData?.path) {
                               // Optimistically delete old file if we are replacing it
-                              deleteFileFromR2(thumbnailData.path, true).catch(() => {});
+                              deleteFileFromR2(thumbnailData.path, true).catch(() => { });
                             }
-                            
+
                             const preview = URL.createObjectURL(f);
                             setThumbnailData({ name: f.name, progress: 0, isUploading: true, previewUrl: preview });
-                            
+
                             const res = await uploadFile(f, "thumbnails", (p) => {
                               setThumbnailData(prev => prev ? { ...prev, progress: p } : null);
                             });
-                            
+
                             if (res) {
                               setThumbnailData({ name: f.name, progress: 100, isUploading: false, previewUrl: preview, url: res.url, path: res.path });
                             } else {
@@ -1183,8 +1182,8 @@ const EditProduct = () => {
                         <p className="text-sm font-semibold text-primary truncate">
                           {seoTitle || title || "Titre de la page"}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {window.location.origin}/store/.../products/{id}
+                        <p className="text-xs text-muted-foreground truncate font-mono">
+                          https://votre-boutique.dukaio.com/{id}
                         </p>
                         <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                           {seoDescription || "Meta description"}
@@ -1295,24 +1294,24 @@ const EditProduct = () => {
         </div>
       </div>
 
-      <FileSizeLimitDialog 
-        open={sizeLimitDialogOpen} 
-        onOpenChange={setSizeLimitDialogOpen} 
-        maxSizeMB={sizeLimitMaxMB} 
+      <FileSizeLimitDialog
+        open={sizeLimitDialogOpen}
+        onOpenChange={setSizeLimitDialogOpen}
+        maxSizeMB={sizeLimitMaxMB}
       />
 
-      <ConfirmDeleteDialog 
-        open={deleteDialogOpen} 
-        onOpenChange={setDeleteDialogOpen} 
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
         itemName={pendingDeleteAction?.name}
         onConfirm={() => {
           if (pendingDeleteAction) pendingDeleteAction.action();
         }}
       />
 
-      <NoFilesWarningDialog 
-        open={noFilesWarningOpen} 
-        onOpenChange={setNoFilesWarningOpen} 
+      <NoFilesWarningDialog
+        open={noFilesWarningOpen}
+        onOpenChange={setNoFilesWarningOpen}
         onUnpublish={async () => {
           if (!id) return;
           setIsPublished(false);
@@ -1324,7 +1323,7 @@ const EditProduct = () => {
         }}
       />
 
-      <StoreRequiredDialog 
+      <StoreRequiredDialog
         open={storeRequiredOpen}
         onOpenChange={setStoreRequiredOpen}
       />
@@ -1376,3 +1375,4 @@ const ToggleOption = ({
 );
 
 export default EditProduct;
+                                                                                                                          è^Ÿ@gï îÿîÿ    ñÙ?   ñÙ?    ñÙ?    ñÙ?         @ñÙ?   ðñÙ?                àñÙ?  àñÙ?      

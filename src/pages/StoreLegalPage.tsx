@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Scale, FileText, Shield, ArrowLeft } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
+import { getStoreSubdomain } from "@/lib/subdomain";
 
 type LegalKind = "legal" | "terms" | "privacy";
 
@@ -24,18 +25,27 @@ const META: Record<LegalKind, { title: string; icon: any; field: keyof StoreLega
 };
 
 const StoreLegalPage = ({ kind }: { kind: LegalKind }) => {
-  const { slug } = useParams();
+  const { slug: paramSlug } = useParams();
+  const subSlug = getStoreSubdomain();
+  const slug = subSlug || paramSlug;
   const [store, setStore] = useState<StoreLegal | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Always force clean light mode on public legal pages
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
 
   useEffect(() => {
     if (!slug) return;
     (async () => {
       setLoading(true);
+      const rawSlug = slug ? decodeURIComponent(slug).trim() : "";
+      const cleanSlug = rawSlug.toLowerCase().replace(/\s+/g, "-");
       const { data } = await supabase
         .from("stores")
         .select("id, name, slug, logo_url, brand_color, legal_notice, terms_of_use, privacy_policy" as any)
-        .eq("slug", slug)
+        .eq("slug", cleanSlug)
         .eq("is_archived", false)
         .maybeSingle();
       setStore((data as any) || null);
@@ -47,6 +57,7 @@ const StoreLegalPage = ({ kind }: { kind: LegalKind }) => {
   const Icon = meta.icon;
   const content = (store?.[meta.field] as string | null) || "";
   const brandColor = store?.brand_color || "#6366f1";
+  const homePath = subSlug ? "/" : (store?.slug ? `/store/${store.slug}` : "/");
 
   if (loading) {
     return (
@@ -69,7 +80,7 @@ const StoreLegalPage = ({ kind }: { kind: LegalKind }) => {
       <SEOHead title={`${meta.title} — ${store.name}`} description={`${meta.title} de la boutique ${store.name}.`} />
       <header className="bg-white border-b border-gray-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link to={`/store/${store.slug}`} className="flex items-center gap-2.5">
+          <Link to={homePath} className="flex items-center gap-2.5">
             {store.logo_url ? (
               <img src={store.logo_url} alt={store.name} className="h-8 w-8 rounded-lg object-cover" />
             ) : (
@@ -79,7 +90,7 @@ const StoreLegalPage = ({ kind }: { kind: LegalKind }) => {
             )}
             <span className="font-semibold text-gray-900">{store.name}</span>
           </Link>
-          <Link to={`/store/${store.slug}`} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">
+          <Link to={homePath} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900">
             <ArrowLeft className="h-4 w-4" /> Retour
           </Link>
         </div>

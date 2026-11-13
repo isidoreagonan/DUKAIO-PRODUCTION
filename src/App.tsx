@@ -68,6 +68,8 @@ import DashboardStores from "./pages/dashboard/DashboardStores";
 import DashboardBadge from "./pages/dashboard/DashboardBadge";
 import AdminBadges from "./pages/dashboard/AdminBadges";
 
+import { isStoreSubdomain } from "@/lib/subdomain";
+
 import DashboardSupport from "./pages/dashboard/DashboardSupport";
 import DashboardMenu from "./pages/dashboard/DashboardMenu";
 import DashboardTools from "./pages/dashboard/DashboardTools";
@@ -127,106 +129,152 @@ const ConditionalSupportChatbot = () => {
   return <SupportChatbot />;
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <DomainMigrationBanner />
-        <ThemeRouteSync />
-        <AnalyticsWrapper />
-        <ScrollToTop />
-        <ScrollToHashElement />
-        <AuthProvider>
-          <Routes>
-            {dukaioSiteRoutes}
+const App = () => {
+  const isSubdomain = isStoreSubdomain();
 
-            {/* Redirections douces des anciens liens marketing */}
-            <Route path="/pricing" element={<Navigate to="/#tarif" replace />} />
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <DomainMigrationBanner />
+          <ThemeRouteSync />
+          <AnalyticsWrapper />
+          <ScrollToTop />
+          <ScrollToHashElement />
+          <AuthProvider>
+            {isSubdomain ? (
+              <Routes>
+                {/* Store Root */}
+                <Route path="/" element={<StorePage />} />
 
-            {/* Pages publiques additionnelles */}
-            <Route path="/products" element={<Products />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/marketplace" element={<SearchPage />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/partners" element={<Partners />} />
-            <Route path="/documentation" element={<Documentation />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/faq" element={<Navigate to="/#faq" replace />} />
-            <Route path="/refund-policy" element={<RefundPolicy />} />
+                {/* Legal Pages */}
+                <Route path="/legal" element={<StoreLegalPage kind="legal" />} />
+                <Route path="/terms" element={<StoreLegalPage kind="terms" />} />
+                <Route path="/privacy" element={<StoreLegalPage kind="privacy" />} />
 
-            {/* Boutiques Vendeurs Publiques & Détail Produits */}
-            <Route path="/store/:slug" element={<StorePage />} />
-            <Route path="/store/:slug/legal" element={<StoreLegalPage kind="legal" />} />
-            <Route path="/store/:slug/terms" element={<StoreLegalPage kind="terms" />} />
-            <Route path="/store/:slug/privacy" element={<StoreLegalPage kind="privacy" />} />
-            <Route path="/store/:slug/:productId" element={<StoreProductDetail />} />
+                {/* Product Detail */}
+                <Route path="/produit/:productId" element={<StoreProductDetail />} />
+                <Route path="/product/:productId" element={<StoreProductDetail />} />
 
-            {/* Espace Acheteur */}
-            <Route path="/buyer-login" element={<BuyerLogin />} />
-            <Route path="/buyer/login" element={<BuyerLogin />} />
-            <Route path="/buyer" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
-            <Route path="/buyer/orders" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
-            <Route path="/buyer-oauth-callback" element={<BuyerOAuthCallback />} />
-            <Route path="/buyer-verify-otp" element={<BuyerVerifyOtp />} />
-            <Route path="/mes-achats" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
-            <Route path="/mes-achats/:orderId" element={<BuyerProtectedRoute><BuyerOrderDetail /></BuyerProtectedRoute>} />
-            <Route path="/payment-callback" element={<PaymentCallback />} />
-            <Route path="/checkout/:productId" element={<CheckoutPage />} />
+                {/* Checkout & Callbacks */}
+                <Route path="/checkout/:productId" element={<CheckoutPage />} />
+                <Route path="/payment-callback" element={<PaymentCallback />} />
 
-            {/* Espace Vendeur Protégé (Dashboard) */}
-            <Route path="/verify-otp" element={<ProtectedRoute><VerifyOtp /></ProtectedRoute>} />
-            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
-            <Route path="/dashboard/products" element={<ProtectedRoute><DashboardProducts /></ProtectedRoute>} />
-            <Route path="/dashboard/profile" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-            <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-            <Route path="/dashboard/products/new" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
-            <Route path="/dashboard/products/:id/edit" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
-            <Route path="/dashboard/sales" element={<ProtectedRoute><DashboardSales /></ProtectedRoute>} />
-            <Route path="/dashboard/sales/:orderId" element={<ProtectedRoute><SaleDetail /></ProtectedRoute>} />
-            <Route path="/dashboard/clients" element={<ProtectedRoute><DashboardClients /></ProtectedRoute>} />
-            <Route path="/dashboard/licenses" element={<ProtectedRoute><DashboardLicenses /></ProtectedRoute>} />
-            <Route path="/dashboard/revenue" element={<ProtectedRoute><DashboardRevenue /></ProtectedRoute>} />
-            <Route path="/dashboard/analytics" element={<ProtectedRoute><DashboardAnalytics /></ProtectedRoute>} />
-            <Route path="/dashboard/marketing" element={<ProtectedRoute><DashboardMarketing /></ProtectedRoute>} />
-            <Route path="/dashboard/affiliation" element={<ProtectedRoute><DashboardAffiliation /></ProtectedRoute>} />
-            <Route path="/dashboard/automations" element={<ProtectedRoute><DashboardAutomations /></ProtectedRoute>} />
-            <Route path="/dashboard/withdrawals" element={<ProtectedRoute><DashboardWithdrawals /></ProtectedRoute>} />
-            <Route path="/dashboard/withdrawals/new" element={<ProtectedRoute><WithdrawNew /></ProtectedRoute>} />
-            <Route path="/dashboard/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-            <Route path="/dashboard/wallet/accounts" element={<ProtectedRoute><WalletAccounts /></ProtectedRoute>} />
-            <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKYC /></ProtectedRoute>} />
-            <Route path="/dashboard/webhooks" element={<ProtectedRoute><DashboardWebhooks /></ProtectedRoute>} />
-            <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-            <Route path="/dashboard/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
-            <Route path="/dashboard/badge" element={<ProtectedRoute><DashboardBadge /></ProtectedRoute>} />
-            <Route path="/dashboard/support" element={<ProtectedRoute><DashboardSupport /></ProtectedRoute>} />
-            <Route path="/dashboard/menu" element={<ProtectedRoute><DashboardMenu /></ProtectedRoute>} />
-            <Route path="/dashboard/tools" element={<ProtectedRoute><DashboardTools /></ProtectedRoute>} />
-            <Route path="/dashboard/nova" element={<ProtectedRoute><Nova /></ProtectedRoute>} />
+                {/* Buyer Portal */}
+                <Route path="/buyer-login" element={<BuyerLogin />} />
+                <Route path="/buyer/login" element={<BuyerLogin />} />
+                <Route path="/buyer" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+                <Route path="/buyer/orders" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+                <Route path="/buyer-oauth-callback" element={<BuyerOAuthCallback />} />
+                <Route path="/buyer-verify-otp" element={<BuyerVerifyOtp />} />
+                <Route path="/mes-achats" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+                <Route path="/mes-achats/:orderId" element={<BuyerProtectedRoute><BuyerOrderDetail /></BuyerProtectedRoute>} />
 
-            {/* Espace Administration - STRICTEMENT RÉSERVÉ À isidoreagonan@gmail.com */}
-            <Route path="/dashboard/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-            <Route path="/dashboard/admin-kyc" element={<AdminProtectedRoute><AdminKYC /></AdminProtectedRoute>} />
-            <Route path="/dashboard/admin-users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
-            <Route path="/dashboard/admin-withdrawals" element={<AdminProtectedRoute><AdminWithdrawals /></AdminProtectedRoute>} />
-            <Route path="/dashboard/admin-support" element={<AdminProtectedRoute><AdminSupport /></AdminProtectedRoute>} />
-            <Route path="/dashboard/admin-moderation" element={<AdminProtectedRoute><AdminModeration /></AdminProtectedRoute>} />
-            <Route path="/dashboard/admin-badges" element={<AdminProtectedRoute><AdminBadges /></AdminProtectedRoute>} />
+                {/* Legacy store paths */}
+                <Route path="/store/:slug" element={<StorePage />} />
+                <Route path="/store/:slug/legal" element={<StoreLegalPage kind="legal" />} />
+                <Route path="/store/:slug/terms" element={<StoreLegalPage kind="terms" />} />
+                <Route path="/store/:slug/privacy" element={<StoreLegalPage kind="privacy" />} />
+                <Route path="/store/:slug/:productId" element={<StoreProductDetail />} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+                {/* Direct product ID or slug catch: boutique.dukaio.com/:productId */}
+                <Route path="/:productId" element={<StoreProductDetail />} />
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            ) : (
+              <Routes>
+                {dukaioSiteRoutes}
+
+                {/* Redirections douces des anciens liens marketing */}
+                <Route path="/pricing" element={<Navigate to="/#tarif" replace />} />
+
+                {/* Pages publiques additionnelles */}
+                <Route path="/products" element={<Products />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/marketplace" element={<SearchPage />} />
+                <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:slug" element={<BlogPost />} />
+                <Route path="/partners" element={<Partners />} />
+                <Route path="/documentation" element={<Documentation />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/faq" element={<Navigate to="/#faq" replace />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
+
+                {/* Boutiques Vendeurs Publiques & Détail Produits */}
+                <Route path="/store/:slug" element={<StorePage />} />
+                <Route path="/store/:slug/legal" element={<StoreLegalPage kind="legal" />} />
+                <Route path="/store/:slug/terms" element={<StoreLegalPage kind="terms" />} />
+                <Route path="/store/:slug/privacy" element={<StoreLegalPage kind="privacy" />} />
+                <Route path="/store/:slug/:productId" element={<StoreProductDetail />} />
+
+                {/* Espace Acheteur */}
+                <Route path="/buyer-login" element={<BuyerLogin />} />
+                <Route path="/buyer/login" element={<BuyerLogin />} />
+                <Route path="/buyer" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+                <Route path="/buyer/orders" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+                <Route path="/buyer-oauth-callback" element={<BuyerOAuthCallback />} />
+                <Route path="/buyer-verify-otp" element={<BuyerVerifyOtp />} />
+                <Route path="/mes-achats" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+                <Route path="/mes-achats/:orderId" element={<BuyerProtectedRoute><BuyerOrderDetail /></BuyerProtectedRoute>} />
+                <Route path="/payment-callback" element={<PaymentCallback />} />
+                <Route path="/checkout/:productId" element={<CheckoutPage />} />
+
+                {/* Espace Vendeur Protégé (Dashboard) */}
+                <Route path="/verify-otp" element={<ProtectedRoute><VerifyOtp /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><DashboardOverview /></ProtectedRoute>} />
+                <Route path="/dashboard/products" element={<ProtectedRoute><DashboardProducts /></ProtectedRoute>} />
+                <Route path="/dashboard/profile" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
+                <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
+                <Route path="/dashboard/products/new" element={<ProtectedRoute><CreateProduct /></ProtectedRoute>} />
+                <Route path="/dashboard/products/:id/edit" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
+                <Route path="/dashboard/sales" element={<ProtectedRoute><DashboardSales /></ProtectedRoute>} />
+                <Route path="/dashboard/sales/:orderId" element={<ProtectedRoute><SaleDetail /></ProtectedRoute>} />
+                <Route path="/dashboard/clients" element={<ProtectedRoute><DashboardClients /></ProtectedRoute>} />
+                <Route path="/dashboard/licenses" element={<ProtectedRoute><DashboardLicenses /></ProtectedRoute>} />
+                <Route path="/dashboard/revenue" element={<ProtectedRoute><DashboardRevenue /></ProtectedRoute>} />
+                <Route path="/dashboard/analytics" element={<ProtectedRoute><DashboardAnalytics /></ProtectedRoute>} />
+                <Route path="/dashboard/marketing" element={<ProtectedRoute><DashboardMarketing /></ProtectedRoute>} />
+                <Route path="/dashboard/affiliation" element={<ProtectedRoute><DashboardAffiliation /></ProtectedRoute>} />
+                <Route path="/dashboard/automations" element={<ProtectedRoute><DashboardAutomations /></ProtectedRoute>} />
+                <Route path="/dashboard/withdrawals" element={<ProtectedRoute><DashboardWithdrawals /></ProtectedRoute>} />
+                <Route path="/dashboard/withdrawals/new" element={<ProtectedRoute><WithdrawNew /></ProtectedRoute>} />
+                <Route path="/dashboard/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+                <Route path="/dashboard/wallet/accounts" element={<ProtectedRoute><WalletAccounts /></ProtectedRoute>} />
+                <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKYC /></ProtectedRoute>} />
+                <Route path="/dashboard/webhooks" element={<ProtectedRoute><DashboardWebhooks /></ProtectedRoute>} />
+                <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
+                <Route path="/dashboard/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
+                <Route path="/dashboard/badge" element={<ProtectedRoute><DashboardBadge /></ProtectedRoute>} />
+                <Route path="/dashboard/support" element={<ProtectedRoute><DashboardSupport /></ProtectedRoute>} />
+                <Route path="/dashboard/menu" element={<ProtectedRoute><DashboardMenu /></ProtectedRoute>} />
+                <Route path="/dashboard/tools" element={<ProtectedRoute><DashboardTools /></ProtectedRoute>} />
+                <Route path="/dashboard/nova" element={<ProtectedRoute><Nova /></ProtectedRoute>} />
+
+                {/* Espace Administration - STRICTEMENT RÉSERVÉ À isidoreagonan@gmail.com */}
+                <Route path="/dashboard/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+                <Route path="/dashboard/admin-kyc" element={<AdminProtectedRoute><AdminKYC /></AdminProtectedRoute>} />
+                <Route path="/dashboard/admin-users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+                <Route path="/dashboard/admin-withdrawals" element={<AdminProtectedRoute><AdminWithdrawals /></AdminProtectedRoute>} />
+                <Route path="/dashboard/admin-support" element={<AdminProtectedRoute><AdminSupport /></AdminProtectedRoute>} />
+                <Route path="/dashboard/admin-moderation" element={<AdminProtectedRoute><AdminModeration /></AdminProtectedRoute>} />
+                <Route path="/dashboard/admin-badges" element={<AdminProtectedRoute><AdminBadges /></AdminProtectedRoute>} />
+
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            )}
           <ConditionalSupportChatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

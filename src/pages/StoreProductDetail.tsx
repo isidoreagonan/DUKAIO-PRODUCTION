@@ -39,6 +39,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import ProductReviewsSection from "@/components/store/ProductReviewsSection";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
+import { getStoreSubdomain, getStoreUrl } from "@/lib/subdomain";
 
 interface Profile {
   id: string;
@@ -93,7 +94,10 @@ const typeLabels: Record<string, string> = {
 };
 
 const StoreProductDetail = () => {
-  const { slug, productId } = useParams();
+  const { slug: paramSlug, productId } = useParams();
+  const subSlug = getStoreSubdomain();
+  const slug = subSlug || paramSlug;
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
@@ -111,6 +115,12 @@ const StoreProductDetail = () => {
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
+
+  const homePath = subSlug ? "/" : `/store/${slug}`;
+  const legalPath = subSlug ? "/legal" : `/store/${slug}/legal`;
+  const termsPath = subSlug ? "/terms" : `/store/${slug}/terms`;
+  const privacyPath = subSlug ? "/privacy" : `/store/${slug}/privacy`;
+  const getRelatedProductPath = (id: string) => subSlug ? `/${id}` : `/store/${slug}/${id}`;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -258,7 +268,7 @@ const StoreProductDetail = () => {
         <Package className="h-16 w-16 text-gray-200 mb-4" />
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Produit introuvable</h1>
         <p className="text-gray-500 mb-6">Ce produit n'existe pas ou n'est plus disponible.</p>
-        <Link to={`/store/${slug}`}><Button>Retour à la boutique</Button></Link>
+        <Link to={homePath}><Button>Retour à la boutique</Button></Link>
       </div>
     );
   }
@@ -308,7 +318,7 @@ const StoreProductDetail = () => {
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-40 border-b border-gray-200/50 bg-white/70 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
-          <Link to={`/store/${slug}`} className="flex items-center gap-3 min-w-0">
+          <Link to={homePath} className="flex items-center gap-3 min-w-0">
             {logoUrl ? (
               <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded-lg object-cover shadow-sm border border-gray-100" />
             ) : (
@@ -320,7 +330,7 @@ const StoreProductDetail = () => {
           </Link>
           <div className="flex items-center gap-2">
             <CurrencySwitcher />
-            <Link to={`/store/${slug}`} className="hidden sm:block">
+            <Link to={homePath} className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-xs text-gray-600">Boutique</Button>
             </Link>
             <Link to="/buyer-login">
@@ -337,7 +347,7 @@ const StoreProductDetail = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
           {/* Breadcrumb */}
           <Link
-            to={`/store/${slug}`}
+            to={homePath}
             className="mb-4 sm:mb-6 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -607,7 +617,7 @@ const StoreProductDetail = () => {
                       </p>
                     )}
                   </div>
-                  <Link to={`/store/${slug}`}>
+                  <Link to={homePath}>
                     <Button variant="outline" size="sm" className="text-xs">Voir</Button>
                   </Link>
                 </div>
@@ -779,7 +789,7 @@ const StoreProductDetail = () => {
                   const rDisc = rp.original_price && rp.original_price > rp.price
                     ? Math.round(((rp.original_price - rp.price) / rp.original_price) * 100) : null;
                   return (
-                    <Link key={rp.id} to={`/store/${slug}/${rp.id}`}
+                    <Link key={rp.id} to={getRelatedProductPath(rp.id)}
                       className="group border border-gray-100 rounded-2xl overflow-hidden bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
                       <div className="relative aspect-square overflow-hidden bg-gray-50">
                         {rp.thumbnail_url ? (
@@ -851,7 +861,7 @@ const StoreProductDetail = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link to={`/store/${slug}`} className="text-sm text-gray-600 hover:text-gray-900">
+                  <Link to={homePath} className="text-sm text-gray-600 hover:text-gray-900">
                     Boutique
                   </Link>
                 </li>
@@ -861,9 +871,9 @@ const StoreProductDetail = () => {
             <div className="space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Légal</h3>
               <ul className="space-y-2.5">
-                <li><Link to={`/store/${slug}/legal`} className="text-sm text-gray-600 hover:text-gray-900">Mentions légales</Link></li>
-                <li><Link to={`/store/${slug}/terms`} className="text-sm text-gray-600 hover:text-gray-900">Conditions générales</Link></li>
-                <li><Link to={`/store/${slug}/privacy`} className="text-sm text-gray-600 hover:text-gray-900">Politique de confidentialité</Link></li>
+                <li><Link to={legalPath} className="text-sm text-gray-600 hover:text-gray-900">Mentions légales</Link></li>
+                <li><Link to={termsPath} className="text-sm text-gray-600 hover:text-gray-900">Conditions générales</Link></li>
+                <li><Link to={privacyPath} className="text-sm text-gray-600 hover:text-gray-900">Politique de confidentialité</Link></li>
               </ul>
             </div>
           </div>

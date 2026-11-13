@@ -18,6 +18,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActiveStore } from "@/hooks/useActiveStore";
+import { getStoreUrl } from "@/lib/subdomain";
 
 type ChartPeriod = 7 | 30 | 90;
 
@@ -161,9 +162,7 @@ export function DashboardOverview() {
   // Copy store link to clipboard
   const handleCopyLink = () => {
     const slug = activeStore?.slug || profile?.store_slug;
-    const url = slug
-      ? `${window.location.origin}/store/${slug}`
-      : window.location.origin;
+    const url = getStoreUrl(slug);
 
     navigator.clipboard.writeText(url);
     setCopied(true);

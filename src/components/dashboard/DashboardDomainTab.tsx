@@ -39,8 +39,8 @@ const DashboardDomainTab = () => {
           <div className="text-center">
             <p className="text-xs text-muted-foreground">
               En attendant, votre boutique est accessible à :{" "}
-              <span className="font-medium text-foreground">
-                dukaio.com/store/{activeStore?.slug || "votre-boutique"}
+              <span className="font-medium text-foreground font-mono">
+                https://{activeStore?.slug || "votre-boutique"}.dukaio.com
               </span>
             </p>
           </div>

@@ -9,6 +9,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import StoreSelector from "./StoreSelector";
 import { useActiveStore } from "@/hooks/useActiveStore";
 import { uploadToBunny } from "@/lib/bunnyStorage";
+import { getStoreUrl } from "@/lib/subdomain";
 
 const DashboardProfileTab = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -228,20 +229,23 @@ const DashboardProfileTab = () => {
           </label>
           <div className="flex items-center">
             <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-xs text-muted-foreground whitespace-nowrap">
-              https://dukaio.com/store/
+              https://
             </span>
-            <Input className="rounded-l-none" value={storeSlug} onChange={(e) => setStoreSlug(e.target.value)} placeholder="ma-boutique" />
+            <Input className="rounded-none border-x-0" value={storeSlug} onChange={(e) => setStoreSlug(e.target.value)} placeholder="ma-boutique" />
+            <span className="inline-flex items-center px-3 h-10 rounded-r-md border border-l-0 border-input bg-muted text-xs text-muted-foreground whitespace-nowrap">
+              .dukaio.com
+            </span>
           </div>
           {storeSlug && (
             <div className="mt-1.5 flex items-center gap-2">
               <p className="text-xs text-muted-foreground">Lien de votre boutique :</p>
               <a
-                href={`https://dukaio.com/store/${storeSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+                href={getStoreUrl(storeSlug)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs font-medium text-primary hover:underline"
+                className="text-xs font-medium text-primary hover:underline font-mono"
               >
-                https://dukaio.com/store/{storeSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-")}
+                {getStoreUrl(storeSlug)}
               </a>
             </div>
           )}

@@ -8,6 +8,7 @@ import { products, formatPrice } from "@/data/products";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { getStoreProductUrl } from "@/lib/subdomain";
 
 const categoryLabels: Record<string, string> = {
   course: "Cours",
@@ -38,7 +39,7 @@ const ProductDetail = () => {
               .maybeSingle()
               .then(({ data: st }) => {
                 if (st?.slug) {
-                  window.location.replace(`/store/${st.slug}/${data.id}`);
+                  window.location.replace(getStoreProductUrl(st.slug, data.id));
                 } else {
                   window.location.replace(`/checkout/${data.id}`);
                 }

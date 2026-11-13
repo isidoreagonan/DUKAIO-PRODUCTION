@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import BuyerContentDialog from "@/components/BuyerContentDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { getBuyerSession, clearBuyerSession } from "@/lib/buyerSession";
+import { getStoreUrl } from "@/lib/subdomain";
 
 interface OrderWithProduct {
   id: string;
@@ -200,12 +201,14 @@ const BuyerDashboard = () => {
                   {o.store_owner?.store_slug && (
                     <p className="text-xs text-muted-foreground mb-3">
                       par{" "}
-                      <Link
-                        to={`/store/${o.store_owner.store_slug}`}
+                      <a
+                        href={getStoreUrl(o.store_owner.store_slug)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-primary hover:underline"
                       >
                         {o.store_owner.display_name || o.store_owner.store_slug}
-                      </Link>
+                      </a>
                     </p>
                   )}
                   <Link to={`/mes-achats/${o.id}`}>

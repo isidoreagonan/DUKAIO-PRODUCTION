@@ -18,6 +18,7 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
+import { getStoreSubdomain, getStoreUrl } from "@/lib/subdomain";
 
 interface StoreInfo {
   id: string;
@@ -74,7 +75,9 @@ const typeLabels: Record<string, string> = {
 type StoreTab = "products" | "about" | "contact" | "reviews";
 
 const StorePage = () => {
-  const { slug } = useParams();
+  const { slug: paramSlug } = useParams();
+  const subSlug = getStoreSubdomain();
+  const slug = subSlug || paramSlug;
   const [store, setStore] = useState<StoreInfo | null>(null);
 
   // Always force clean light mode on public store pages
@@ -96,6 +99,12 @@ const StorePage = () => {
       try {
         const rawSlug = slug ? decodeURIComponent(slug).trim() : "";
         const cleanSlug = rawSlug.toLowerCase().replace(/\s+/g, "-");
+
+        // If visited on main domain via /store/:slug in production, redirect to official subdomain
+        if (!subSlug && paramSlug && typeof window !== "undefined" && window.location.hostname.endsWith("dukaio.com")) {
+          window.location.replace(getStoreUrl(cleanSlug));
+          return;
+        }
 
         let { data: storeData } = await supabase
           .from("stores")
@@ -288,12 +297,19 @@ const StorePage = () => {
 
   const types = [...new Set(products.map((p) => p.type))];
 
+  const homePath = subSlug ? "/" : `/store/${slug}`;
+  const getProductPath = (prodId: string) =>
+    subSlug ? `/${prodId}?country=${countryCode}` : `/store/${slug}/${prodId}?country=${countryCode}`;
+  const legalPath = subSlug ? "/legal" : `/store/${slug}/legal`;
+  const termsPath = subSlug ? "/terms" : `/store/${slug}/terms`;
+  const privacyPath = subSlug ? "/privacy" : `/store/${slug}/privacy`;
+
   return (
     <div className="min-h-screen flex flex-col bg-white" style={{ fontFamily: storeFont }}>
       {/* ─── HEADER ─── */}
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14">
-          <Link to={`/store/${slug}`} className="flex items-center gap-3">
+          <Link to={homePath} className="flex items-center gap-3">
             {logoUrl ? (
               <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded-lg object-cover" />
             ) : (
@@ -447,7 +463,7 @@ const StorePage = () => {
                         transition={{ delay: i * 0.04 }}
                         className="group bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg hover:shadow-gray-100/80 transition-all duration-300"
                       >
-                        <Link to={`/store/${slug}/${product.id}?country=${countryCode}`}>
+                        <Link to={getProductPath(product.id)}>
                           <div className="relative aspect-square overflow-hidden bg-gray-50">
                             {product.thumbnail_url ? (
                               <img
@@ -471,7 +487,7 @@ const StorePage = () => {
                           </div>
                         </Link>
                         <div className="p-4 space-y-2">
-                          <Link to={`/store/${slug}/${product.id}?country=${countryCode}`}>
+                          <Link to={getProductPath(product.id)}>
                             <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 hover:opacity-70 transition-opacity">
                               {product.title}
                             </h3>
@@ -581,17 +597,17 @@ const StorePage = () => {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Légal</h3>
               <ul className="space-y-2.5">
                 <li>
-                  <Link to={`/store/${slug}/legal`} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  <Link to={legalPath} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                     Mentions légales
                   </Link>
                 </li>
                 <li>
-                  <Link to={`/store/${slug}/terms`} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  <Link to={termsPath} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                     Conditions générales
                   </Link>
                 </li>
                 <li>
-                  <Link to={`/store/${slug}/privacy`} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
+                  <Link to={privacyPath} className="text-sm text-gray-600 hover:text-gray-900 transition-colors">
                     Politique de confidentialité
                   </Link>
                 </li>

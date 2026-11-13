@@ -22,6 +22,7 @@ import StoreRequiredDialog from "@/components/dashboard/StoreRequiredDialog";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { deleteFromBunny } from "@/lib/bunnyStorage";
+import { getStoreProductUrl } from "@/lib/subdomain";
 
 type ProductType = "file" | "course" | "license";
 
@@ -241,7 +242,7 @@ export default function DashboardProducts() {
   const handleCopyLink = (p: Product) => {
     const slug = (profile?.store_slug || "").trim().toLowerCase().replace(/\s+/g, "-");
     const url = slug
-      ? `${window.location.origin}/store/${slug}/${p.id}`
+      ? getStoreProductUrl(slug, p.id)
       : `${window.location.origin}/products/${p.id}`;
     navigator.clipboard.writeText(url);
     toast.success("Lien copié dans le presse-papier");
@@ -250,7 +251,7 @@ export default function DashboardProducts() {
   const handleShare = (p: Product) => {
     const slug = (profile?.store_slug || "").trim().toLowerCase().replace(/\s+/g, "-");
     const url = slug
-      ? `${window.location.origin}/store/${slug}/${p.id}`
+      ? getStoreProductUrl(slug, p.id)
       : `${window.location.origin}/products/${p.id}`;
     if (navigator.share) {
       navigator.share({ title: p.title, url });
@@ -341,31 +342,28 @@ export default function DashboardProducts() {
             <div className="flex items-center p-0.5 rounded-lg border border-border bg-secondary/40 text-xs">
               <button
                 onClick={() => setStatusFilter("all")}
-                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all ${
-                  statusFilter === "all"
+                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all ${statusFilter === "all"
                     ? "bg-card text-foreground font-semibold shadow-2xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Tous
               </button>
               <button
                 onClick={() => setStatusFilter("published")}
-                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all ${
-                  statusFilter === "published"
+                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all ${statusFilter === "published"
                     ? "bg-card text-foreground font-semibold shadow-2xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Publiés
               </button>
               <button
                 onClick={() => setStatusFilter("draft")}
-                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all ${
-                  statusFilter === "draft"
+                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-all ${statusFilter === "draft"
                     ? "bg-card text-foreground font-semibold shadow-2xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Brouillons
               </button>
@@ -401,22 +399,20 @@ export default function DashboardProducts() {
               <button
                 onClick={() => setViewMode("list")}
                 aria-label="Vue liste"
-                className={`p-1 rounded-md transition-colors ${
-                  viewMode === "list"
+                className={`p-1 rounded-md transition-colors ${viewMode === "list"
                     ? "bg-card text-foreground shadow-2xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <List className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => setViewMode("grid")}
                 aria-label="Vue grille"
-                className={`p-1 rounded-md transition-colors ${
-                  viewMode === "grid"
+                className={`p-1 rounded-md transition-colors ${viewMode === "grid"
                     ? "bg-card text-foreground shadow-2xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
               </button>
@@ -565,7 +561,7 @@ export default function DashboardProducts() {
                               onClick={() => {
                                 const slug = (profile?.store_slug || "").trim().toLowerCase().replace(/\s+/g, "-");
                                 if (slug) {
-                                  window.open(`/store/${slug}/${p.id}`, "_blank");
+                                  window.open(getStoreProductUrl(slug, p.id), "_blank");
                                 } else {
                                   navigate(`/products/${p.id}`);
                                 }

@@ -16,6 +16,7 @@ import { useDukaioTheme } from "@/hooks/useDukaioTheme";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { QuickSearchDialog } from "./QuickSearchDialog";
+import { getStoreUrl } from "@/lib/subdomain";
 import UserAvatar from "@/components/UserAvatar";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -130,9 +131,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Copy store link
   const handleCopyStoreLink = () => {
     const slug = activeStore?.slug || profile?.store_slug;
-    const url = slug
-      ? `${window.location.origin}/store/${slug}`
-      : window.location.origin;
+    const url = getStoreUrl(slug);
 
     navigator.clipboard.writeText(url);
     toast.success("Lien de votre boutique copié !");
@@ -142,7 +141,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleVisitStore = () => {
     const slug = activeStore?.slug || profile?.store_slug;
     if (slug) {
-      window.open(`/store/${slug}`, "_blank");
+      window.open(getStoreUrl(slug), "_blank");
     } else {
       navigate("/dashboard/stores");
     }
@@ -579,7 +578,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     {/* Voir ma boutique */}
                     {activeStore?.slug && (
                       <a
-                        href={`/store/${activeStore.slug}`}
+                        href={getStoreUrl(activeStore.slug)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => setProfileSheetOpen(false)}

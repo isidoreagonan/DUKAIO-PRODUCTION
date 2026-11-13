@@ -21,13 +21,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
+import { getStoreUrl } from "@/lib/subdomain";
 
 interface DashboardSidebarProps {
   collapsed?: boolean;
@@ -499,7 +495,7 @@ export function DashboardSidebar({
                 {/* Voir ma boutique */}
                 {activeStore?.slug && (
                   <a
-                    href={`/store/${activeStore.slug}`}
+                    href={getStoreUrl(activeStore.slug)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => setProfilePopoverOpen(false)}
@@ -717,7 +713,7 @@ export function DashboardSidebar({
                     {/* Voir ma boutique */}
                     {activeStore?.slug && (
                       <a
-                        href={`/store/${activeStore.slug}`}
+                        href={getStoreUrl(activeStore.slug)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={() => {

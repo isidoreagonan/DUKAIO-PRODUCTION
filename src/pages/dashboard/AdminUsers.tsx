@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { isAdminUser } from "@/lib/admin";
+import { getStoreUrl, getStoreProductUrl } from "@/lib/subdomain";
 import UserAvatar from "@/components/UserAvatar";
 
 interface UserProfile {
@@ -349,12 +350,12 @@ const AdminUsers = () => {
                               <div className="flex-1 min-w-0">
                                 <p className="font-bold text-sm text-foreground truncate">{store.name}</p>
                                 <a
-                                  href={`/store/${store.slug}`}
+                                  href={getStoreUrl(store.slug)}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-xs text-primary hover:underline truncate inline-block w-full"
+                                  className="text-xs text-primary hover:underline truncate inline-block w-full font-mono"
                                 >
-                                  /{store.slug}
+                                  {store.slug}.dukaio.com
                                 </a>
                               </div>
                             </div>
@@ -374,7 +375,7 @@ const AdminUsers = () => {
                           {userDetails.products.slice(0, 10).map((prod: any) => {
                             const firstStore = userDetails.stores[0];
                             const prodSlug = firstStore?.slug || userDetails.profile.store_slug;
-                            const prodUrl = prodSlug ? `/store/${prodSlug}/${prod.id}` : `/product/${prod.id}`;
+                            const prodUrl = prodSlug ? getStoreProductUrl(prodSlug, prod.id) : `/product/${prod.id}`;
                             return (
                               <div
                                 key={prod.id}

@@ -194,8 +194,8 @@ const Onboarding = () => {
                         className="text-xs text-center text-muted-foreground"
                       >
                         Votre boutique sera accessible à :{" "}
-                        <span className="font-medium" style={{ color: brandColor }}>
-                          {window.location.origin}/store/{storeName.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-")}
+                        <span className="font-mono font-medium" style={{ color: brandColor }}>
+                          https://{storeName.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-")}.dukaio.com
                         </span>
                       </motion.p>
                     )}

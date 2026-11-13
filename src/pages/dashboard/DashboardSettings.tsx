@@ -10,6 +10,7 @@ import DashboardTelegramTab from "@/components/dashboard/DashboardTelegramTab";
 import DashboardLegalTab from "@/components/dashboard/DashboardLegalTab";
 import { useActiveStore } from "@/hooks/useActiveStore";
 import { useSearchParams } from "react-router-dom";
+import { getStoreUrl } from "@/lib/subdomain";
 
 const VALID_TABS = ["profile", "appearance", "pixels", "account", "domain", "telegram", "legal"];
 
@@ -29,7 +30,7 @@ const DashboardSettings = () => {
           </div>
           {activeStore?.slug && (
             <a
-              href={`/store/${activeStore.slug}`}
+              href={getStoreUrl(activeStore.slug)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-primary hover:underline shrink-0"

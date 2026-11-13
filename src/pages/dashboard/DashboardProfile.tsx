@@ -7,6 +7,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "sonner";
 import { Store, Phone, Globe, Upload, ImageIcon } from "lucide-react";
 import { uploadToBunny } from "@/lib/bunnyStorage";
+import { getStoreUrl } from "@/lib/subdomain";
 
 const DashboardProfile = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -173,25 +174,28 @@ const DashboardProfile = () => {
             </label>
             <div className="flex items-center">
               <span className="inline-flex items-center px-3 h-10 rounded-l-md border border-r-0 border-input bg-muted text-xs text-muted-foreground whitespace-nowrap">
-                {window.location.origin}/store/
+                https://
               </span>
               <Input
-                className="rounded-l-none"
+                className="rounded-none border-x-0"
                 value={storeSlug}
                 onChange={(e) => setStoreSlug(e.target.value)}
                 placeholder="ma-boutique"
               />
+              <span className="inline-flex items-center px-3 h-10 rounded-r-md border border-l-0 border-input bg-muted text-xs text-muted-foreground whitespace-nowrap">
+                .dukaio.com
+              </span>
             </div>
             {storeSlug && (
               <div className="mt-1.5 flex items-center gap-2">
                 <p className="text-xs text-muted-foreground">Lien de votre boutique :</p>
                 <a
-                  href={`/store/${storeSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-")}`}
+                  href={getStoreUrl(storeSlug)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs font-medium text-primary hover:underline"
+                  className="text-xs font-medium text-primary hover:underline font-mono"
                 >
-                  {window.location.origin}/store/{storeSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-")}
+                  {getStoreUrl(storeSlug)}
                 </a>
               </div>
             )}

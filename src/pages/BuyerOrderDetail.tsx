@@ -23,6 +23,7 @@ import logo from "@/assets/dukaio-logo.png";
 
 import BuyerContentDialog from "@/components/BuyerContentDialog";
 import ProductReviewForm from "@/components/buyer/ProductReviewForm";
+import { getStoreUrl, getStoreProductUrl } from "@/lib/subdomain";
 import { extractDownloadUrls } from "@/lib/downloadHelper";
 import SupportTicketDialog from "@/components/buyer/SupportTicketDialog";
 import { generateInvoicePDF } from "@/lib/invoice";
@@ -175,9 +176,14 @@ const BuyerOrderDetail = () => {
           {store?.store_slug && (
             <p className="mt-1 text-sm text-muted-foreground">
               Vendu par{" "}
-              <Link to={`/store/${store.store_slug}`} className="text-primary hover:underline">
+              <a
+                href={getStoreUrl(store.store_slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
                 {store.display_name || store.store_slug}
-              </Link>
+              </a>
             </p>
           )}
         </motion.div>
@@ -262,8 +268,10 @@ const BuyerOrderDetail = () => {
                 <ul className="space-y-2">
                   {recommendations.map((r) => (
                     <li key={r.id}>
-                      <Link
-                        to={`/store/${store?.store_slug}/${r.id}`}
+                      <a
+                        href={getStoreProductUrl(store?.store_slug, r.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2 hover:bg-secondary transition-colors"
                       >
                         {r.thumbnail_url ? (
@@ -278,7 +286,7 @@ const BuyerOrderDetail = () => {
                           <p className="text-[11px] text-muted-foreground capitalize">{r.type}</p>
                         </div>
                         <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                      </Link>
+                      </a>
                     </li>
                   ))}
                 </ul>

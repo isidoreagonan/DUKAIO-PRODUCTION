@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plus, Store, Archive, RotateCcw, ExternalLink, Settings, Pencil } from "lucide-react";
+import { getStoreUrl } from "@/lib/subdomain";
 
 const DashboardStores = () => {
   const { user } = useAuth();
@@ -149,7 +150,7 @@ const DashboardStores = () => {
                 <div className="space-y-2">
                   <Label>Slug (URL)</Label>
                   <Input value={slug} onChange={(e) => handleSlugChange(e.target.value)} placeholder="ma-boutique" />
-                  <p className="text-xs text-muted-foreground">/store/{slug || "ma-boutique"}</p>
+                  <p className="text-xs text-muted-foreground font-mono">https://{slug || "ma-boutique"}.dukaio.com</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Description (optionnel)</Label>
@@ -201,7 +202,7 @@ const DashboardStores = () => {
                         <Store className="h-4 w-4 text-primary" />
                         {store.name}
                       </CardTitle>
-                      <CardDescription className="text-xs">/store/{store.slug}</CardDescription>
+                      <CardDescription className="text-xs font-mono">{store.slug}.dukaio.com</CardDescription>
                     </div>
                     <Badge variant={store.is_archived ? "secondary" : "default"}>
                       {store.is_archived ? "Archivée" : "Active"}
@@ -214,7 +215,7 @@ const DashboardStores = () => {
                   )}
                   <div className="flex flex-wrap gap-2">
                     {!store.is_archived && (
-                      <a href={`/store/${store.slug}`} target="_blank" rel="noopener noreferrer">
+                      <a href={getStoreUrl(store.slug)} target="_blank" rel="noopener noreferrer">
                         <Button variant="outline" size="sm">
                           <ExternalLink className="h-3.5 w-3.5 mr-1" />
                           Visiter

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import KycBadge from "@/components/KycBadge";
 import { useCustomersKyc } from "@/hooks/useCustomersKyc";
 import { Link } from "react-router-dom";
+import { isStoreSubdomain } from "@/lib/subdomain";
 
 interface Review {
   id: string;
@@ -119,7 +120,7 @@ const StoreProductReviewsAggregated = ({ storeOwnerId, storeSlug, brandColor = "
                   </div>
                   {productMap[r.product_id] && (
                     <Link
-                      to={`/store/${storeSlug}/${r.product_id}`}
+                      to={isStoreSubdomain() ? `/${r.product_id}` : `/store/${storeSlug}/${r.product_id}`}
                       className="mt-1 block text-xs text-primary hover:underline"
                       style={{ color: brandColor }}
                     >
