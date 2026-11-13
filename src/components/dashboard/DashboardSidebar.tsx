@@ -7,7 +7,7 @@ import {
   Plus, Settings, ChevronRight, ChevronsUpDown, Check,
   ExternalLink, Moon, Sun, LogOut, User as UserIcon,
   Store, PanelLeft, Folder, ArrowUpRight, X,
-  Users, DollarSign, Wallet
+  Users, DollarSign, Wallet, Shield
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -465,6 +465,22 @@ export function DashboardSidebar({
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </button>
 
+                {/* Vérification KYC */}
+                <button
+                  onClick={() => {
+                    navigate("/dashboard/kyc");
+                    setProfilePopoverOpen(false);
+                    onNavigate?.();
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Shield className="h-4 w-4 text-emerald-600" />
+                    <span>Vérification KYC</span>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                </button>
+
                 {/* Paramètres du compte */}
                 <button
                   onClick={() => {
@@ -662,6 +678,22 @@ export function DashboardSidebar({
                       <div className="flex items-center gap-3">
                         <UserIcon className="h-4.5 w-4.5 text-muted-foreground" />
                         <span>Mon profil</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                    </button>
+
+                    {/* Vérification KYC */}
+                    <button
+                      onClick={() => {
+                        navigate("/dashboard/kyc");
+                        setProfilePopoverOpen(false);
+                        onNavigate?.();
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-4.5 w-4.5 text-emerald-600" />
+                        <span>Vérification KYC</span>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
                     </button>

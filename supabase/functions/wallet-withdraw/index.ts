@@ -48,6 +48,21 @@ Deno.serve(async (req) => {
     currentUserId = user.id;
 
     const { amount, phone, provider, country } = await req.json();
+
+    // Enforce mandatory KYC verification before any withdrawal
+    const { data: kycRecord } = await service
+      .from("identity_verifications")
+      .select("status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (kycRecord?.status !== "approved") {
+      return j({
+        error: "Vérification d'identité (KYC) requise avant tout retrait. Veuillez soumettre votre pièce d'identité dans votre espace KYC.",
+        code: "kyc_required",
+        kyc_status: kycRecord?.status || "none",
+      }, 403);
+    }
     
     // SaaSPay minimum withdrawal is 200 FCFA
     if (!amount || amount < 200) return j({ error: "Montant minimum de retrait : 200 FCFA" }, 400);

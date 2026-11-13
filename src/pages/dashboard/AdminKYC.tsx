@@ -31,6 +31,14 @@ interface KYCRequest {
   submitted_at: string;
   reviewed_at: string | null;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  birth_date: string | null;
+  age: number | null;
+  gender: string | null;
+  birth_country: string | null;
+  nationality: string | null;
+  document_number: string | null;
   country: string | null;
   city: string | null;
   ai_recommendation: string | null;
@@ -244,35 +252,53 @@ const AdminKYC = () => {
 
           {selected && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5 text-sm p-4 rounded-2xl bg-muted/30 border border-border">
                 <div>
-                  <p className="text-muted-foreground">Nom complet</p>
-                  <p className="font-medium">{selected.full_name || <span className="italic text-muted-foreground">Non renseigné</span>}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Localisation</p>
-                  <p className="font-medium">
-                    {selected.city && selected.country ? `${selected.city}, ${selected.country}` : 
-                     selected.country || <span className="italic text-muted-foreground">Non renseigné</span>}
+                  <p className="text-xs text-muted-foreground">Nom & Prénom</p>
+                  <p className="font-bold text-foreground">
+                    {selected.full_name || (selected.first_name ? `${selected.first_name} ${selected.last_name || ""}` : <span className="italic text-muted-foreground">Non renseigné</span>)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">ID Utilisateur</p>
-                  <p className="font-mono text-xs break-all">{selected.user_id}</p>
+                  <p className="text-xs text-muted-foreground">Date de naissance & Âge</p>
+                  <p className="font-medium text-foreground">
+                    {selected.birth_date ? `${selected.birth_date} (${selected.age || "?"} ans)` : <span className="italic text-muted-foreground">Non renseigné</span>}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Type de document</p>
-                  <p className="capitalize">{selected.document_type}</p>
+                  <p className="text-xs text-muted-foreground">Genre</p>
+                  <p className="font-medium capitalize text-foreground">{selected.gender || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Soumis le</p>
-                  <p>{new Date(selected.submitted_at).toLocaleString("fr-FR")}</p>
+                  <p className="text-xs text-muted-foreground">Pays de naissance</p>
+                  <p className="font-medium text-foreground">{selected.birth_country || selected.country || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Statut</p>
-                  <Badge variant={statusBadge[selected.status]?.variant || "outline"}>
-                    {statusBadge[selected.status]?.label || selected.status}
-                  </Badge>
+                  <p className="text-xs text-muted-foreground">Nationalité</p>
+                  <p className="font-medium text-foreground">{selected.nationality || "—"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Type de document</p>
+                  <p className="font-bold uppercase text-foreground">{selected.document_type}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-xs text-muted-foreground">Numéro de pièce officielle</p>
+                  <p className="font-mono font-bold text-primary text-sm">{selected.document_number || "Non renseigné"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Date de soumission</p>
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {new Date(selected.submitted_at).toLocaleString("fr-FR")}
+                  </p>
+                </div>
+                <div className="md:col-span-3 flex items-center justify-between pt-2 border-t border-border/60">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Statut actuel:</span>
+                    <Badge variant={statusBadge[selected.status]?.variant || "outline"}>
+                      {statusBadge[selected.status]?.label || selected.status}
+                    </Badge>
+                  </div>
+                  <p className="font-mono text-[10px] text-muted-foreground">ID: {selected.user_id}</p>
                 </div>
               </div>
 

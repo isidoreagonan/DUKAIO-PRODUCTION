@@ -4,7 +4,7 @@ import {
   Wallet as WalletIcon, Loader2, Plus, Trash2, ShieldCheck,
   ChevronDown, Eye, EyeOff,
   ArrowUpRight, RotateCcw, Smartphone, AlertCircle,
-  Receipt
+  Receipt, Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,6 +97,8 @@ export default function Wallet() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [kycModalOpen, setKycModalOpen] = useState(false);
+  const [kycStatus, setKycStatus] = useState<string>("none");
 
   // Withdrawal form state
   const [selectedWalletId, setSelectedWalletId] = useState<string>("new");
@@ -132,6 +134,15 @@ export default function Wallet() {
     setLoading(true);
 
     try {
+      // 0. Fetch KYC verification status
+      const { data: kycRec } = await supabase
+        .from("identity_verifications")
+        .select("status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const currentKycStatus = kycRec?.status || "none";
+      setKycStatus(currentKycStatus);
+
       // 1. Check if user has PIN
       const { data: pinData } = await supabase
         .from("wallet_pins")
@@ -274,12 +285,24 @@ export default function Wallet() {
     loadData();
   }, [user, authLoading]);
 
+  const handleOpenWithdrawModal = () => {
+    if (kycStatus !== "approved") {
+      setKycModalOpen(true);
+      return;
+    }
+    setWithdrawModalOpen(true);
+  };
+
   // Open withdraw modal if ?action=withdraw in query
   useEffect(() => {
-    if (searchParams.get("action") === "withdraw") {
-      setWithdrawModalOpen(true);
+    if (searchParams.get("action") === "withdraw" && !loading) {
+      if (kycStatus !== "approved") {
+        setKycModalOpen(true);
+      } else {
+        setWithdrawModalOpen(true);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, kycStatus, loading]);
 
   // Selected Country in Account Form
   const currentCountryConfig = useMemo(() => {
@@ -385,6 +408,12 @@ export default function Wallet() {
   // INITIATE WITHDRAWAL CLICK
   // -------------------------------------------------------------
   const handleInitiateWithdraw = () => {
+    if (kycStatus !== "approved") {
+      setWithdrawModalOpen(false);
+      setKycModalOpen(true);
+      return;
+    }
+
     if (!isAmountValid) {
       if (isAmountTooHigh) {
         toast.error(`Solde insuffisant. Vous disposez de ${formatFmt(balanceFcfa)} FCFA.`);
@@ -604,7 +633,7 @@ export default function Wallet() {
             {/* Action 1: Retirer */}
             <div className="flex flex-col items-center gap-2">
               <button
-                onClick={() => setWithdrawModalOpen(true)}
+                onClick={handleOpenWithdrawModal}
                 className="h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] flex items-center justify-center shadow-md active:scale-95 transition-all group"
               >
                 <ArrowUpRight className="h-6 w-6 stroke-[2.5] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -770,6 +799,84 @@ export default function Wallet() {
           )}
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* DIALOG KYC GATE: VÉRIFICATION OBLIGATOIRE                */}
+      {/* ======================================================== */}
+      <Dialog open={kycModalOpen} onOpenChange={setKycModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white">
+          <div className="flex flex-col items-center text-center space-y-4 pt-2">
+            <div
+              className={`h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg ${
+                kycStatus === "pending"
+                  ? "bg-amber-100 dark:bg-amber-950/60 text-amber-600 shadow-amber-500/10"
+                  : kycStatus === "rejected"
+                  ? "bg-red-100 dark:bg-red-950/60 text-red-600 shadow-red-500/10"
+                  : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 shadow-emerald-500/10"
+              }`}
+            >
+              {kycStatus === "pending" ? (
+                <Clock className="h-8 w-8 stroke-[2.2]" />
+              ) : kycStatus === "rejected" ? (
+                <AlertCircle className="h-8 w-8 stroke-[2.2]" />
+              ) : (
+                <ShieldCheck className="h-8 w-8 stroke-[2.2]" />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <DialogTitle className="text-xl font-extrabold text-foreground">
+                {kycStatus === "pending"
+                  ? "Vérification KYC en cours"
+                  : kycStatus === "rejected"
+                  ? "Vérification KYC rejetée"
+                  : "Vérification d'identité requise"}
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground leading-relaxed px-2">
+                {kycStatus === "pending"
+                  ? "Votre dossier a été soumis avec succès et est en cours d'examen par notre équipe de conformité (délai indicatif 24h à 48h). Vos retraits seront débloqués automatiquement dès approbation."
+                  : kycStatus === "rejected"
+                  ? "Votre soumission précédente n'a pas été validée. Veuillez consulter le motif du rejet et soumettre à nouveau vos pièces d'identité pour autoriser les retraits."
+                  : "Pour des raisons de conformité financière et de sécurité anti-fraude, la vérification d'une pièce d'identité officielle est obligatoire pour effectuer vos retraits de fonds."}
+              </DialogDescription>
+            </div>
+
+            <div className="w-full rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-3.5 text-left text-xs space-y-1.5">
+              <div className="flex items-center gap-2 text-foreground font-semibold">
+                <span className="text-base">💡</span>
+                <span>Bon à savoir</span>
+              </div>
+              <p className="text-muted-foreground leading-relaxed">
+                Vos ventes et vos encaissements continuent de fonctionner à 100%. La vérification ne bloque que la sortie des fonds vers votre numéro ou compte bancaire.
+              </p>
+            </div>
+
+            <div className="w-full flex flex-col gap-2 pt-2">
+              <Button
+                onClick={() => {
+                  setKycModalOpen(false);
+                  navigate("/dashboard/kyc");
+                }}
+                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm flex items-center justify-center gap-2"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                {kycStatus === "pending"
+                  ? "Suivre l'avancement de mon KYC"
+                  : kycStatus === "rejected"
+                  ? "Corriger mes documents KYC"
+                  : "Passer ma vérification KYC (2 min)"}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setKycModalOpen(false)}
+                className="w-full h-10 rounded-xl text-xs text-muted-foreground hover:text-foreground"
+              >
+                Plus tard
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ======================================================== */}
       {/* DIALOG 1: EFFECTUER UN RETRAIT                          */}

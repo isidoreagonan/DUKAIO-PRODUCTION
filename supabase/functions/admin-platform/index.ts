@@ -8,10 +8,6 @@ const corsHeaders = {
 
 const ADMIN_EMAILS = [
   "isidoreagonan@gmail.com",
-  "agonandolapo@gmail.com",
-  "dolapoecomllc@gmail.com",
-  "dolapoecom1@gmail.com",
-  "dolapoagonan@gmail.com",
 ];
 
 const getAdminUser = async (req: Request, supabaseUrl: string, anonKey: string) => {

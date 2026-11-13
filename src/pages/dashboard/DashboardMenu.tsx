@@ -99,6 +99,14 @@ const tools: Tool[] = [
     bg: "bg-pink-50 dark:bg-pink-950/40 border-pink-200/70 dark:border-pink-900/50",
   },
   {
+    title: "Vérification KYC",
+    subtitle: "Pièce d'identité & retraits sécurisés",
+    url: "/dashboard/kyc",
+    icon: Shield,
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200/70 dark:border-emerald-900/50",
+  },
+  {
     title: "Outils",
     subtitle: "Utilitaires & extensions",
     url: "/dashboard/tools",
