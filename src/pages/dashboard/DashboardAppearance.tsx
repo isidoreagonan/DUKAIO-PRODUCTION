@@ -160,14 +160,37 @@ const DashboardAppearance = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     setUploadingBanner(true);
-    const ext = file.name.split(".").pop();
-    const path = `banners/${user.id}/banner.${ext}`;
+    const ext = file.name.split(".").pop() || "jpg";
+    const cleanExt = ext.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `${user.id}/banner_${Date.now()}.${cleanExt}`;
+
     try {
-      const res = await uploadToBunny(file, path, "media");
-      setBannerUrl(res.url + "?t=" + Date.now());
-      toast.success("Bannière uploadée !");
+      // Primary: Upload to Supabase Storage 'store-assets' (100GB plan)
+      const { error: uploadErr } = await supabase.storage
+        .from("store-assets")
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type || "image/jpeg",
+        });
+
+      if (!uploadErr) {
+        const { data: pubData } = supabase.storage
+          .from("store-assets")
+          .getPublicUrl(path);
+        setBannerUrl(pubData.publicUrl + "?t=" + Date.now());
+        toast.success("Bannière uploadée sur Supabase !");
+        return;
+      }
+      throw uploadErr;
     } catch (err: any) {
-      toast.error("Erreur lors de l'upload de la bannière : " + err.message);
+      // Fallback to Bunny
+      try {
+        const res = await uploadToBunny(file, `banners/${user.id}/banner.${cleanExt}`, "media");
+        setBannerUrl(res.url + "?t=" + Date.now());
+        toast.success("Bannière uploadée !");
+      } catch (bunnyErr: any) {
+        toast.error("Erreur lors de l'upload de la bannière : " + (err.message || bunnyErr.message));
+      }
     } finally {
       setUploadingBanner(false);
     }

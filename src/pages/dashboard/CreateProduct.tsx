@@ -334,16 +334,54 @@ const CreateProduct = () => {
     folder: string,
     onProgress: (progress: number) => void
   ): Promise<{ url: string; path: string } | null> => {
+    const isPublicMedia = folder === "thumbnails" || folder === "banners" || folder === "seo-images";
+
+    // Media assets (Thumbnails, Covers, SEO images, Banners) are stored on Supabase Storage (100GB plan)
+    if (isPublicMedia) {
+      const ext = file.name.split(".").pop() || "jpg";
+      const cleanExt = ext.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `${user!.id}/${folder}_${Date.now()}.${cleanExt}`;
+
+      try {
+        const { error: uploadErr } = await supabase.storage
+          .from("product-assets")
+          .upload(path, file, {
+            upsert: true,
+            contentType: file.type || "image/jpeg",
+          });
+
+        if (uploadErr) {
+          console.warn("Supabase storage error, falling back to Bunny:", uploadErr);
+          throw uploadErr;
+        }
+
+        const { data: pubData } = supabase.storage
+          .from("product-assets")
+          .getPublicUrl(path);
+
+        onProgress(100);
+        return { url: pubData.publicUrl, path };
+      } catch (err: any) {
+        // Resilient fallback to Bunny.net if Supabase encounters any issue
+        try {
+          const res = await uploadToBunny(file, path, "media", onProgress);
+          return { url: res.url, path: res.path };
+        } catch (bunnyErr: any) {
+          toast.error(`Erreur upload image: ${err.message || bunnyErr.message}`);
+          return null;
+        }
+      }
+    }
+
+    // Heavy downloadable product files (zip, software, courses, videos) are stored on Bunny.net
     const ext = file.name.split(".").pop();
     const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
-    const isPublic = folder === "thumbnails" || folder === "banners" || folder === "seo-images";
-    const zone = isPublic ? "media" : "files";
 
     try {
-      const res = await uploadToBunny(file, path, zone, onProgress);
+      const res = await uploadToBunny(file, path, "files", onProgress);
       return { url: res.url, path: res.path };
     } catch (err: any) {
-      toast.error(`Erreur upload: ${err.message}`);
+      toast.error(`Erreur upload fichier produit: ${err.message}`);
       return null;
     }
   };

@@ -145,6 +145,8 @@ const App = () => (
             {/* Espace Acheteur */}
             <Route path="/buyer-login" element={<BuyerLogin />} />
             <Route path="/buyer/login" element={<BuyerLogin />} />
+            <Route path="/buyer" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
+            <Route path="/buyer/orders" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />
             <Route path="/buyer-oauth-callback" element={<BuyerOAuthCallback />} />
             <Route path="/buyer-verify-otp" element={<BuyerVerifyOtp />} />
             <Route path="/mes-achats" element={<BuyerProtectedRoute><BuyerDashboard /></BuyerProtectedRoute>} />

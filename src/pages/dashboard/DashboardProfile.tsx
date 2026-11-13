@@ -41,15 +41,37 @@ const DashboardProfile = () => {
     }
 
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `logos/${user.id}/store-logo.${ext}`;
+    const ext = file.name.split(".").pop() || "png";
+    const cleanExt = ext.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `${user.id}/store-logo_${Date.now()}.${cleanExt}`;
 
     try {
-      const res = await uploadToBunny(file, path, "media");
-      setLogoUrl(res.url);
-      toast.success("Logo uploadé !");
+      // Primary: Upload to Supabase Storage 'store-assets' (100GB plan)
+      const { error: uploadErr } = await supabase.storage
+        .from("store-assets")
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type || "image/png",
+        });
+
+      if (!uploadErr) {
+        const { data: pubData } = supabase.storage
+          .from("store-assets")
+          .getPublicUrl(path);
+        setLogoUrl(pubData.publicUrl);
+        toast.success("Logo uploadé sur Supabase !");
+        return;
+      }
+      throw uploadErr;
     } catch (err: any) {
-      toast.error("Erreur lors de l'upload : " + err.message);
+      // Fallback to Bunny
+      try {
+        const res = await uploadToBunny(file, `logos/${user.id}/store-logo.${cleanExt}`, "media");
+        setLogoUrl(res.url);
+        toast.success("Logo uploadé !");
+      } catch (bunnyErr: any) {
+        toast.error("Erreur lors de l'upload : " + (err.message || bunnyErr.message));
+      }
     } finally {
       setUploading(false);
     }
