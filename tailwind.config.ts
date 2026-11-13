@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import colors from "tailwindcss/colors";
 
 export default {
   darkMode: ["class"],
@@ -72,10 +73,16 @@ export default {
         },
         ink: "#0F1E3D",
         inkSoft: "#152A52",
-        blue: "#2557D6",
+        blue: {
+          ...colors.blue,
+          DEFAULT: "#2557D6",
+        },
         blueDeep: "#1B3FA0",
         blueTint: "#EAF0FF",
-        slate: "#64748B",
+        slate: {
+          ...colors.slate,
+          DEFAULT: "#64748B",
+        },
         hair: "rgba(15, 30, 61, 0.12)",
       },
       borderRadius: {

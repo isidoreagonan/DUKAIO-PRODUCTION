@@ -2,12 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Plus, Trash2, ShieldCheck, Smartphone, Check,
-  Building2, AlertCircle, Loader2, Star, CheckCircle2
+  AlertCircle, Loader2, Star, CheckCircle2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -126,7 +125,7 @@ export default function WalletAccounts() {
     }
   }, [accCountry, countryNetworks]);
 
-  // Save new account
+  // Save account handler
   const handleSaveAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -139,21 +138,24 @@ export default function WalletAccounts() {
 
     setSavingAccount(true);
     try {
-      const isFirst = savedWallets.length === 0;
-      const shouldBeDefault = isFirst || accMakeDefault;
+      const isDefault = accMakeDefault || savedWallets.length === 0;
 
-      // If making default, reset existing defaults
-      if (shouldBeDefault && savedWallets.length > 0) {
+      const selectedNet =
+        countryNetworks.find((n) => n.code === accOperator) ||
+        countryNetworks[0];
+      const providerCode = selectedNet ? selectedNet.code : accOperator;
+      const dialCode = currentCountryConfig.dial.replace(/\D/g, "");
+      const fullPhone = cleanPh.startsWith(dialCode)
+        ? `+${cleanPh}`
+        : `+${dialCode}${cleanPh}`;
+
+      // If set to default, first reset existing defaults
+      if (isDefault && savedWallets.length > 0) {
         await supabase
           .from("wallets")
           .update({ is_default: false })
           .eq("user_id", user.id);
       }
-
-      const selectedNet = countryNetworks.find((n) => n.code === accOperator) || countryNetworks[0];
-      const providerCode = selectedNet ? selectedNet.code : accOperator;
-      const dialCode = currentCountryConfig.dial.replace(/\D/g, "");
-      const fullPhone = cleanPh.startsWith(dialCode) ? `+${cleanPh}` : `+${dialCode}${cleanPh}`;
 
       const { data, error } = await supabase
         .from("wallets")
@@ -163,9 +165,10 @@ export default function WalletAccounts() {
           country: accCountry.toUpperCase(),
           provider_code: providerCode,
           phone: fullPhone,
-          holder_first_name: accHolderName.trim() || profile?.display_name || "Créateur",
+          holder_first_name:
+            accHolderName.trim() || profile?.display_name || "Créateur",
           holder_last_name: "",
-          is_default: shouldBeDefault,
+          is_default: isDefault,
         })
         .select()
         .single();
@@ -173,10 +176,13 @@ export default function WalletAccounts() {
       if (error) throw error;
 
       toast.success("Compte de retrait enregistré avec succès !");
+
+      // Reset form
       setAccPhone("");
       setAccLabel("");
       setAccHolderName("");
-      setAccMakeDefault(false);
+
+      // Reload
       await loadWallets();
     } catch (err: any) {
       toast.error("Erreur lors de l'enregistrement : " + err.message);
@@ -239,20 +245,23 @@ export default function WalletAccounts() {
 
   return (
     <DashboardLayout>
-      <SEOHead title="Mes comptes de retrait | DUKAIO" description="Gérez vos coordonnées de paiement pour les retraits" />
+      <SEOHead
+        title="Mes comptes de retrait | DUKAIO"
+        description="Gérez vos coordonnées de paiement pour les retraits"
+      />
 
       <div className="max-w-4xl mx-auto space-y-8 pb-16 font-sans">
         {/* Navigation & Header */}
         <div>
           <button
             onClick={() => navigate("/dashboard/wallet")}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-3"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors mb-3 cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
             Retour au portefeuille
           </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-[#263043]">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
                 <Smartphone className="h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -268,7 +277,7 @@ export default function WalletAccounts() {
                 const el = document.getElementById("add-account-form");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5"
+              className="bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A] font-bold text-xs h-9 rounded-xl shadow-xs gap-1.5 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Ajouter un compte
@@ -288,12 +297,12 @@ export default function WalletAccounts() {
           </div>
 
           {loading ? (
-            <div className="p-12 text-center rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600 mx-auto mb-2" />
+            <div className="p-12 text-center rounded-2xl border border-slate-200 dark:border-[#263043] bg-white dark:bg-[#151C2B]">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400 mx-auto mb-2" />
               <p className="text-xs text-slate-500 dark:text-slate-400">Chargement de vos comptes...</p>
             </div>
           ) : savedWallets.length === 0 ? (
-            <div className="p-8 sm:p-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3">
+            <div className="p-8 sm:p-12 text-center rounded-2xl border border-dashed border-slate-300 dark:border-[#263043] bg-slate-50/50 dark:bg-[#151C2B]/40 space-y-3">
               <div className="h-12 w-12 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 mx-auto flex items-center justify-center">
                 <Smartphone className="h-6 w-6" />
               </div>
@@ -314,24 +323,28 @@ export default function WalletAccounts() {
                     key={sw.id}
                     className={`p-4 rounded-2xl border transition-all ${
                       isDefault
-                        ? "border-blue-500/60 bg-blue-50/30 dark:bg-blue-950/20 ring-1 ring-blue-500/40 shadow-xs"
-                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700"
+                        ? "border-emerald-500/50 dark:border-emerald-500/50 bg-emerald-50/30 dark:bg-emerald-950/20 ring-1 ring-emerald-500/30 shadow-xs"
+                        : "border-slate-200 dark:border-[#263043] bg-white dark:bg-[#151C2B] hover:border-slate-300 dark:hover:border-slate-700"
                     }`}
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       {/* Left: Logo & Details */}
                       <div className="flex items-center gap-3.5 min-w-0">
-                        <div className="relative h-13 w-13 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-2 shrink-0 shadow-2xs overflow-hidden">
+                        <div className="relative h-12 w-12 rounded-xl bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-[#263043] flex items-center justify-center p-2 shrink-0 shadow-2xs overflow-hidden">
                           {meta.logo ? (
-                            <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
+                            <img
+                              src={meta.logo}
+                              alt={meta.name}
+                              className="h-full w-full max-h-8 max-w-8 object-contain"
+                            />
                           ) : (
-                            <Smartphone className="h-6 w-6 text-slate-500" />
+                            <Smartphone className="h-5 w-5 text-slate-500 dark:text-slate-400" />
                           )}
                           {meta.flagUrl && (
                             <img
                               src={meta.flagUrl}
                               alt={meta.country}
-                              className="absolute bottom-1 right-1 h-4 w-4 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs"
+                              className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full object-cover border border-white dark:border-[#1E2536] shadow-2xs"
                             />
                           )}
                         </div>
@@ -341,18 +354,18 @@ export default function WalletAccounts() {
                             <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
                               {sw.name}
                             </span>
-                            <Badge variant="outline" className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700">
+                            <span className="text-[10px] font-semibold bg-slate-100 dark:bg-[#1E2536] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#263043] px-2 py-0.5 rounded-md">
                               {meta.name}
-                            </Badge>
+                            </span>
                             {isDefault && (
-                              <Badge className="bg-emerald-600 text-white text-[10px] font-bold gap-1 shadow-2xs">
+                              <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-2xs">
                                 <CheckCircle2 className="h-3 w-3" />
                                 Compte par défaut
-                              </Badge>
+                              </span>
                             )}
                           </div>
 
-                          <p className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 tracking-wide">
+                          <p className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200 tracking-wide">
                             {sw.phone}
                           </p>
 
@@ -370,7 +383,7 @@ export default function WalletAccounts() {
                             size="sm"
                             disabled={settingDefaultId === sw.id}
                             onClick={() => handleSetDefault(sw.id)}
-                            className="h-8 text-xs font-semibold rounded-lg border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 gap-1"
+                            className="h-8 text-xs font-semibold rounded-lg border-slate-200 dark:border-[#263043] bg-white dark:bg-[#1E2536] hover:bg-slate-100 dark:hover:bg-[#252E42] text-slate-700 dark:text-slate-200 gap-1 cursor-pointer"
                           >
                             {settingDefaultId === sw.id ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -386,7 +399,7 @@ export default function WalletAccounts() {
                           size="icon"
                           disabled={deletingId === sw.id}
                           onClick={() => handleDeleteAccount(sw.id)}
-                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                          className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
                           title="Supprimer ce compte"
                         >
                           {deletingId === sw.id ? (
@@ -405,8 +418,11 @@ export default function WalletAccounts() {
         </div>
 
         {/* ─── SECTION 2: AJOUTER UN NOUVEAU COMPTE ─── */}
-        <div id="add-account-form" className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 space-y-6 shadow-xs">
-          <div className="flex items-center gap-3 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div
+          id="add-account-form"
+          className="rounded-3xl border border-slate-200 dark:border-[#263043] bg-white dark:bg-[#151C2B] p-6 sm:p-8 space-y-6 shadow-xs"
+        >
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-200 dark:border-[#263043]">
             <div className="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
               <Plus className="h-5 w-5" />
             </div>
@@ -426,17 +442,30 @@ export default function WalletAccounts() {
               <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                 1. Pays de réception
               </Label>
-              <select
-                value={accCountry}
-                onChange={(e) => setAccCountry(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
-              >
-                {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                    {c.name} ({c.dial} • {c.currency})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={accCountry}
+                  onChange={(e) => setAccCountry(e.target.value)}
+                  className="w-full h-11 px-3.5 pr-10 rounded-xl border border-slate-200 dark:border-[#263043] bg-slate-50 dark:bg-[#101726] text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer appearance-none"
+                >
+                  {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
+                    <option
+                      key={c.code}
+                      value={c.code}
+                      className="bg-white dark:bg-[#101726] text-slate-900 dark:text-white"
+                    >
+                      {c.name} ({c.dial} • {c.currency})
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
+                  <img
+                    src={`https://flagcdn.com/w40/${accCountry.toLowerCase()}.png`}
+                    alt={accCountry}
+                    className="h-4 w-5 rounded object-cover shadow-2xs border border-slate-200 dark:border-[#263043]"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* 2. Sélection du Réseau / Opérateur */}
@@ -461,15 +490,19 @@ export default function WalletAccounts() {
                       onClick={() => setAccOperator(net.code)}
                       className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
                         isSelected
-                          ? "border-blue-600 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-950/40 ring-2 ring-blue-600/30 shadow-xs"
-                          : "border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700"
+                          ? "border-blue-600 dark:border-blue-500 bg-blue-50/60 dark:bg-blue-950/40 ring-2 ring-blue-600/40 shadow-xs"
+                          : "border-slate-200 dark:border-[#263043] bg-slate-50/60 dark:bg-[#101726] hover:border-slate-300 dark:hover:border-slate-600"
                       }`}
                     >
-                      <div className="h-9 w-9 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-2xs">
+                      <div className="h-9 w-9 rounded-lg bg-white dark:bg-[#1E2536] border border-slate-200 dark:border-[#263043] flex items-center justify-center p-1 shrink-0 overflow-hidden shadow-2xs">
                         {opMeta.logos?.[0] ? (
-                          <img src={opMeta.logos[0]} alt={net.name} className="h-full w-full object-contain" />
+                          <img
+                            src={opMeta.logos[0]}
+                            alt={net.name}
+                            className="h-full w-full object-contain"
+                          />
                         ) : (
-                          <Smartphone className="h-4 w-4 text-slate-500" />
+                          <Smartphone className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -505,7 +538,7 @@ export default function WalletAccounts() {
                   placeholder={currentCountryConfig.placeholder}
                   value={accPhone}
                   onChange={(e) => setAccPhone(e.target.value)}
-                  className="pl-16 h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-mono font-bold text-sm"
+                  className="pl-16 h-11 rounded-xl border-slate-200 dark:border-[#263043] bg-slate-50 dark:bg-[#101726] text-slate-900 dark:text-white font-mono font-bold text-sm focus:border-blue-500"
                   required
                 />
               </div>
@@ -525,7 +558,7 @@ export default function WalletAccounts() {
                   placeholder="Ex: Jean Dupont"
                   value={accHolderName}
                   onChange={(e) => setAccHolderName(e.target.value)}
-                  className="h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-medium"
+                  className="h-11 rounded-xl border-slate-200 dark:border-[#263043] bg-slate-50 dark:bg-[#101726] text-slate-900 dark:text-white text-xs font-medium focus:border-blue-500"
                 />
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Le nom officiel enregistré sur la ligne téléphonique ou le compte bancaire.
@@ -542,7 +575,7 @@ export default function WalletAccounts() {
                   placeholder="Ex: Mon MTN Principal"
                   value={accLabel}
                   onChange={(e) => setAccLabel(e.target.value)}
-                  className="h-11 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-medium"
+                  className="h-11 rounded-xl border-slate-200 dark:border-[#263043] bg-slate-50 dark:bg-[#101726] text-slate-900 dark:text-white text-xs font-medium focus:border-blue-500"
                 />
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Un nom mémo pour reconnaître ce compte dans votre liste.
@@ -557,20 +590,23 @@ export default function WalletAccounts() {
                 id="make-default"
                 checked={accMakeDefault}
                 onChange={(e) => setAccMakeDefault(e.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                className="h-4 w-4 rounded border-slate-300 dark:border-[#263043] bg-white dark:bg-[#101726] text-blue-600 focus:ring-blue-500 cursor-pointer"
               />
-              <label htmlFor="make-default" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+              <label
+                htmlFor="make-default"
+                className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer select-none"
+              >
                 Définir ce compte comme compte de retrait par défaut
               </label>
             </div>
 
             {/* 7. Bouton Submit */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-3">
+            <div className="pt-4 border-t border-slate-200 dark:border-[#263043] flex items-center justify-end gap-3">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/dashboard/wallet")}
-                className="h-11 rounded-xl text-xs font-semibold"
+                className="h-11 rounded-xl text-xs font-semibold border-slate-200 dark:border-[#263043] bg-transparent hover:bg-slate-100 dark:hover:bg-[#1E2536] text-slate-700 dark:text-slate-300 cursor-pointer"
               >
                 Annuler
               </Button>
@@ -578,7 +614,7 @@ export default function WalletAccounts() {
               <Button
                 type="submit"
                 disabled={savingAccount || !accPhone.trim()}
-                className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs gap-2"
+                className="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs gap-2 cursor-pointer"
               >
                 {savingAccount ? (
                   <>
@@ -587,7 +623,7 @@ export default function WalletAccounts() {
                   </>
                 ) : (
                   <>
-                    <Plus className="h-4 w-4" />
+                    <ShieldCheck className="h-4 w-4" />
                     Enregistrer ce compte
                   </>
                 )}
