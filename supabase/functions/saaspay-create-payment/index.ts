@@ -143,9 +143,14 @@ Deno.serve(async (req) => {
     if (countryUpper === "BJ" && localPhone.length === 8) {
       localPhone = `01${localPhone}`;
     }
-    // Nigeria: Strip leading 0 if present (e.g. 080 -> 80)
-    if (countryUpper === "NG" && localPhone.startsWith("0")) {
-      localPhone = localPhone.slice(1);
+    // Nigeria: Strip leading 0 if present (e.g. 080 -> 80) and validate 10 digits
+    if (countryUpper === "NG" && !isCardOrCrypto) {
+      if (localPhone.startsWith("0")) {
+        localPhone = localPhone.slice(1);
+      }
+      if (localPhone.length < 10) {
+        return json({ error: "Numéro de téléphone nigérian invalide : 10 chiffres locaux attendus (ex: 80 1234 5678)" }, 400);
+      }
     }
 
     // Determine normalized SaaSPay network code
@@ -221,11 +226,12 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               country: "NG",
               network: "allbanks_ng",
+              phone_number: localPhone,
               customer: {
                 first_name: firstName,
                 last_name: lastName,
                 email,
-                phone: rawPhone ? `+${rawPhone}` : undefined,
+                phone: localPhone,
               },
             }),
           });

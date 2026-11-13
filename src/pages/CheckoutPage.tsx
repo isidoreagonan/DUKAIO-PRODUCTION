@@ -3,8 +3,10 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Check, ChevronDown, CreditCard, Lock, MessageCircle,
   Package, ShieldCheck, Smartphone, Loader2, Sparkles, AlertCircle, RefreshCw,
-  Landmark, Copy, ExternalLink, Clock, Tag, X, Wifi, WifiOff
+  Landmark, Copy, ExternalLink, Clock, Tag, X, Wifi, WifiOff,
+  Building2, QrCode
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
 import { toast } from "sonner";
@@ -257,6 +259,29 @@ export default function CheckoutPage() {
   } | null>(null);
   const [bankTransferCheckoutUrl, setBankTransferCheckoutUrl] = useState<string>("");
   const [countdownSeconds, setCountdownSeconds] = useState<number>(3600);
+
+  // Unique sync reference shared between Desktop & Mobile QR scan
+  const [qrSyncRef] = useState<string>(() => {
+    const fromUrl = searchParams.get("ref");
+    if (fromUrl) return fromUrl;
+    try {
+      const stored = sessionStorage.getItem("dukaio_qr_ref");
+      if (stored) return stored;
+    } catch {}
+    const newRef = `DK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    try { sessionStorage.setItem("dukaio_qr_ref", newRef); } catch {}
+    return newRef;
+  });
+
+  const [mobileActive, setMobileActive] = useState<boolean>(false);
+  const isQrSource = searchParams.get("src") === "qr";
+
+  const qrCheckoutUrl = useMemo(() => {
+    if (!product?.id) return "";
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://ecom-revolt.com";
+    const promoParam = appliedPromo?.code ? `&promo=${encodeURIComponent(appliedPromo.code)}` : "";
+    return `${origin}/checkout/${product.id}?ref=${qrSyncRef}&src=qr${promoParam}`;
+  }, [product?.id, qrSyncRef, appliedPromo?.code]);
 
   // Force strict light mode on the checkout experience
   useEffect(() => {
@@ -620,7 +645,7 @@ export default function CheckoutPage() {
 
     const saaspayMethod = getSaaSPayMethodCode(method, country.code);
     const fullPhone = `${country.dial}${phone.replace(/\D/g, "")}`;
-    const clientRef = `DK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const clientRef = searchParams.get("ref") || qrSyncRef;
 
     setOrderReference(clientRef);
     setSubmitting(true);
@@ -808,6 +833,17 @@ export default function CheckoutPage() {
           setStep("done");
           try { localStorage.removeItem("dukaio_active_tx"); } catch {}
           toast.success("Paiement validé avec succès !");
+
+          // Broadcast to connected desktop screen
+          try {
+            const syncChannel = supabase.channel(`checkout_sync_${orderReference}`);
+            syncChannel.send({
+              type: "broadcast",
+              event: "mobile_success",
+              payload: { orderId: data.orderId },
+            });
+          } catch {}
+
           clearInterval(interval);
         } else if (data?.status === "failed") {
           setErrorMessage(data.error || "Paiement refusé ou annulé.");
@@ -825,6 +861,87 @@ export default function CheckoutPage() {
       clearInterval(interval);
     };
   }, [step, paymentId, orderReference]);
+
+  // -------------------------------------------------------------
+  // Realtime QR Synchronization (Desktop <-> Mobile Phone)
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (!qrSyncRef || step === "done") return;
+
+    // 1. Supabase Broadcast Channel between PC and Mobile
+    const syncChannel = supabase.channel(`checkout_sync_${qrSyncRef}`);
+
+    syncChannel
+      .on("broadcast", { event: "mobile_scan" }, () => {
+        setMobileActive(true);
+        toast.info(t("Téléphone connecté ! Paiement en cours sur votre mobile...", "Phone connected! Payment in progress on mobile..."));
+      })
+      .on("broadcast", { event: "mobile_success" }, (msg) => {
+        if (msg.payload?.orderId) setCompletedOrderId(msg.payload.orderId);
+        setStep("done");
+        toast.success(t("Paiement validé depuis votre téléphone !", "Payment approved from your phone!"));
+      })
+      .subscribe((status) => {
+        // If this page was opened via QR scan on mobile, notify the PC!
+        if (status === "SUBSCRIBED" && isQrSource) {
+          syncChannel.send({
+            type: "broadcast",
+            event: "mobile_scan",
+            payload: { timestamp: Date.now() },
+          });
+        }
+      });
+
+    // 2. Realtime listener on orders table for this reference
+    const orderChannel = supabase
+      .channel(`order_realtime_${qrSyncRef}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `moneroo_transaction_id=eq.${qrSyncRef}`,
+        },
+        (payload) => {
+          const rec: any = payload.new;
+          if (rec && (rec.status === "completed" || rec.status === "paid")) {
+            setCompletedOrderId(rec.id);
+            setStep("done");
+            toast.success(t("Paiement validé avec succès !", "Payment completed successfully!"));
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Lightweight status check every 3.5s
+    const pollTimer = setInterval(async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      try {
+        const { data: ord } = await supabase
+          .from("orders")
+          .select("id, status")
+          .eq("moneroo_transaction_id", qrSyncRef)
+          .maybeSingle();
+
+        if (ord) {
+          if (!mobileActive) setMobileActive(true);
+          if (ord.status === "completed" || ord.status === "paid") {
+            setCompletedOrderId(ord.id);
+            setStep("done");
+            toast.success(t("Paiement validé avec succès !", "Payment completed successfully!"));
+            clearInterval(pollTimer);
+          }
+        }
+      } catch {}
+    }, 3500);
+
+    return () => {
+      syncChannel.unsubscribe();
+      orderChannel.unsubscribe();
+      clearInterval(pollTimer);
+    };
+  }, [qrSyncRef, step, isQrSource, mobileActive]);
 
   const allSupportedMethods = useMemo(
     () => Array.from(new Set(SAASPAY_COUNTRIES.flatMap((c) => c.methods))),
@@ -1108,20 +1225,51 @@ export default function CheckoutPage() {
             {t("Mobile Money et carte bancaire acceptés en temps réel.", "Instant Mobile Money and cards accepted.")}
           </p>
 
-          <div className="mt-6 hidden items-start gap-3 rounded-xl border border-[#E2E8F0] p-4 lg:flex bg-[#F8FAFC]">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white border border-[#E2E8F0] text-[#0F172A]">
-              <Smartphone className="h-4 w-4" strokeWidth={1.8} />
-            </span>
-            <div>
-              <p className="text-sm font-bold text-[#0F172A]">
-                {t("Payer depuis votre téléphone", "Pay from your phone")}
-              </p>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-[#64748B]">
-                {t(
-                  "Validez la demande directement sur votre téléphone avec votre code secret Mobile Money.",
-                  "Approve the payment request on your phone with your secret Mobile Money PIN."
-                )}
-              </p>
+          {/* QR Code Pay from Phone Card (Desktop) */}
+          <div className="mt-6 hidden lg:flex flex-col gap-3 rounded-2xl border border-[#E2E8F0] p-4 bg-[#F8FAFC] transition-all">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-[#E2E8F0] text-[#0F172A] shadow-2xs">
+                  <QrCode className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-xs font-bold text-[#0F172A]">
+                    {t("Payer depuis votre téléphone", "Pay from your phone")}
+                  </p>
+                  <p className="text-[10px] text-[#64748B]">
+                    {t("Scannez avec l'appareil photo", "Scan with your camera")}
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-bold text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Sync
+              </span>
+            </div>
+
+            {/* QR Code Visual */}
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
+              <div className="p-2 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs shrink-0 flex items-center justify-center">
+                <QRCodeSVG
+                  value={qrCheckoutUrl}
+                  size={104}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+
+              <div className="space-y-1 text-left min-w-0">
+                <p className="text-[11px] text-[#0F172A] font-bold leading-tight">
+                  {mobileActive
+                    ? t("📱 Smartphone connecté !", "📱 Smartphone connected!")
+                    : t("Ouvrir sur mobile", "Open on mobile")}
+                </p>
+                <p className="text-[10px] text-[#64748B] leading-relaxed">
+                  {mobileActive
+                    ? t("Finalisez votre validation PIN sur votre téléphone. Cet écran se mettra à jour automatiquement dès paiement confirmé !", "Finalize PIN approval on mobile. This screen will automatically update upon payment!")
+                    : t("Scannez pour choisir votre réseau Mobile Money et valider directement avec votre code secret.", "Scan to select your Mobile Money provider and approve with your secret PIN.")}
+                </p>
+              </div>
             </div>
           </div>
         </aside>
@@ -1131,6 +1279,37 @@ export default function CheckoutPage() {
         {/* ======================================================== */}
         <main className="rounded-2xl border border-[#E2E8F0] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.03)] overflow-hidden flex flex-col justify-between">
           <div className="p-5 sm:p-7">
+            {/* Banner when opened via QR sync on mobile */}
+            {isQrSource && step === "form" && (
+              <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200/80 p-2.5 flex items-center gap-2 text-xs text-emerald-800 font-semibold animate-in fade-in">
+                <Smartphone className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>{t("Session synchronisée avec votre ordinateur. Vos fichiers se débloqueront sur vos deux écrans dès validation !", "Session synced with your computer. Your files will unlock on both screens upon confirmation!")}</span>
+              </div>
+            )}
+
+            {/* Banner on desktop when mobile is actively paying */}
+            {mobileActive && step === "form" && (
+              <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50/80 p-3.5 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
+                    <Smartphone className="h-4 w-4" />
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-blue-950">
+                      {t("Paiement en cours sur votre smartphone", "Payment in progress on smartphone")}
+                    </p>
+                    <p className="text-[11px] text-blue-800 leading-tight">
+                      {t("Finalisez la saisie de votre PIN Mobile Money sur votre mobile. Téléchargement immédiat ici !", "Approve your Mobile Money PIN on your mobile. Immediate download right here!")}
+                    </p>
+                  </div>
+                </div>
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
+              </div>
+            )}
             {/* ---------------------------------------------------- */}
             {/* STEP 1: FORM                                         */}
             {/* ---------------------------------------------------- */}
@@ -1299,6 +1478,47 @@ export default function CheckoutPage() {
                                       )}
                                     </p>
                                   </>
+                                ) : meta.kind === "bank" ? (
+                                  <div className="space-y-3">
+                                    <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/70 text-xs space-y-1.5">
+                                      <div className="flex items-center gap-2 font-bold text-blue-900">
+                                        <Building2 className="h-4 w-4 text-blue-600" />
+                                        <span>{t("Virement bancaire instantané (Nigeria - NGN)", "Instant Bank Transfer (Nigeria - NGN)")}</span>
+                                      </div>
+                                      <p className="text-[11px] text-blue-800 leading-relaxed">
+                                        {t(
+                                          "Un compte bancaire virtuel (Sterling Bank) dédié à votre commande s'affichera directement sur cet écran dès validation. Effectuez votre virement depuis votre application bancaire (Kuda, OPay, PalmPay, GTBank, Zenith, etc.) pour une confirmation automatique immédiate.",
+                                          "A dedicated temporary virtual bank account (Sterling Bank) will be generated for your order. Transfer from your banking app (Kuda, OPay, PalmPay, GTBank, Zenith, etc.) for instant automated confirmation."
+                                        )}
+                                      </p>
+                                    </div>
+
+                                    <div>
+                                      <label className="text-xs font-semibold text-[#64748B] block mb-1">
+                                        {t("Votre numéro de téléphone (Nigeria)", "Your phone number (Nigeria)")}
+                                      </label>
+                                      <div className="flex h-11 overflow-hidden rounded-xl border border-[#E2E8F0] bg-white focus-within:border-[#0F172A] transition-colors">
+                                        <span className="flex items-center gap-2 border-r border-[#E2E8F0] px-3 text-xs font-mono font-bold text-[#0F172A] bg-[#F8FAFC]">
+                                          <Flag code={country.code} />
+                                          <span>{country.dial}</span>
+                                        </span>
+                                        <input
+                                          type="tel"
+                                          inputMode="tel"
+                                          value={phone}
+                                          onChange={(e) => setPhone(e.target.value.replace(/[^\d ]/g, ""))}
+                                          placeholder={country.placeholder}
+                                          className="min-w-0 flex-1 bg-transparent px-3 text-sm font-mono outline-none placeholder:text-[#94A3B8] text-[#0F172A]"
+                                        />
+                                      </div>
+                                      <p className="text-[11px] text-[#64748B] mt-1">
+                                        {t(
+                                          "Numéro associé à la génération de votre compte bancaire virtuel.",
+                                          "Phone number linked to your temporary virtual bank account."
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>
                                 ) : meta.kind === "card" ? (
                                   <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] text-xs space-y-1.5">
                                     <div className="flex items-center gap-2 font-bold text-[#0F172A]">
