@@ -20,6 +20,7 @@ import {
   type MethodId,
   type SaaSPayCountry,
 } from "@/data/saaspayProviders";
+import { useTrackingPixels, trackEvent, trackPurchaseOnce } from "@/hooks/useTrackingPixels";
 
 interface Product {
   id: string;
@@ -205,6 +206,14 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [sellerPixels, setSellerPixels] = useState<{
+    facebookPixelId?: string | null;
+    tiktokPixelId?: string | null;
+    googleAdsId?: string | null;
+  }>({});
+
+  useTrackingPixels(sellerPixels);
+
   // Form states: auto-select country from query params, session storage, or default
   const resolveInitialCountry = (): SaaSPayCountry => {
     if (queryCountry) {
@@ -374,6 +383,32 @@ export default function CheckoutPage() {
         }
 
         setProduct(p as Product);
+
+        // Fetch seller's tracking pixels & initialize
+        if (p.creator_id) {
+          const { data: creatorProf } = await supabase
+            .from("profiles")
+            .select("facebook_pixel_id, tiktok_pixel_id, google_ads_id")
+            .eq("id", p.creator_id)
+            .maybeSingle();
+          if (creatorProf) {
+            setSellerPixels({
+              facebookPixelId: creatorProf.facebook_pixel_id,
+              tiktokPixelId: creatorProf.tiktok_pixel_id,
+              googleAdsId: creatorProf.google_ads_id,
+            });
+          }
+        }
+
+        // Fire InitiateCheckout event
+        trackEvent("InitiateCheckout", {
+          content_name: p.title,
+          content_ids: [p.id],
+          content_type: "product",
+          value: p.price,
+          currency: "XOF",
+          num_items: 1,
+        });
 
         if (storeSlug) {
           const { data: store } = await supabase
@@ -632,10 +667,34 @@ export default function CheckoutPage() {
   };
 
   // -------------------------------------------------------------
+  // Track purchase when step transitions to 'done' (deduplicated)
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (step === "done" && product) {
+      const finalOrderId = completedOrderId || paymentId || orderReference || `order_${product.id}_${Date.now()}`;
+      trackPurchaseOnce(finalOrderId, {
+        content_name: product.title,
+        content_ids: [product.id],
+        content_type: "product",
+        value: priceAmount,
+        currency: currencyCode,
+        num_items: 1,
+      });
+    }
+  }, [step, product, completedOrderId, paymentId, orderReference, priceAmount, currencyCode]);
+
+  // -------------------------------------------------------------
   // Submit payment to SaaSPay (with African USSD Hotspot resilience)
   // -------------------------------------------------------------
   const handlePayment = async () => {
     if (!product) return;
+
+    // Track payment intent
+    trackEvent("AddPaymentInfo", {
+      payment_method: method,
+      value: priceAmount,
+      currency: currencyCode,
+    });
 
     // Handle free product (or 100% discounted product)
     if (priceAmount === 0) {

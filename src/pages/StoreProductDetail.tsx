@@ -32,7 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import ProductReportDialog from "@/components/store/ProductReportDialog";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
-import { trackEvent } from "@/hooks/useTrackingPixels";
+import { useTrackingPixels, trackEvent } from "@/hooks/useTrackingPixels";
 import { toast } from "sonner";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
@@ -49,6 +49,9 @@ interface Profile {
   store_description: string | null;
   store_logo_url: string | null;
   contact: string | null;
+  facebook_pixel_id?: string | null;
+  tiktok_pixel_id?: string | null;
+  google_ads_id?: string | null;
 }
 
 interface Product {
@@ -111,6 +114,12 @@ const StoreProductDetail = () => {
   const { grade: ownerBadge, expiresAt: ownerBadgeExpires } = useUserBadge(profile?.id);
   const { formatDual, countryCode, rates } = useCurrency();
 
+  useTrackingPixels({
+    facebookPixelId: profile?.facebook_pixel_id,
+    tiktokPixelId: profile?.tiktok_pixel_id,
+    googleAdsId: profile?.google_ads_id,
+  });
+
   // Always force clean light mode on public store pages
   useEffect(() => {
     document.documentElement.classList.remove("dark");
@@ -157,14 +166,14 @@ const StoreProductDetail = () => {
         if (ownerId) {
           const { data } = await supabase
             .from("profiles")
-            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
+            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
             .eq("id", ownerId)
             .maybeSingle();
           prof = data;
         } else {
           const { data } = await supabase
             .from("profiles")
-            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
+            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
             .or(`store_slug.eq."${cleanSlug}",store_slug.eq."${rawSlug}"`)
             .maybeSingle();
           prof = data;
@@ -185,7 +194,7 @@ const StoreProductDetail = () => {
           if (!prof) {
             const { data: creatorProf } = await supabase
               .from("profiles")
-              .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact")
+              .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
               .eq("id", directProd.creator_id)
               .maybeSingle();
             if (creatorProf) {

@@ -6,6 +6,7 @@ import { CheckCircle, Copy, Download, FileText, Key, Loader2, Play, ShoppingBag 
 import { toast } from "sonner";
 import { extractDownloadUrls } from "@/lib/downloadHelper";
 import { getStoreUrl, getBuyerPortalUrl } from "@/lib/subdomain";
+import { initTrackingPixels, trackPurchaseOnce } from "@/hooks/useTrackingPixels";
 
 const PaymentCallback = () => {
   const navigate = useNavigate();
@@ -53,6 +54,44 @@ const PaymentCallback = () => {
 
       if (data?.order?.status === "completed") {
         const order = data.order;
+
+        // Initialize tracking pixels for seller and track Purchase
+        if (order.store_owner_id) {
+          supabase
+            .from("profiles")
+            .select("facebook_pixel_id, tiktok_pixel_id, google_ads_id")
+            .eq("id", order.store_owner_id)
+            .maybeSingle()
+            .then(({ data: ownerProf }) => {
+              if (ownerProf) {
+                initTrackingPixels({
+                  facebookPixelId: ownerProf.facebook_pixel_id,
+                  tiktokPixelId: ownerProf.tiktok_pixel_id,
+                  googleAdsId: ownerProf.google_ads_id,
+                });
+              }
+              // Track Purchase event (deduplicated)
+              trackPurchaseOnce(order.id, {
+                content_name: order.products?.title || "Produit",
+                content_ids: order.product_id ? [order.product_id] : [],
+                content_type: "product",
+                value: order.amount,
+                currency: "XOF",
+                num_items: 1,
+              });
+            })
+            .catch((e) => console.warn("Pixel tracking error:", e));
+        } else {
+          trackPurchaseOnce(order.id, {
+            content_name: order.products?.title || "Produit",
+            content_ids: order.product_id ? [order.product_id] : [],
+            content_type: "product",
+            value: order.amount,
+            currency: "XOF",
+            num_items: 1,
+          });
+        }
+
         sessionStorage.setItem("buyer_session", JSON.stringify({
           email: order.customers?.email || email,
           customerName: order.customers?.name || pendingCheckout?.customerName || "Client",
