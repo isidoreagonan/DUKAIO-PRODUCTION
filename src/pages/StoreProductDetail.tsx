@@ -38,6 +38,7 @@ import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import ProductReviewsSection from "@/components/store/ProductReviewsSection";
 import { useCurrency } from "@/lib/currency";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 
 interface Profile {
   id: string;
@@ -318,6 +319,7 @@ const StoreProductDetail = () => {
             <span className="text-sm font-bold text-gray-900 truncate">{storeName}</span>
           </Link>
           <div className="flex items-center gap-2">
+            <CurrencySwitcher />
             <Link to={`/store/${slug}`} className="hidden sm:block">
               <Button variant="ghost" size="sm" className="text-xs text-gray-600">Boutique</Button>
             </Link>

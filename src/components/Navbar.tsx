@@ -7,6 +7,7 @@ import { Menu, X, ChevronDown, LayoutDashboard, ShoppingBag, Store, FileText, Gr
 import logo from "@/assets/dukaio-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 
 const productLinks = [
   { label: "Fichiers", href: "/fichiers", icon: FileText },
@@ -72,6 +73,7 @@ const Navbar = () => {
         </div>
 
         <div className="hidden lg:flex items-center gap-3">
+          <CurrencySwitcher />
           {user ? (
             <>
               <Link to="/dashboard">
@@ -132,6 +134,10 @@ const Navbar = () => {
             >
               {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
+                <div className="flex justify-between items-center bg-secondary/30 p-3 rounded-2xl border border-border">
+                  <span className="text-xs font-semibold text-muted-foreground">Devise affichée :</span>
+                  <CurrencySwitcher />
+                </div>
                 {!user && (
                   <div className="grid grid-cols-2 gap-3">
                     <Link to="/buyer-login" onClick={() => setMobileOpen(false)}>

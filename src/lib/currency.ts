@@ -4,7 +4,7 @@
  * Supports RDC (CDF/USD), Nigeria (NGN), Zambia (ZMW), Kenya (KES), Ghana (GHS), USA (USD), Europe (EUR), etc.
  */
 import { useEffect, useState } from "react";
-import { detectUserCountry } from "./geo";
+import { detectUserCountry, manuallySetCountry } from "./geo";
 
 export interface CurrencyMeta {
   code: string;
@@ -291,8 +291,17 @@ export function formatDualPrice(
  */
 export function useCurrency(userCountryCode?: string) {
   const [rates, setRates] = useState<Record<string, number>>(activeRates);
-  const [countryCode, setCountryCode] = useState<string>(userCountryCode || "bj");
-  const [loading, setLoading] = useState(!userCountryCode);
+  const [countryCode, setCountryCode] = useState<string>(() => {
+    if (userCountryCode) return userCountryCode.toLowerCase();
+    if (typeof window !== "undefined") {
+      const urlParam = new URLSearchParams(window.location.search).get("country");
+      if (urlParam && urlParam.length === 2) return urlParam.toLowerCase();
+      const saved = sessionStorage.getItem("dukaio_geo_country_code") || localStorage.getItem("dukaio_geo_country_code");
+      if (saved && saved.length === 2) return saved.toLowerCase();
+    }
+    return "bj";
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -301,7 +310,8 @@ export function useCurrency(userCountryCode?: string) {
     });
 
     if (!userCountryCode) {
-      detectUserCountry().then((geo) => {
+      // Always run a fresh real-time IP detection to detect VPN switches immediately
+      detectUserCountry(true).then((geo) => {
         if (isMounted) {
           setCountryCode(geo.countryCode);
           setLoading(false);
@@ -339,6 +349,7 @@ export function useCurrency(userCountryCode?: string) {
     meta,
     rates,
     loading,
+    setCountry: (newCode: string) => manuallySetCountry(newCode),
     convert: (amountXof: number) => convertFromXOF(amountXof, currency, rates),
     format: (amount: number, curr?: string) => formatMoney(amount, curr || currency),
     formatDual: (amountXof: number) => formatDualPrice(amountXof, currency, rates),

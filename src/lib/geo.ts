@@ -96,7 +96,30 @@ export async function detectUserCountry(forceRefresh = false): Promise<UserGeo> 
   }
 
   cachedInFlight = (async (): Promise<UserGeo> => {
-    // 1. Primary Live Service: country.is (ultra-fast ~50-100ms)
+    // 1. Primary Live Service: Our own Supabase Edge Function (bypasses ad-blockers, tracking shields & VPN extensions)
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://lljbqdkygwhsngyhrxmx.supabase.co";
+      const apikey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_CEN7ofi1v_Bik6IMGmvHMQ_pyNU-0a9";
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2200);
+      const res = await fetch(`${supabaseUrl}/functions/v1/geo-detect`, {
+        signal: controller.signal,
+        headers: { apikey, Accept: "application/json" },
+      });
+      clearTimeout(timer);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.countryCode && typeof data.countryCode === "string" && data.countryCode.length === 2) {
+          const code = data.countryCode.toLowerCase();
+          const geo: UserGeo = { countryCode: code, ip: data.ip, source: "supabase-edge" as any };
+          saveGeoCache(geo);
+          return geo;
+        }
+      }
+    } catch {}
+
+    // 2. Secondary Live Service: country.is (ultra-fast ~50-100ms)
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 1800);
@@ -117,7 +140,7 @@ export async function detectUserCountry(forceRefresh = false): Promise<UserGeo> 
       }
     } catch {}
 
-    // 2. Secondary Live Service: ipwho.is (fast fallback)
+    // 3. Tertiary Live Service: ipwho.is (fast fallback)
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2000);
@@ -138,7 +161,7 @@ export async function detectUserCountry(forceRefresh = false): Promise<UserGeo> 
       }
     } catch {}
 
-    // 3. Tertiary Live Service: freeipapi.com
+    // 4. Quaternary Live Service: freeipapi.com
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 2000);
@@ -197,6 +220,15 @@ function saveGeoCache(geo: UserGeo) {
     localStorage.setItem(GEO_TTL_KEY, String(Date.now()));
     window.dispatchEvent(new CustomEvent("dukaio_geo_change", { detail: geo }));
   } catch {}
+}
+
+/**
+ * Manually override detected country (e.g. from user currency switcher)
+ */
+export function manuallySetCountry(countryCode: string) {
+  const code = countryCode.toLowerCase().trim();
+  const geo: UserGeo = { countryCode: code, source: "cache" };
+  saveGeoCache(geo);
 }
 
 /**

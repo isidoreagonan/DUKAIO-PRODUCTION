@@ -17,6 +17,7 @@ import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
 import { useCurrency } from "@/lib/currency";
+import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 
 interface StoreInfo {
   id: string;
@@ -320,12 +321,15 @@ const StorePage = () => {
             ))}
           </nav>
 
-          <Link to="/buyer-login">
-            <Button variant="outline" size="sm" className="text-xs gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
-              <ShoppingBag className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Mes achats</span>
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <CurrencySwitcher />
+            <Link to="/buyer-login">
+              <Button variant="outline" size="sm" className="text-xs gap-1.5 border-gray-200 text-gray-700 hover:bg-gray-50">
+                <ShoppingBag className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Mes achats</span>
+              </Button>
+            </Link>
+          </div>
         </div>
         {/* Mobile nav */}
         <div className="md:hidden flex items-center gap-5 px-4 pb-2 border-t border-gray-50 pt-2 overflow-x-auto">
