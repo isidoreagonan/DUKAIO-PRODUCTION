@@ -45,7 +45,7 @@ function StatTile({ t }: { t: Tile }) {
 
 const top: Tile[] = [
   { n: 300, suf: "+", l: "Créateurs vendent déjà avec Dukaio", bg: "--grad-tile", d: 0 },
-  { n: 10, suf: "%", l: "Seule commission, prélevée par vente", bg: "--grad-tile-gray", d: 100 },
+  { n: 5, suf: "%", l: "Seule commission, prélevée par vente", bg: "--grad-tile-gray", d: 100 },
 ];
 const bottom: Tile[] = [
   { n: 0, suf: " F", l: "D’abonnement mensuel, pour toujours", bg: "--grad-tile-soft", d: 0 },

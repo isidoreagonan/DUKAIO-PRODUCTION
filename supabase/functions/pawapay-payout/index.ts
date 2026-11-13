@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const { data: orders } = await supabase
       .from("orders").select("amount").eq("store_owner_id", user.id).eq("status", "completed");
     const totalSales = (orders || []).reduce((s: number, o: any) => s + Number(o.amount), 0);
-    const grossAvailable = totalSales * 0.9; // 10% commission
+    const grossAvailable = totalSales * 0.95; // 5% commission
     const { data: ws } = await supabase
       .from("withdrawals").select("amount").eq("user_id", user.id)
       .in("status", ["pending", "processing", "completed"]);

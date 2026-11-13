@@ -99,14 +99,14 @@ const DashboardWithdrawals = () => {
     const sales = allOrders.reduce((s, o) => s + Number(o.amount), 0);
     const maturedSales = allOrders.filter(o => new Date(o.created_at) <= cutoff5d).reduce((s, o) => s + Number(o.amount), 0);
     const pendingSales = sales - maturedSales;
-    const commission = maturedSales * 0.10;
+    const commission = maturedSales * 0.05;
     const gross = maturedSales - commission;
     const wds = (withdrawalsRes.data || []) as Withdrawal[];
     const withdrawn = wds.filter(w => ["pending", "processing", "completed"].includes(w.status))
       .reduce((s, w) => s + Number(w.amount) + Number(w.fee || 0), 0);
 
     setTotalSales(sales);
-    setPendingFunds(pendingSales * 0.9);
+    setPendingFunds(pendingSales * 0.95);
     setTotalWithdrawn(withdrawn);
     setAvailableBalance(gross - withdrawn);
     setWithdrawals(wds);
@@ -146,8 +146,8 @@ const DashboardWithdrawals = () => {
             <p className="text-2xl font-bold text-foreground">{Math.floor(totalSales).toLocaleString("fr")} <span className="text-sm font-normal text-muted-foreground">FCFA</span></p>
           </div>
           <div className="rounded-xl border border-border bg-card p-5">
-            <p className="text-xs text-muted-foreground mb-1">Commission plateforme (10%)</p>
-            <p className="text-2xl font-bold text-muted-foreground">{Math.floor(totalSales * 0.10).toLocaleString("fr")} <span className="text-sm font-normal">FCFA</span></p>
+            <p className="text-xs text-muted-foreground mb-1">Commission plateforme (5%)</p>
+            <p className="text-2xl font-bold text-muted-foreground">{Math.floor(totalSales * 0.05).toLocaleString("fr")} <span className="text-sm font-normal">FCFA</span></p>
           </div>
           {pendingFunds > 0 && (
             <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5">

@@ -63,7 +63,7 @@ function Hero({ p }: { p: ProductPage }) {
             <a href={APP_URL} className="btn btn-primary h-11 px-6">{p.cta}</a>
             <Link to="/" hash="tarif" className="btn btn-ghost h-11">Voir le tarif</Link>
           </div>
-          <p data-reveal="" style={d(300)} className="mt-6 text-xs text-muted-foreground"><b className="font-semibold text-foreground">0 F</b> par mois · <b className="font-semibold text-foreground">10 %</b> par vente, c’est tout</p>
+          <p data-reveal="" style={d(300)} className="mt-6 text-xs text-muted-foreground"><b className="font-semibold text-foreground">0 F</b> par mois · <b className="font-semibold text-foreground">5 %</b> par vente, c’est tout</p>
         </div>
 
         <div data-reveal="" style={{ ...d(150), background: "var(--grad-tile-soft)" }} className="relative rounded-[1.6rem] p-3 md:p-4">

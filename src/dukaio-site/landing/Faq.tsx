@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import { APP_URL } from "@/dukaio-site/site/Header";
 
 const faqs = [
-  ["Combien coûte Dukaio ?", "Ouvrir une boutique est gratuit et il n’y a aucun abonnement. Dukaio prélève 10 % sur chaque vente réalisée. Si vous ne vendez pas, vous ne payez rien."],
+  ["Combien coûte Dukaio ?", "Ouvrir une boutique est gratuit et il n’y a aucun abonnement. Dukaio prélève 5 % sur chaque vente réalisée. Si vous ne vendez pas, vous ne payez rien."],
   ["Quels produits puis-je vendre ?", "Des fichiers (ebooks, templates, packs), des cours en ligne, des services (coaching, prestations) et des licences de logiciels."],
   ["Comment mes clients paient-ils ?", "Par Mobile Money (Orange Money, MTN MoMo, Wave, Moov Money…), par carte bancaire Visa ou Mastercard, ou par PayPal."],
   ["Comment je récupère mon argent ?", "Vos gains s’affichent dans votre tableau de bord. Vous les retirez vers votre compte Mobile Money quand vous le souhaitez."],

@@ -38,7 +38,7 @@ export const legalPages: LegalPage[] = [
     intro: "Ces conditions s’appliquent à l’utilisation de Dukaio par les vendeurs et aux achats réalisés via les boutiques.",
     sections: [
       { h: "Aucun abonnement", p: ["L’ouverture d’une boutique Dukaio est gratuite. Aucun abonnement, aucun frais d’inscription et aucun frais mensuel ne sont facturés au vendeur."] },
-      { h: "Commission de 10 %", p: ["Dukaio prélève une commission de 10 % sur le montant de chaque vente réalisée. Elle est déduite automatiquement du montant reversé au vendeur. Aucune commission n’est due tant que le vendeur ne vend pas."] },
+      { h: "Commission de 5 %", p: ["Dukaio prélève une commission de 5 % sur le montant de chaque vente réalisée. Elle est déduite automatiquement du montant reversé au vendeur. Aucune commission n’est due tant que le vendeur ne vend pas."] },
       { h: "Achats acheteurs", p: ["Le contrat de vente d’un produit est conclu entre l’acheteur et le vendeur. Dukaio traite le paiement et assure la livraison numérique sécurisée."] },
       { h: "Reversements", p: ["Les fonds sont reversés au vendeur sur le moyen de retrait choisi (Mobile Money ou virement), selon les délais indiqués dans le tableau de bord."] },
     ],

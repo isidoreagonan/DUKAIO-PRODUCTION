@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
 import { toast } from "sonner";
 import { extractDownloadUrls } from "@/lib/downloadHelper";
+import { detectUserCountry } from "@/lib/geo";
+import { convertFromXOF, formatMoney, getCurrencyForCountry } from "@/lib/currency";
 import {
   SAASPAY_COUNTRIES,
   SAASPAY_METHODS,
@@ -253,6 +255,24 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  // Detect visitor's country on mount and auto-select optimal payment methods
+  useEffect(() => {
+    let isMounted = true;
+    detectUserCountry().then((geo) => {
+      if (!isMounted) return;
+      const matched = SAASPAY_COUNTRIES.find((c) => c.code.toLowerCase() === geo.countryCode.toLowerCase());
+      if (matched) {
+        setCountry(matched);
+        if (matched.methods.length > 0) {
+          setMethod(matched.methods[0]);
+        }
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Automatically select first method when country changes
   useEffect(() => {
     if (country.methods.length > 0) {
@@ -320,7 +340,12 @@ export default function CheckoutPage() {
   }, [appliedPromo, originalPrice]);
 
   const priceAmount = Math.max(0, originalPrice - discountAmount);
-  const currencyCode = country.currency || "XOF";
+  const currencyCode = country.currency || getCurrencyForCountry(country.code);
+  const isForeignCurrency = currencyCode !== "XOF" && currencyCode !== "XAF";
+  const convertedPrice = useMemo(() => {
+    if (!isForeignCurrency || priceAmount === 0) return null;
+    return convertFromXOF(priceAmount, currencyCode);
+  }, [priceAmount, currencyCode, isForeignCurrency]);
   const t = (fr: string, en: string) => (lang === "fr" ? fr : en);
 
   // Auto-apply promo code from URL query param if present (?coupon=... or ?promo=... or ?code=...)
@@ -825,21 +850,27 @@ export default function CheckoutPage() {
             <p className="text-[13px] text-[#64748B] font-medium">
               {t("Montant à payer", "Amount due")}
             </p>
-            <div className="mt-1 flex items-baseline gap-2.5">
+            <div className="mt-1 flex items-baseline gap-2.5 flex-wrap">
               <span className="font-black text-4xl sm:text-5xl leading-none tracking-tight text-[#0F172A]">
                 {priceAmount === 0 ? t("Gratuit", "Free") : fmt(priceAmount)}
               </span>
               {priceAmount > 0 && (
                 <span className="text-sm font-bold text-[#64748B]">
-                  {currencyCode}
+                  FCFA
                 </span>
               )}
               {appliedPromo && discountAmount > 0 && originalPrice > 0 && (
                 <span className="text-sm font-semibold text-[#94A3B8] line-through decoration-red-400">
-                  {fmt(originalPrice)} {currencyCode}
+                  {fmt(originalPrice)} FCFA
                 </span>
               )}
             </div>
+            {isForeignCurrency && convertedPrice !== null && priceAmount > 0 && (
+              <div className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200/80 px-2.5 py-1 text-xs text-blue-800 font-semibold">
+                <span>≈ {formatMoney(convertedPrice, currencyCode)}</span>
+                <span className="text-[10px] font-medium text-blue-600/80">({currencyCode} en direct)</span>
+              </div>
+            )}
           </div>
 
           {/* Product card info */}
@@ -866,7 +897,13 @@ export default function CheckoutPage() {
 
             <Row
               label={t("Sous-total", "Subtotal")}
-              value={originalPrice === 0 ? "0 FCFA" : `${fmt(originalPrice)} ${currencyCode}`}
+              value={
+                originalPrice === 0
+                  ? "0 FCFA"
+                  : isForeignCurrency && convertedPrice !== null
+                  ? `${fmt(originalPrice)} FCFA (~${formatMoney(convertFromXOF(originalPrice, currencyCode), currencyCode)})`
+                  : `${fmt(originalPrice)} FCFA`
+              }
             />
             {appliedPromo && discountAmount > 0 && (
               <div className="flex items-center justify-between gap-4 px-4 py-3 text-[13px] bg-emerald-50/70 border-t border-emerald-100">
@@ -875,7 +912,12 @@ export default function CheckoutPage() {
                   <span>{t("Réduction", "Discount")} ({appliedPromo.code})</span>
                 </span>
                 <span className="font-bold text-emerald-700 font-mono">
-                  -{fmt(discountAmount)} {currencyCode}
+                  -{fmt(discountAmount)} FCFA
+                  {isForeignCurrency && (
+                    <span className="ml-1 text-[11px] font-normal text-emerald-600">
+                      (~{formatMoney(convertFromXOF(discountAmount, currencyCode), currencyCode)})
+                    </span>
+                  )}
                 </span>
               </div>
             )}
@@ -1051,7 +1093,11 @@ export default function CheckoutPage() {
                     <p className="mt-1 text-xs text-[#64748B]">
                       {t("Choisissez comment régler", "Choose how to pay")}{" "}
                       <span className="font-bold text-[#0F172A]">
-                        {priceAmount === 0 ? t("Gratuit", "Free") : `${fmt(priceAmount)} ${currencyCode}`}
+                        {priceAmount === 0
+                          ? t("Gratuit", "Free")
+                          : isForeignCurrency && convertedPrice !== null
+                          ? `${fmt(priceAmount)} FCFA (~${formatMoney(convertedPrice, currencyCode)})`
+                          : `${fmt(priceAmount)} FCFA`}
                       </span>.
                     </p>
                   </div>
@@ -1359,7 +1405,9 @@ export default function CheckoutPage() {
                       <span>
                         {priceAmount === 0
                           ? t("Obtenir gratuitement", "Get for free")
-                          : `${t("Payer", "Pay")} ${fmt(priceAmount)} ${currencyCode}`}
+                          : isForeignCurrency && convertedPrice !== null
+                          ? `${t("Payer", "Pay")} ${fmt(priceAmount)} FCFA (~${formatMoney(convertedPrice, currencyCode)})`
+                          : `${t("Payer", "Pay")} ${fmt(priceAmount)} FCFA`}
                       </span>
                     </>
                   )}
@@ -1405,8 +1453,8 @@ export default function CheckoutPage() {
 
                 <p className="mt-2 max-w-sm text-xs leading-relaxed text-[#64748B]">
                   {t(
-                    `Une demande de ${fmt(priceAmount)} ${currencyCode} a été envoyée au ${country.dial} ${phone}. Saisissez votre code secret ${currentMethodMeta.name} pour valider la commande.`,
-                    `A payment request of ${fmt(priceAmount)} ${currencyCode} was sent to ${country.dial} ${phone}. Enter your secret ${currentMethodMeta.name} PIN to approve.`
+                    `Une demande de ${fmt(priceAmount)} FCFA ${isForeignCurrency && convertedPrice !== null ? `(~${formatMoney(convertedPrice, currencyCode)}) ` : ""}a été envoyée au ${country.dial} ${phone}. Saisissez votre code secret ${currentMethodMeta.name} pour valider la commande.`,
+                    `A payment request of ${fmt(priceAmount)} FCFA ${isForeignCurrency && convertedPrice !== null ? `(~${formatMoney(convertedPrice, currencyCode)}) ` : ""}was sent to ${country.dial} ${phone}. Enter your secret ${currentMethodMeta.name} PIN to approve.`
                   )}
                 </p>
 
@@ -1659,7 +1707,13 @@ export default function CheckoutPage() {
                 <div className="mt-6 w-full max-w-sm divide-y divide-[#E2E8F0] rounded-xl border border-[#E2E8F0] text-left bg-[#F8FAFC] overflow-hidden">
                   <Row
                     label={t("Montant payé", "Amount paid")}
-                    value={priceAmount === 0 ? "0 FCFA" : `${fmt(priceAmount)} ${currencyCode}`}
+                    value={
+                      priceAmount === 0
+                        ? "0 FCFA"
+                        : isForeignCurrency && convertedPrice !== null
+                        ? `${fmt(priceAmount)} FCFA (~${formatMoney(convertedPrice, currencyCode)})`
+                        : `${fmt(priceAmount)} FCFA`
+                    }
                   />
                   <Row label={t("Moyen utilisé", "Payment method")} value={currentMethodMeta.name} />
                   {orderReference && (

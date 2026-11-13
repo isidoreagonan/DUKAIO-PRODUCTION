@@ -19,7 +19,7 @@ const acts = [
   {
     chapter: "ACTE II",
     title: "La rupture",
-    text: "Dukaio n'est pas une énième boutique en ligne. C'est une réponse. Mobile Money natif. Commission unique de 10%. Wallet sécurisé. KYC souverain. Zéro intermédiaire qui ne comprend pas le terrain.",
+    text: "Dukaio n'est pas une énième boutique en ligne. C'est une réponse. Mobile Money natif. Commission unique de 5%. Wallet sécurisé. KYC souverain. Zéro intermédiaire qui ne comprend pas le terrain.",
     icon: Sparkles,
   },
   {
@@ -31,7 +31,7 @@ const acts = [
 ];
 
 const pillars = [
-  { value: "10%", label: "Commission unique. Aucun frais caché." },
+  { value: "5%", label: "Commission unique. Aucun frais caché." },
   { value: "12+", label: "Pays africains couverts en Mobile Money." },
   { value: "5 jours", label: "Maturation des fonds, retraits sécurisés." },
   { value: "∞", label: "Ambition. Cette plateforme appartient au continent." },
@@ -42,7 +42,7 @@ const About = () => {
     <div className="min-h-screen bg-background">
       <SEOHead
         title="Manifeste — Dukaio"
-        description="L'Afrique ne vendra plus jamais comme avant. Dukaio est l'infrastructure de vente digitale pensée par et pour le continent. 10% de commission, Mobile Money natif, souveraineté économique."
+        description="L'Afrique ne vendra plus jamais comme avant. Dukaio est l'infrastructure de vente digitale pensée par et pour le continent. 5% de commission, Mobile Money natif, souveraineté économique."
         canonicalPath="/about"
       />
       <Navbar />

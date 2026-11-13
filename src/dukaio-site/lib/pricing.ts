@@ -1,5 +1,5 @@
 /** Dukaio takes a flat commission on each sale. No subscription. */
-export const COMMISSION_RATE = 0.1;
+export const COMMISSION_RATE = 0.05;
 
 export function payout(price: number, sales = 1) {
   const gross = Math.max(0, price) * Math.max(0, sales);

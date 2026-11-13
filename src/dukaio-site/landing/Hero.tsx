@@ -49,7 +49,7 @@ export function Hero() {
           className="group inline-flex items-center gap-2 rounded-full border border-border bg-background py-1 pl-1 pr-3 text-xs text-muted-foreground shadow-[var(--shadow-soft)]"
         >
           <span className="rounded-full border border-tint-line bg-tint px-2 py-0.5 font-semibold text-accent">Nouveau</span>
-          Sans abonnement · 10 % par vente
+          Sans abonnement · 5 % par vente
           <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </a>
 
@@ -80,7 +80,7 @@ export function Hero() {
         <div data-reveal="" style={{ "--d": "400ms" } as CSSProperties} className="mt-6 flex items-center gap-6 text-xs text-muted-foreground">
           <span className="flex items-center gap-2"><b className="font-semibold text-foreground">0 F</b> par mois</span>
           <span className="h-3 w-px bg-border" />
-          <span className="flex items-center gap-2"><b className="font-semibold text-foreground">10 %</b> par vente, c’est tout</span>
+          <span className="flex items-center gap-2"><b className="font-semibold text-foreground">5 %</b> par vente, c’est tout</span>
         </div>
       </div>
 

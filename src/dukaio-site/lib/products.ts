@@ -27,7 +27,7 @@ export const productPages: ProductPage[] = [
     cta: "Vendre mon premier fichier",
     stats: [
       { n: "0", suf: " clic", l: "De votre part après chaque vente" },
-      { n: "10", suf: " %", l: "Seule commission, par vente" },
+      { n: "5", suf: " %", l: "Seule commission, par vente" },
       { n: "24", suf: "/7", l: "Votre boutique vend même quand vous dormez" },
     ],
     examples: ["Ebooks & guides PDF", "Templates Canva", "Presets photo", "Packs graphiques", "Fichiers Excel", "Musique & sons"],
@@ -44,9 +44,9 @@ export const productPages: ProductPage[] = [
     faqs: [
       ["Quels types de fichiers puis-je vendre ?", "Tout produit numérique téléchargeable : PDF, ZIP, images, templates, audio, tableurs…"],
       ["Comment le client reçoit-il le fichier ?", "Automatiquement, juste après son paiement, par e-mail."],
-      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 10 % sur chaque vente, rien d’autre."],
+      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 5 % sur chaque vente, rien d’autre."],
     ],
-    meta: { title: "Vendre des fichiers numériques — Dukaio", description: "Vendez ebooks, templates et packs en ligne. Livraison automatique, paiement Mobile Money, 10 % par vente sans abonnement." },
+    meta: { title: "Vendre des fichiers numériques — Dukaio", description: "Vendez ebooks, templates et packs en ligne. Livraison automatique, paiement Mobile Money, 5 % par vente sans abonnement." },
   },
   {
     slug: "cours",
@@ -57,7 +57,7 @@ export const productPages: ProductPage[] = [
     cta: "Créer ma formation",
     stats: [
       { n: "1", suf: " lien", l: "Pour vendre toute votre formation" },
-      { n: "10", suf: " %", l: "Seule commission, par vente" },
+      { n: "5", suf: " %", l: "Seule commission, par vente" },
       { n: "0", suf: " F", l: "D’abonnement, même avec 1 000 élèves" },
     ],
     examples: ["Formations vidéo", "Masterclass", "Programmes en modules", "Cours de langue", "Formations business", "Tutoriels"],
@@ -69,14 +69,14 @@ export const productPages: ProductPage[] = [
     features: [
       { t: "Modules & leçons", d: "Structurez votre formation en chapitres clairs.", title: "Formation Excel en 30 jours", rows: [{ a: "Module 1 · Les bases", b: "6 leçons" }, { a: "Module 2 · Formules", b: "8 leçons" }, { a: "Module 3 · Tableaux de bord", b: "5 leçons" }] },
       { t: "Accès élève", d: "Chaque acheteur obtient son accès dès que le paiement est validé.", title: "Nouvel élève inscrit", rows: [{ a: "Moussa K.", b: "Wave", tag: "ok" }, { a: "Accès ouvert", b: "Formation Excel", tag: "ok" }, { a: "Progression", b: "Module 1" }] },
-      { t: "Suivi des revenus", d: "Inscriptions et revenus de chaque formation au même endroit.", title: "Ce mois-ci", rows: [{ a: "Nouveaux élèves", b: "58" }, { a: "Revenus", b: "1 450 000 F" }, { a: "Vous recevez", b: "1 305 000 F" }] },
+      { t: "Suivi des revenus", d: "Inscriptions et revenus de chaque formation au même endroit.", title: "Ce mois-ci", rows: [{ a: "Nouveaux élèves", b: "58" }, { a: "Revenus", b: "1 450 000 F" }, { a: "Vous recevez", b: "1 377 500 F" }] },
     ],
     faqs: [
       ["Dois-je héberger mes vidéos ailleurs ?", "Non, vous ajoutez vos leçons directement dans votre formation Dukaio."],
       ["Comment mes élèves accèdent-ils au cours ?", "Dès que le paiement est validé, l’élève accède à sa formation."],
-      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 10 % sur chaque vente, rien d’autre."],
+      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 5 % sur chaque vente, rien d’autre."],
     ],
-    meta: { title: "Vendre une formation en ligne — Dukaio", description: "Créez et vendez vos cours vidéo en modules. Paiement Mobile Money, accès élève immédiat, 10 % par vente sans abonnement." },
+    meta: { title: "Vendre une formation en ligne — Dukaio", description: "Créez et vendez vos cours vidéo en modules. Paiement Mobile Money, accès élève immédiat, 5 % par vente sans abonnement." },
   },
   {
     slug: "services",
@@ -87,7 +87,7 @@ export const productPages: ProductPage[] = [
     cta: "Proposer mon service",
     stats: [
       { n: "100", suf: " %", l: "Payé avant de commencer le travail" },
-      { n: "10", suf: " %", l: "Seule commission, par vente" },
+      { n: "5", suf: " %", l: "Seule commission, par vente" },
       { n: "0", suf: " relance", l: "Fini les clients qui oublient de payer" },
     ],
     examples: ["Coaching individuel", "Consultations", "Audits", "Design sur mesure", "Rédaction", "Accompagnement"],
@@ -104,9 +104,9 @@ export const productPages: ProductPage[] = [
     faqs: [
       ["Quels services puis-je vendre ?", "Toute prestation que vous réalisez vous-même : coaching, conseil, design, rédaction, accompagnement…"],
       ["Quand suis-je payé ?", "Le client paie au moment de la commande, avant la prestation."],
-      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 10 % sur chaque vente, rien d’autre."],
+      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 5 % sur chaque vente, rien d’autre."],
     ],
-    meta: { title: "Vendre ses services en ligne — Dukaio", description: "Coaching, consultation, prestation : faites-vous payer d’avance en Mobile Money. 10 % par vente, sans abonnement." },
+    meta: { title: "Vendre ses services en ligne — Dukaio", description: "Coaching, consultation, prestation : faites-vous payer d’avance en Mobile Money. 5 % par vente, sans abonnement." },
   },
   {
     slug: "licences",
@@ -117,7 +117,7 @@ export const productPages: ProductPage[] = [
     cta: "Vendre mon logiciel",
     stats: [
       { n: "1", suf: " clé", l: "Unique pour chaque acheteur" },
-      { n: "10", suf: " %", l: "Seule commission, par vente" },
+      { n: "5", suf: " %", l: "Seule commission, par vente" },
       { n: "0", suf: " F", l: "D’abonnement mensuel" },
     ],
     examples: ["Logiciels", "Plugins WordPress", "Applications", "Outils SaaS", "Bots", "Accès privés"],
@@ -134,9 +134,9 @@ export const productPages: ProductPage[] = [
     faqs: [
       ["Comment fonctionnent les clés de licence ?", "Vous ajoutez vos clés, et Dukaio en remet une différente à chaque acheteur après paiement."],
       ["Puis-je vendre à l’international ?", "Oui, vos clients peuvent aussi payer par carte bancaire ou PayPal."],
-      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 10 % sur chaque vente, rien d’autre."],
+      ["Combien ça coûte ?", "Aucun abonnement. Dukaio prélève 5 % sur chaque vente, rien d’autre."],
     ],
-    meta: { title: "Vendre des licences logicielles — Dukaio", description: "Vendez logiciels et plugins avec remise automatique de clé de licence. Mobile Money et carte, 10 % par vente, sans abonnement." },
+    meta: { title: "Vendre des licences logicielles — Dukaio", description: "Vendez logiciels et plugins avec remise automatique de clé de licence. Mobile Money et carte, 5 % par vente, sans abonnement." },
   },
 ];
 

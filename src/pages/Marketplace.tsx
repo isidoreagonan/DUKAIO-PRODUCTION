@@ -364,7 +364,7 @@ const Marketplace = () => {
       <section className="border-y border-border bg-card/40 py-10">
         <div className="container mx-auto grid grid-cols-2 gap-4 px-4 text-center sm:grid-cols-4">
           {[
-            { value: "10%", label: "Commission unique" },
+            { value: "5%", label: "Commission unique" },
             { value: "5 jours", label: "Délai de maturité" },
             { value: "100%", label: "Vendeurs KYC" },
             { value: "24/7", label: "Modération IA" },
@@ -389,7 +389,7 @@ const Marketplace = () => {
             Vendez vos produits numériques sur Dukaio
           </h2>
           <p className="relative mx-auto mb-5 max-w-xl text-xs opacity-90 sm:mb-6 sm:text-sm md:text-base">
-            Lancez votre boutique en quelques minutes. Commission unique de 10%, paiements mobile
+            Lancez votre boutique en quelques minutes. Commission unique de 5%, paiements mobile
             money intégrés, suite marketing complète.
           </p>
           <div className="relative flex flex-wrap items-center justify-center gap-3">

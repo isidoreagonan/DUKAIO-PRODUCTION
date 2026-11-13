@@ -5,6 +5,7 @@ import { getCategoryByKey } from "@/data/marketplaceCategories";
 import { useState } from "react";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge, type BadgeGrade } from "@/components/VerifiedBadge";
+import { useCurrency } from "@/lib/currency";
 
 export interface MarketplaceProduct {
   id: string;
@@ -54,6 +55,8 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
     : 0;
 
   const [liked, setLiked] = useState(false);
+  const { formatDual } = useCurrency();
+  const dualPrice = formatDual(product.price);
 
   return (
     <motion.div
@@ -127,13 +130,20 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
             </p>
           )}
 
-          <div className="flex items-end gap-2 mt-auto mb-3.5">
-            <span className="font-serif text-[17px] font-medium text-ink">
-              {Number(product.price).toLocaleString()} FCFA
-            </span>
-            {hasDiscount && (
-              <span className="text-[11px] font-medium text-slate-400 line-through pb-0.5">
-                {Number(product.original_price).toLocaleString()} FCFA
+          <div className="flex flex-col mt-auto mb-3.5">
+            <div className="flex items-end gap-2 flex-wrap">
+              <span className="font-serif text-[17px] font-medium text-ink">
+                {Number(product.price).toLocaleString()} FCFA
+              </span>
+              {hasDiscount && (
+                <span className="text-[11px] font-medium text-slate-400 line-through pb-0.5">
+                  {Number(product.original_price).toLocaleString()} FCFA
+                </span>
+              )}
+            </div>
+            {dualPrice.isLocalDifferent && dualPrice.localPriceFormatted && (
+              <span className="text-[11px] font-semibold text-blue mt-0.5">
+                ≈ {dualPrice.localPriceFormatted}
               </span>
             )}
           </div>

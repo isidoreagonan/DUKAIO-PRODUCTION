@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       if (!order || order.status === "completed") return new Response("ok", { status: 200 });
 
       const amountUsd = Number(order.amount);
-      const commission = amountUsd * 0.10;
+      const commission = amountUsd * 0.05;
       const net = amountUsd - commission;
       const availableAt = order.funds_available_at || new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
 
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
         reference_type: "order",
         status: "pending",
         available_at: availableAt,
-        description: `Vente Stripe (net après 10% commission)`,
+        description: `Vente Stripe (net après 5% commission)`,
       });
     }
 

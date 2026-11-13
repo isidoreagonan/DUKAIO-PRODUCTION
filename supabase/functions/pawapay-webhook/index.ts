@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
 
     // Credit pending_fcfa
     const grossXof = Number(amount || ev.amount);
-    const net = grossXof * 0.9;
+    const net = grossXof * 0.95;
     await supabase.from("user_wallets").upsert({ user_id: ev.store_owner_id }, { onConflict: "user_id" });
     const { data: w } = await supabase.from("user_wallets")
       .select("pending_fcfa").eq("user_id", ev.store_owner_id).single();
@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       reference_type: "order",
       status: "pending",
       available_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-      description: "Vente Mobile Money (net après 10% commission)",
+      description: "Vente Mobile Money (net après 5% commission)",
     });
 
     return new Response("ok", { status: 200 });

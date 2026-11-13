@@ -15,6 +15,8 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { toast } from "sonner";
 import SEOHead from "@/components/SEOHead";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { convertFromXOF, formatMoney, getCurrencyForCountry } from "@/lib/currency";
+import { detectUserCountry } from "@/lib/geo";
 import {
   SAASPAY_PAYOUT_COUNTRIES,
   SAASPAY_METHODS,
@@ -121,6 +123,28 @@ export default function Wallet() {
   const [pinConfirmValue, setPinConfirmValue] = useState<string>("");
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState<boolean>(false);
+
+  // Multi-Currency & Localized Creator Detection
+  const [detectedCountry, setDetectedCountry] = useState<string>("bj");
+
+  useEffect(() => {
+    detectUserCountry().then((geo) => setDetectedCountry(geo.countryCode));
+  }, []);
+
+  const creatorCountry = useMemo(() => {
+    if (savedWallets.length > 0 && savedWallets[0].country) {
+      return savedWallets[0].country.toLowerCase();
+    }
+    const profCountry = (profile as any)?.country;
+    if (profCountry) return profCountry.toLowerCase();
+    return detectedCountry;
+  }, [savedWallets, profile, detectedCountry]);
+
+  const creatorCurrency = useMemo(() => {
+    return getCurrencyForCountry(creatorCountry);
+  }, [creatorCountry]);
+
+  const isCreatorForeignCurrency = creatorCurrency !== "XOF" && creatorCurrency !== "XAF";
 
   // Forgot PIN state
   const [forgotStep, setForgotStep] = useState<"send" | "verify">("send");
@@ -339,6 +363,16 @@ export default function Wallet() {
     const val = Math.floor((balanceFcfa * pct) / 100);
     setWithdrawAmount(String(val));
   };
+
+  const withdrawalCountry = useMemo(() => {
+    if (selectedWalletId === "new") return accCountry;
+    const sw = savedWallets.find((w) => w.id === selectedWalletId);
+    return sw ? sw.country.toLowerCase() : accCountry;
+  }, [selectedWalletId, accCountry, savedWallets]);
+
+  const withdrawalCurrency = useMemo(() => {
+    return getCurrencyForCountry(withdrawalCountry);
+  }, [withdrawalCountry]);
 
   // -------------------------------------------------------------
   // SAVE A NEW WALLET ACCOUNT
@@ -602,26 +636,35 @@ export default function Wallet() {
           </div>
 
           {/* Giant Amount Display */}
-          <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3">
-            <span className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight">
-              {loading ? (
-                <span className="inline-flex items-center gap-2 text-2xl text-slate-400">
-                  <Loader2 className="h-6 w-6 animate-spin" /> Chargement...
-                </span>
-              ) : hideBalance ? (
-                "••••••••"
-              ) : (
-                `${formatFmt(balanceFcfa)} F`
-              )}
-            </span>
+          <div className="mt-4 sm:mt-6 flex flex-col items-center justify-center">
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight">
+                {loading ? (
+                  <span className="inline-flex items-center gap-2 text-2xl text-slate-400">
+                    <Loader2 className="h-6 w-6 animate-spin" /> Chargement...
+                  </span>
+                ) : hideBalance ? (
+                  "••••••••"
+                ) : (
+                  `${formatFmt(balanceFcfa)} F`
+                )}
+              </span>
 
-            <button
-              onClick={() => setHideBalance(!hideBalance)}
-              className="h-10 w-10 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors"
-              title={hideBalance ? "Afficher le solde" : "Masquer le solde"}
-            >
-              {hideBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+              <button
+                onClick={() => setHideBalance(!hideBalance)}
+                className="h-10 w-10 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors"
+                title={hideBalance ? "Afficher le solde" : "Masquer le solde"}
+              >
+                {hideBalance ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {!loading && !hideBalance && isCreatorForeignCurrency && balanceFcfa > 0 && (
+              <div className="mt-2.5 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                <span>≈ {formatMoney(convertFromXOF(balanceFcfa, creatorCurrency), creatorCurrency)}</span>
+                <span className="text-[10px] font-normal text-emerald-600/80">({creatorCurrency} en direct)</span>
+              </div>
+            )}
           </div>
 
           <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
@@ -684,7 +727,9 @@ export default function Wallet() {
                 {hideBalance ? "••••" : `${formatFmt(balanceFcfa)} F`}
               </span>
               <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                100% prêt au virement
+                {isCreatorForeignCurrency && balanceFcfa > 0
+                  ? `≈ ${formatMoney(convertFromXOF(balanceFcfa, creatorCurrency), creatorCurrency)} • 100% prêt`
+                  : "100% prêt au virement"}
               </span>
             </div>
             <div className="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -702,6 +747,11 @@ export default function Wallet() {
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 {formatFmt(totalWithdrawn)} F déjà retirés
+                {isCreatorForeignCurrency && totalEarned > 0 && (
+                  <span className="ml-1 text-slate-400">
+                    (Total : ≈ {formatMoney(convertFromXOF(totalEarned, creatorCurrency), creatorCurrency)})
+                  </span>
+                )}
               </span>
             </div>
             <div className="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -1149,6 +1199,15 @@ export default function Wallet() {
                   <AlertCircle className="h-3.5 w-3.5" />
                   Montant minimum requis : 200 FCFA
                 </p>
+              )}
+
+              {numericAmount >= 200 && withdrawalCurrency !== "XOF" && withdrawalCurrency !== "XAF" && (
+                <div className="mt-2.5 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/70 dark:bg-blue-950/40 p-2.5 text-xs flex items-center justify-between text-blue-900 dark:text-blue-200 font-semibold">
+                  <span>💡 Contre-valeur reçue sur votre compte :</span>
+                  <span className="font-mono text-sm font-black text-blue-700 dark:text-blue-300">
+                    ≈ {formatMoney(convertFromXOF(numericAmount, withdrawalCurrency), withdrawalCurrency)}
+                  </span>
+                </div>
               )}
             </div>
 

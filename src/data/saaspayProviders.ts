@@ -356,16 +356,16 @@ const AFRICAN_MOMO_MAP: Record<string, { methods: MethodId[]; currency: string; 
   ml: { methods: ["orange", "moov", "wave", "card", "crypto"], currency: "XOF", placeholder: "70 00 00 00" },
   ga: { methods: ["airtel", "moov", "card", "crypto"], currency: "XAF", placeholder: "077 00 00 00" },
   cg: { methods: ["airtel", "mtn", "card", "crypto"], currency: "XAF", placeholder: "06 000 00 00" },
-  cd: { methods: ["vodacom", "airtel", "orange", "card", "crypto"], currency: "CDF", placeholder: "081 000 00 00" },
+  cd: { methods: ["airtel", "vodacom", "orange", "card", "crypto"], currency: "CDF", placeholder: "081 000 00 00" },
   ne: { methods: ["airtel", "moov", "card", "crypto"], currency: "XOF", placeholder: "90 00 00 00" },
-  ng: { methods: ["mtn", "airtel", "card", "crypto"], currency: "NGN", placeholder: "080 0000 0000" },
+  ng: { methods: ["bank", "card", "crypto", "mtn", "airtel"], currency: "NGN", placeholder: "080 0000 0000" },
   gh: { methods: ["mtn", "airtel", "card", "crypto"], currency: "GHS", placeholder: "024 000 0000" },
   gn: { methods: ["mtn", "card", "crypto"], currency: "GNF", placeholder: "620 00 00 00" },
   ke: { methods: ["vodacom", "airtel", "card", "crypto"], currency: "KES", placeholder: "0700 000000" },
   rw: { methods: ["mtn", "airtel", "card", "crypto"], currency: "RWF", placeholder: "078 000 0000" },
   ug: { methods: ["mtn", "airtel", "card", "crypto"], currency: "UGX", placeholder: "077 000 0000" },
   tz: { methods: ["vodacom", "airtel", "card", "crypto"], currency: "TZS", placeholder: "075 000 0000" },
-  zm: { methods: ["mtn", "airtel", "card", "crypto"], currency: "ZMW", placeholder: "097 000 0000" },
+  zm: { methods: ["airtel", "mtn", "card", "crypto"], currency: "ZMW", placeholder: "097 000 0000" },
 };
 
 const PRIORITY_ORDER = [
@@ -380,11 +380,22 @@ function buildWorldwideCountries(): SaaSPayCountry[] {
     const code = c.code.toLowerCase();
     const momo = AFRICAN_MOMO_MAP[code];
 
+    let currency = "XOF";
+    if (momo) {
+      currency = momo.currency;
+    } else if (code === "us" || code === "ca") {
+      currency = "USD";
+    } else if (["fr", "be", "de", "es", "it", "nl", "pt", "lu", "at", "fi", "ie", "ch"].includes(code)) {
+      currency = "EUR";
+    } else if (code === "gb") {
+      currency = "GBP";
+    }
+
     map.set(code, {
       code,
       name: c.name,
       dial: c.dial,
-      currency: momo ? momo.currency : "XOF",
+      currency,
       placeholder: momo ? momo.placeholder : "000 000 0000",
       methods: momo ? momo.methods : ["card", "crypto"],
     });

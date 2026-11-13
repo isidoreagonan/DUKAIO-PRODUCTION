@@ -34,7 +34,7 @@ export function Footer() {
               </span>
             </a>
             <p className="mt-3 text-xs text-faint">
-              Sans abonnement. 10 % par vente uniquement. Voir nos{" "}
+              Sans abonnement. 5 % par vente uniquement. Voir nos{" "}
               <Link to="/legal/$slug" params={{ slug: "conditions-vente" }} className="text-highlight hover:underline">conditions de vente</Link>.
             </p>
           </div>
