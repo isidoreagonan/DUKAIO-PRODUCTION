@@ -5,7 +5,7 @@ import { getCategoryByKey } from "@/data/marketplaceCategories";
 import { useState } from "react";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge, type BadgeGrade } from "@/components/VerifiedBadge";
-import { useCurrency } from "@/lib/currency";
+import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
 
 export interface MarketplaceProduct {
   id: string;
@@ -38,7 +38,7 @@ interface Props {
 export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerBadge }: Props) => {
   const { grade: fetchedGrade } = useUserBadge(sellerBadge === undefined ? product.creator_id : null);
   const grade = sellerBadge !== undefined ? sellerBadge : fetchedGrade;
-  const { formatDual, countryCode } = useCurrency();
+  const { formatDual, countryCode, rates } = useCurrency();
   const dual = formatDual(product.price);
   const cat = getCategoryByKey(product.category);
   const storeSlug = product.store?.store_slug;
@@ -131,20 +131,33 @@ export const MarketplaceProductCard = ({ product, index = 0, fixedWidth, sellerB
           )}
 
           <div className="flex flex-col mt-auto mb-3.5">
-            <div className="flex items-end gap-2 flex-wrap">
-              <span className="font-serif text-[17px] font-medium text-ink">
-                {Number(product.price).toLocaleString()} FCFA
-              </span>
-              {hasDiscount && (
-                <span className="text-[11px] font-medium text-slate-400 line-through pb-0.5">
-                  {Number(product.original_price).toLocaleString()} FCFA
+            {dual.isLocalDifferent && dual.localPriceFormatted ? (
+              <div>
+                <div className="flex items-end gap-2 flex-wrap">
+                  <span className="font-serif text-[18px] font-bold text-ink">
+                    {dual.localPriceFormatted}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-[11px] font-medium text-slate-400 line-through pb-0.5">
+                      {formatMoney(convertFromXOF(Number(product.original_price), dual.targetCurrency, rates), dual.targetCurrency)}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] font-medium text-slate-500 block mt-0.5">
+                  Soit {Number(product.price).toLocaleString()} FCFA
                 </span>
-              )}
-            </div>
-            {dual.isLocalDifferent && dual.localPriceFormatted && (
-              <span className="text-[11px] font-bold text-blue mt-0.5 inline-flex items-center gap-1">
-                ≈ {dual.localPriceFormatted}
-              </span>
+              </div>
+            ) : (
+              <div className="flex items-end gap-2 flex-wrap">
+                <span className="font-serif text-[17px] font-medium text-ink">
+                  {Number(product.price).toLocaleString()} FCFA
+                </span>
+                {hasDiscount && (
+                  <span className="text-[11px] font-medium text-slate-400 line-through pb-0.5">
+                    {Number(product.original_price).toLocaleString()} FCFA
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

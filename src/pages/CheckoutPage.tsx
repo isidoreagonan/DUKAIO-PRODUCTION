@@ -888,24 +888,39 @@ export default function CheckoutPage() {
               {t("Montant à payer", "Amount due")}
             </p>
             <div className="mt-1 flex items-baseline gap-2.5 flex-wrap">
-              <span className="font-black text-4xl sm:text-5xl leading-none tracking-tight text-[#0F172A]">
-                {priceAmount === 0 ? t("Gratuit", "Free") : fmt(priceAmount)}
-              </span>
-              {priceAmount > 0 && (
-                <span className="text-sm font-bold text-[#64748B]">
-                  FCFA
+              {priceAmount === 0 ? (
+                <span className="font-black text-4xl sm:text-5xl leading-none tracking-tight text-[#0F172A]">
+                  {t("Gratuit", "Free")}
                 </span>
-              )}
-              {appliedPromo && discountAmount > 0 && originalPrice > 0 && (
-                <span className="text-sm font-semibold text-[#94A3B8] line-through decoration-red-400">
-                  {fmt(originalPrice)} FCFA
-                </span>
+              ) : isForeignCurrency && convertedPrice !== null ? (
+                <>
+                  <span className="font-black text-4xl sm:text-5xl leading-none tracking-tight text-[#0F172A]">
+                    {formatMoney(convertedPrice, currencyCode)}
+                  </span>
+                  {appliedPromo && discountAmount > 0 && originalPrice > 0 && (
+                    <span className="text-sm font-semibold text-[#94A3B8] line-through decoration-red-400">
+                      {formatMoney(convertFromXOF(originalPrice, currencyCode), currencyCode)}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="font-black text-4xl sm:text-5xl leading-none tracking-tight text-[#0F172A]">
+                    {fmt(priceAmount)}
+                  </span>
+                  <span className="text-sm font-bold text-[#64748B]">FCFA</span>
+                  {appliedPromo && discountAmount > 0 && originalPrice > 0 && (
+                    <span className="text-sm font-semibold text-[#94A3B8] line-through decoration-red-400">
+                      {fmt(originalPrice)} FCFA
+                    </span>
+                  )}
+                </>
               )}
             </div>
             {isForeignCurrency && convertedPrice !== null && priceAmount > 0 && (
               <div className="mt-2.5 inline-flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-200/80 px-2.5 py-1 text-xs text-blue-800 font-semibold">
-                <span>≈ {formatMoney(convertedPrice, currencyCode)}</span>
-                <span className="text-[10px] font-medium text-blue-600/80">({currencyCode} en direct)</span>
+                <span>Soit {fmt(priceAmount)} FCFA</span>
+                <span className="text-[10px] font-medium text-blue-600/80">(Taux officiel direct)</span>
               </div>
             )}
           </div>
@@ -938,7 +953,7 @@ export default function CheckoutPage() {
                 originalPrice === 0
                   ? "0 FCFA"
                   : isForeignCurrency && convertedPrice !== null
-                  ? `${fmt(originalPrice)} FCFA (~${formatMoney(convertFromXOF(originalPrice, currencyCode), currencyCode)})`
+                  ? `${formatMoney(convertFromXOF(originalPrice, currencyCode), currencyCode)} (${fmt(originalPrice)} FCFA)`
                   : `${fmt(originalPrice)} FCFA`
               }
             />
@@ -1133,7 +1148,7 @@ export default function CheckoutPage() {
                         {priceAmount === 0
                           ? t("Gratuit", "Free")
                           : isForeignCurrency && convertedPrice !== null
-                          ? `${fmt(priceAmount)} FCFA (~${formatMoney(convertedPrice, currencyCode)})`
+                          ? `${formatMoney(convertedPrice, currencyCode)} (${fmt(priceAmount)} FCFA)`
                           : `${fmt(priceAmount)} FCFA`}
                       </span>.
                     </p>
@@ -1449,7 +1464,7 @@ export default function CheckoutPage() {
                         {priceAmount === 0
                           ? t("Obtenir gratuitement", "Get for free")
                           : isForeignCurrency && convertedPrice !== null
-                          ? `${t("Payer", "Pay")} ${fmt(priceAmount)} FCFA (~${formatMoney(convertedPrice, currencyCode)})`
+                          ? `${t("Payer", "Pay")} ${formatMoney(convertedPrice, currencyCode)} (${fmt(priceAmount)} FCFA)`
                           : `${t("Payer", "Pay")} ${fmt(priceAmount)} FCFA`}
                       </span>
                     </>
@@ -1754,7 +1769,7 @@ export default function CheckoutPage() {
                       priceAmount === 0
                         ? "0 FCFA"
                         : isForeignCurrency && convertedPrice !== null
-                        ? `${fmt(priceAmount)} FCFA (~${formatMoney(convertedPrice, currencyCode)})`
+                        ? `${formatMoney(convertedPrice, currencyCode)} (${fmt(priceAmount)} FCFA)`
                         : `${fmt(priceAmount)} FCFA`
                     }
                   />

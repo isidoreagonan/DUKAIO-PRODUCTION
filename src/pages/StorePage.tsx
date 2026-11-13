@@ -16,7 +16,7 @@ import { useTrackingPixels, trackEvent } from "@/hooks/useTrackingPixels";
 import { useUserBadge } from "@/hooks/useUserBadge";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
-import { useCurrency } from "@/lib/currency";
+import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
 import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 
 interface StoreInfo {
@@ -89,7 +89,7 @@ const StorePage = () => {
   const [notFound, setNotFound] = useState(false);
   
   const [activeTab, setActiveTab] = useState<StoreTab>("products");
-  const { formatDual, countryCode } = useCurrency();
+  const { formatDual, countryCode, rates } = useCurrency();
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -483,20 +483,33 @@ const StorePage = () => {
                             </span>
                           </div>
                           <div className="flex flex-col">
-                            <div className="flex items-baseline gap-2 flex-wrap">
-                              {product.original_price && product.original_price > product.price && (
-                                <span className="text-xs line-through text-gray-300">
-                                  {product.original_price.toLocaleString()} FCFA
+                            {dual.isLocalDifferent && dual.localPriceFormatted ? (
+                              <div>
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                  {product.original_price && product.original_price > product.price && (
+                                    <span className="text-xs line-through text-gray-400">
+                                      {formatMoney(convertFromXOF(product.original_price, dual.targetCurrency, rates), dual.targetCurrency)}
+                                    </span>
+                                  )}
+                                  <span className="text-base sm:text-lg font-black tracking-tight" style={{ color: brandColor }}>
+                                    {dual.localPriceFormatted}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-medium text-gray-500 block mt-0.5">
+                                  Soit {product.price.toLocaleString()} FCFA
                                 </span>
-                              )}
-                              <span className="text-base font-bold" style={{ color: brandColor }}>
-                                {product.price.toLocaleString()} FCFA
-                              </span>
-                            </div>
-                            {dual.isLocalDifferent && dual.localPriceFormatted && (
-                              <span className="text-xs font-semibold text-blue-600 mt-0.5">
-                                ≈ {dual.localPriceFormatted}
-                              </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                {product.original_price && product.original_price > product.price && (
+                                  <span className="text-xs line-through text-gray-300">
+                                    {product.original_price.toLocaleString()} FCFA
+                                  </span>
+                                )}
+                                <span className="text-base font-bold" style={{ color: brandColor }}>
+                                  {product.price.toLocaleString()} FCFA
+                                </span>
+                              </div>
                             )}
                           </div>
                           {showBuyBtn && (

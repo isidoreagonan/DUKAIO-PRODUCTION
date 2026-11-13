@@ -247,9 +247,11 @@ export function formatDualPrice(
   targetCountryOrCurrency: string,
   rates?: Record<string, number>
 ): {
-  basePriceFormatted: string; // e.g. "3 000 FCFA"
-  localPriceFormatted: string | null; // e.g. "11 750 CDF" or "$4.90"
-  fullBadge: string; // e.g. "3 000 FCFA (~11 750 CDF)"
+  basePriceFormatted: string; // e.g. "1 000 FCFA"
+  localPriceFormatted: string | null; // e.g. "1,52 €" or "$1.69 USD"
+  displayPrimary: string; // The MAIN BIG price: "1,52 €" if foreign, "1 000 FCFA" if local
+  displaySecondary: string | null; // Secondary reference: "(1 000 FCFA)" if foreign, null if local
+  fullBadge: string; // e.g. "1,52 € (1 000 FCFA)"
   isLocalDifferent: boolean;
   targetCurrency: string;
 } {
@@ -264,6 +266,8 @@ export function formatDualPrice(
     return {
       basePriceFormatted: baseFormatted,
       localPriceFormatted: null,
+      displayPrimary: baseFormatted,
+      displaySecondary: null,
       fullBadge: baseFormatted,
       isLocalDifferent: false,
       targetCurrency,
@@ -274,13 +278,12 @@ export function formatDualPrice(
   const formattedConverted = formatMoney(converted, targetCurrency);
   const localFormatted = targetCurrency === "USD" ? `${formattedConverted} USD` : formattedConverted;
 
-  // If visitor is in USA / Europe / RDC / Zambia, show local price with XOF reference
-  const fullBadge = `${baseFormatted} (≈ ${localFormatted})`;
-
   return {
     basePriceFormatted: baseFormatted,
     localPriceFormatted: localFormatted,
-    fullBadge,
+    displayPrimary: localFormatted,
+    displaySecondary: baseFormatted,
+    fullBadge: `${localFormatted} (${baseFormatted})`,
     isLocalDifferent: true,
     targetCurrency,
   };
