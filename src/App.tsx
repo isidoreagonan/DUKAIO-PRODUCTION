@@ -64,6 +64,7 @@ import AdminWithdrawals from "./pages/dashboard/AdminWithdrawals";
 import AdminSupport from "./pages/dashboard/AdminSupport";
 import AdminModeration from "./pages/dashboard/AdminModeration";
 import DashboardStores from "./pages/dashboard/DashboardStores";
+import DashboardStoreEditor from "./pages/dashboard/DashboardStoreEditor";
 
 import DashboardBadge from "./pages/dashboard/DashboardBadge";
 import AdminBadges from "./pages/dashboard/AdminBadges";
@@ -247,6 +248,10 @@ const App = () => {
                 <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
                 <Route path="/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
                 <Route path="/dashboard/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
+                <Route path="/store-editor" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
+                <Route path="/dashboard/store-editor" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
+                <Route path="/customizer" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
+                <Route path="/dashboard/customizer" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
 
                 {/* Growth, Analytics, Marketing & Tools */}
                 <Route path="/analytics" element={<ProtectedRoute><DashboardAnalytics /></ProtectedRoute>} />

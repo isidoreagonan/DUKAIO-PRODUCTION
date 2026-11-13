@@ -7,7 +7,7 @@ import {
   Plus, Settings, ChevronRight, ChevronsUpDown, Check,
   ExternalLink, Moon, Sun, LogOut, User as UserIcon,
   Store, PanelLeft, Folder, ArrowUpRight, X,
-  Users, DollarSign, Wallet, Shield
+  Users, DollarSign, Wallet, Shield, Sparkles
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useAuth } from "@/contexts/AuthContext";
@@ -477,6 +477,22 @@ export function DashboardSidebar({
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </button>
 
+                {/* Personnaliser ma boutique (Studio Plein Écran) */}
+                <button
+                  onClick={() => {
+                    navigate("/dashboard/store-editor");
+                    setProfilePopoverOpen(false);
+                    onNavigate?.();
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl text-primary font-semibold hover:bg-primary/10 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span>Personnaliser ma boutique</span>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
+                </button>
+
                 {/* Paramètres du compte */}
                 <button
                   onClick={() => {
@@ -694,7 +710,23 @@ export function DashboardSidebar({
                       <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
                     </button>
 
-                    {/* Paramètres du compte */}
+                    {/* Personnaliser ma boutique (Studio Plein Écran) */}
+                <button
+                  onClick={() => {
+                    navigate("/dashboard/store-editor");
+                    setProfilePopoverOpen(false);
+                    onNavigate?.();
+                  }}
+                  className="w-full flex items-center justify-between p-2 rounded-xl text-primary font-semibold hover:bg-primary/10 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span>Personnaliser ma boutique</span>
+                  </div>
+                  <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
+                </button>
+
+                {/* Paramètres du compte */}
                     <button
                       onClick={() => {
                         navigate("/dashboard/settings");

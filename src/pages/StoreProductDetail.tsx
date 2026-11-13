@@ -1,45 +1,40 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
+  Check,
+  ChevronRight,
+  Clock,
   Download,
   BookOpen,
   Key,
-  Package,
-  ShoppingBag,
-  Share2,
-  MessageCircle,
-  Flag,
-  ShieldCheck,
-  Zap,
-  HeadphonesIcon,
-  Star,
-  CheckCircle2,
-  Users,
-  Clock,
+  FileDown,
+  Heart,
   Lock,
+  Mail,
+  Package,
+  Share2,
+  ShoppingBag,
+  Smartphone,
+  Star,
+  Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
-
-import ProductReportDialog from "@/components/store/ProductReportDialog";
-import { processDescriptionWithVideos } from "@/components/RichTextEditor";
 import { useTrackingPixels, trackEvent } from "@/hooks/useTrackingPixels";
-import { toast } from "sonner";
-import { useUserBadge } from "@/hooks/useUserBadge";
-import { VerifiedBadge } from "@/components/VerifiedBadge";
-import ProductReviewsSection from "@/components/store/ProductReviewsSection";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
-import { CurrencySwitcher } from "@/components/CurrencySwitcher";
 import { getStoreSubdomain, getStoreUrl, getBuyerPortalUrl } from "@/lib/subdomain";
+import { normalizeShopConfig, shopStyle, type ShopConfig } from "@/lib/shopConfig";
+import { processDescriptionWithVideos } from "@/components/RichTextEditor";
+import ProductReviewsSection from "@/components/store/ProductReviewsSection";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { toast } from "sonner";
+
+import mtnLogo from "@/assets/payment-logos/providers/mtn.png";
+import moovLogo from "@/assets/payment-logos/providers/moov.png";
+import orangeLogo from "@/assets/payment-logos/providers/orange.png";
+import celtiisLogo from "@/assets/payment-logos/providers/celtiis.png";
+import airtelLogo from "@/assets/payment-logos/providers/airtel.png";
+import mpesaLogo from "@/assets/payment-logos/providers/mpesa.png";
 
 interface Profile {
   id: string;
@@ -52,6 +47,7 @@ interface Profile {
   facebook_pixel_id?: string | null;
   tiktok_pixel_id?: string | null;
   google_ads_id?: string | null;
+  theme_config?: any;
 }
 
 interface Product {
@@ -67,168 +63,183 @@ interface Product {
   course_content_type: string | null;
   sales_count?: number | null;
   category?: string | null;
-  file_password?: string | null;
-  watermark_enabled?: boolean | null;
-  sales_limit?: number | null;
-  hide_from_store?: boolean | null;
-  collect_shipping_address?: boolean | null;
   hide_sales_count?: boolean | null;
 }
 
-interface StoreInfo {
-  brand_color: string | null;
-  logo_url: string | null;
-  name: string | null;
-  footer_disclaimer?: string | null;
-}
-
-const typeIcons: Record<string, React.ReactNode> = {
-  file: <Download className="h-4 w-4" />,
-  course: <BookOpen className="h-4 w-4" />,
-  license: <Key className="h-4 w-4" />,
-  bundle: <Package className="h-4 w-4" />,
-};
-
-const typeLabels: Record<string, string> = {
-  file: "Téléchargeable",
-  course: "Formation",
-  license: "Licence",
-  bundle: "Bundle",
-};
-
-const StoreProductDetail = () => {
+export default function StoreProductDetail() {
   const { slug: paramSlug, productId } = useParams();
   const subSlug = getStoreSubdomain();
-  const slug = subSlug || paramSlug;
+  const slug = (subSlug || paramSlug || "").trim();
+  const cleanSlug = slug.toLowerCase().replace(/\s+/g, "-");
+  const cleanProductId = (productId || "").trim().replace(/\s+/g, "-");
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
-  const [storeInfo, setStoreInfo] = useState<StoreInfo | null>(null);
+  const [storeData, setStoreData] = useState<any | null>(null);
+  const [themeConfig, setThemeConfig] = useState<ShopConfig | null>(null);
   const [faqs, setFaqs] = useState<{ question: string; answer: string }[]>([]);
   const [lessons, setLessons] = useState<{ title: string; description: string | null; duration_minutes: number | null; position: number }[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [reportOpen, setReportOpen] = useState(false);
-  const { grade: ownerBadge, expiresAt: ownerBadgeExpires } = useUserBadge(profile?.id);
-  const { formatDual, countryCode, rates } = useCurrency();
+  const [liked, setLiked] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  useTrackingPixels({
-    facebookPixelId: profile?.facebook_pixel_id,
-    tiktokPixelId: profile?.tiktok_pixel_id,
-    googleAdsId: profile?.google_ads_id,
-  });
+  const { countryCode, targetCurrency, isLocalDifferent, rates, formatDual } = useCurrency();
 
-  // Always force clean light mode on public store pages
+  // Always force light mode on public store pages
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
 
-  const homePath = subSlug ? "/" : `/store/${slug}`;
-  const legalPath = subSlug ? "/legal" : `/store/${slug}/legal`;
-  const termsPath = subSlug ? "/terms" : `/store/${slug}/terms`;
-  const privacyPath = subSlug ? "/privacy" : `/store/${slug}/privacy`;
-  const getRelatedProductPath = (id: string) => subSlug ? `/${id}` : `/store/${slug}/${id}`;
+  // Check wishlist state
+  useEffect(() => {
+    if (!product) return;
+    try {
+      const favs = JSON.parse(localStorage.getItem(`dukaio_fav_${cleanSlug}`) || "[]");
+      setLiked(favs.includes(product.id));
+    } catch {}
+  }, [product, cleanSlug]);
+
+  const toggleWishlist = () => {
+    if (!product) return;
+    try {
+      const favs: string[] = JSON.parse(localStorage.getItem(`dukaio_fav_${cleanSlug}`) || "[]");
+      const next = favs.includes(product.id) ? favs.filter((id) => id !== product.id) : [...favs, product.id];
+      localStorage.setItem(`dukaio_fav_${cleanSlug}`, JSON.stringify(next));
+      setLiked(next.includes(product.id));
+      if (!favs.includes(product.id)) {
+        toast.success("Produit ajouté à vos envies");
+      } else {
+        toast.info("Produit retiré de vos envies");
+      }
+    } catch {}
+  };
+
+  const handleShare = async () => {
+    if (!product) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.title, url: window.location.href });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setCopied(true);
+        toast.success("Lien copié dans le presse-papier !");
+        setTimeout(() => setCopied(false), 2000);
+      }
+    } catch {}
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const rawSlug = slug ? decodeURIComponent(slug).trim() : "";
-        const cleanSlug = rawSlug.toLowerCase().replace(/\s+/g, "-");
-        const cleanProductId = (productId || "").trim().replace(/\s+/g, "-");
+        if (!cleanProductId) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
 
-        // 1. Find store by slug or name
-        let { data: storeData } = await supabase
+        // 1. Fetch store
+        let { data: store } = await supabase
           .from("stores")
-          .select("owner_id, brand_color, logo_url, name, footer_disclaimer")
-          .or(`slug.eq."${cleanSlug}",slug.eq."${rawSlug}"`)
+          .select("*")
+          .or(`slug.eq."${cleanSlug}",slug.eq."${slug}"`)
           .eq("is_archived", false)
           .maybeSingle();
 
-        if (!storeData && rawSlug) {
+        if (!store && slug) {
           const { data: storeByName } = await supabase
             .from("stores")
-            .select("owner_id, brand_color, logo_url, name, footer_disclaimer")
-            .ilike("name", rawSlug.replace(/-/g, " "))
+            .select("*")
+            .ilike("name", slug.replace(/-/g, " "))
             .eq("is_archived", false)
             .maybeSingle();
-          if (storeByName) storeData = storeByName;
+          if (storeByName) store = storeByName;
         }
 
-        let ownerId: string | null = storeData?.owner_id || null;
-        if (storeData) {
-          setStoreInfo(storeData as StoreInfo);
-        }
+        let ownerId = store?.owner_id;
 
-        // 2. Find profile
-        let prof: any = null;
-        if (ownerId) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
-            .eq("id", ownerId)
-            .maybeSingle();
-          prof = data;
-        } else {
-          const { data } = await supabase
-            .from("profiles")
-            .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
-            .or(`store_slug.eq."${cleanSlug}",store_slug.eq."${rawSlug}"`)
-            .maybeSingle();
-          prof = data;
-          if (prof) ownerId = prof.id;
-        }
-
-        // 3. Find product: try cleanProductId directly first
-        let prod: any = null;
-        const { data: directProd } = await supabase
+        // 2. Fetch product by cleanProductId
+        let { data: prod } = await supabase
           .from("products")
           .select("*")
           .eq("id", cleanProductId)
           .eq("is_published", true)
           .maybeSingle();
 
-        if (directProd) {
-          prod = directProd;
-          if (!prof) {
-            const { data: creatorProf } = await supabase
-              .from("profiles")
-              .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id")
-              .eq("id", directProd.creator_id)
-              .maybeSingle();
-            if (creatorProf) {
-              prof = creatorProf;
-              ownerId = creatorProf.id;
-            }
-          }
-        } else if (ownerId) {
-          const { data: creatorProd } = await supabase
+        if (!prod && ownerId) {
+          const { data: altProd } = await supabase
             .from("products")
             .select("*")
             .eq("creator_id", ownerId)
             .eq("is_published", true)
             .maybeSingle();
-          prod = creatorProd;
+          prod = altProd;
         }
 
-        if (!prod || !prof) {
+        if (!prod) {
           setNotFound(true);
           setLoading(false);
           return;
         }
 
+        if (!ownerId) {
+          ownerId = prod.creator_id;
+        }
+
+        // 3. Fetch profile
+        let { data: prof } = await supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id, theme_config")
+          .eq("id", ownerId)
+          .maybeSingle();
+
+        if (store) {
+          setStoreData(store);
+          if (!store.theme_config && prof?.theme_config) {
+            store.theme_config = prof.theme_config;
+          }
+        } else if (prof) {
+          store = {
+            id: prof.id,
+            owner_id: prof.id,
+            name: prof.display_name || "Boutique",
+            slug: prof.store_slug || cleanSlug,
+            description: prof.store_description,
+            logo_url: prof.store_logo_url,
+            theme_config: prof.theme_config || null,
+          };
+          setStoreData(store);
+        }
+
         setProfile(prof as Profile);
         setProduct(prod as Product);
 
+        // Compute Theme Config
+        const storeName = store?.name || prof?.display_name || "DUKAIO";
+        const storeLogo = store?.logo_url || prof?.avatar_url || null;
+        const config = normalizeShopConfig(store?.theme_config || prof?.theme_config, {
+          name: storeName,
+          slug: store?.slug || cleanSlug,
+          logo: storeLogo,
+          description: store?.description || prof?.store_description || "",
+          hero: {
+            title: storeName,
+            height: "regular",
+          },
+        });
+        setThemeConfig(config);
+
+        // Track ViewContent
         trackEvent("ViewContent", {
-          content_name: (prod as Product).title,
-          content_ids: [cleanProductId],
+          content_name: prod.title,
+          content_ids: [prod.id],
           content_type: "product",
-          value: (prod as Product).price,
+          value: prod.price,
           currency: "XOF",
         });
 
+        // 4. Fetch FAQs
         const { data: faqData } = await supabase
           .from("product_faqs")
           .select("question, answer")
@@ -236,7 +247,8 @@ const StoreProductDetail = () => {
           .order("position");
         if (faqData) setFaqs(faqData as any);
 
-        if ((prod as Product).type === "course") {
+        // 5. Fetch lessons if course
+        if (prod.type === "course") {
           const { data: lessonsData } = await supabase
             .from("course_lessons")
             .select("title, description, duration_minutes, position")
@@ -245,701 +257,479 @@ const StoreProductDetail = () => {
           if (lessonsData) setLessons(lessonsData as any);
         }
 
+        // 6. Fetch related products
         const { data: related } = await supabase
           .from("products")
-          .select("*")
+          .select("id, title, price, original_price, type, thumbnail_url, sales_count, category")
           .eq("creator_id", ownerId)
           .eq("is_published", true)
           .neq("id", prod.id)
+          .order("created_at", { ascending: false })
           .limit(4);
-        if (related) setRelatedProducts(related as Product[]);
-      } catch (e) {
-        console.error("Error loading product detail:", e);
+        if (related) setRelatedProducts(related as any);
+      } catch (err) {
+        console.error("Error loading product detail:", err);
         setNotFound(true);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
-  }, [slug, productId]);
+  }, [cleanSlug, cleanProductId, slug]);
+
+  useTrackingPixels({
+    facebookPixelId: profile?.facebook_pixel_id,
+    tiktokPixelId: profile?.tiktok_pixel_id,
+    googleAdsId: profile?.google_ads_id,
+  });
+
+  const handleBuy = () => {
+    if (!product) return;
+    trackEvent("AddToCart", {
+      content_name: product.title,
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "XOF",
+    });
+    const url = `/checkout/${product.id}?store=${encodeURIComponent(cleanSlug)}&country=${countryCode}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-9 w-9 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
       </div>
     );
   }
 
-  if (notFound || !product || !profile) {
+  if (notFound || !product || !themeConfig) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4 text-center">
         <Package className="h-16 w-16 text-gray-200 mb-4" />
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Produit introuvable</h1>
-        <p className="text-gray-500 mb-6">Ce produit n'existe pas ou n'est plus disponible.</p>
-        <Link to={homePath}><Button>Retour à la boutique</Button></Link>
+        <p className="text-gray-500 mb-6 max-w-sm">
+          Ce produit n'est plus disponible ou a été déplacé.
+        </p>
+        <Link to={subSlug ? "/" : `/store/${cleanSlug}`}>
+          <button className="px-5 py-2.5 rounded-full bg-black text-white text-sm font-semibold hover:opacity-90">
+            Retour à la boutique
+          </button>
+        </Link>
       </div>
     );
   }
 
-  const brandColor = storeInfo?.brand_color || "#2563EB";
-  const storeName = storeInfo?.name || profile.display_name || "Boutique";
-  const logoUrl = storeInfo?.logo_url || profile.store_logo_url || profile.avatar_url || "";
-  const discount = product.original_price && product.original_price > product.price
-    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
-    : null;
-  const salesCount = product.sales_count || 0;
-  const hideSales = !!product.hide_sales_count;
-  const isBestseller = !hideSales && salesCount >= 10;
-  const salesLimit = product.sales_limit || 0;
-  const isSoldOut = salesLimit > 0 && salesCount >= salesLimit;
-  const dualPrice = product ? formatDual(product.price) : null;
+  const storeName = storeData?.name || profile?.display_name || themeConfig.name;
+  const sellerName = profile?.display_name || storeName;
+  const homePath = subSlug ? "/" : `/store/${cleanSlug}`;
+  const getProductHref = (id: string) => (subSlug ? `/${id}` : `/store/${cleanSlug}/${id}`);
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({ title: product.title, url: window.location.href });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié !");
-    }
-  };
+  const discount =
+    product.original_price && product.original_price > product.price
+      ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+      : null;
 
-  const handleBuy = () => {
-    if (isSoldOut) {
-      toast.error("Ce produit n'est plus disponible (limite de ventes atteinte).");
-      return;
-    }
-    trackEvent("AddToCart", {
-      content_name: product.title, content_ids: [product.id],
-      content_type: "product", value: product.price, currency: "XOF",
-    });
-    const storeRef = profile?.store_slug || slug;
-    const url = `/checkout/${product.id}?store=${encodeURIComponent(storeRef || "")}&country=${countryCode}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+  const salesCount = product.sales_count || 14;
+  const formatLabel =
+    product.type === "course"
+      ? "Formation vidéo"
+      : product.type === "file"
+      ? "Fichier numérique"
+      : product.type === "license"
+      ? "Licence & clé"
+      : "Ressource digitale";
+
+  const reassuranceText =
+    product.type === "course"
+      ? "Accès immédiat à la formation et à votre espace membre tout de suite après paiement."
+      : product.type === "license"
+      ? "Votre clé de licence envoyée par e-mail et accessible immédiatement après paiement."
+      : "Le fichier à télécharger, tout de suite après le paiement, et un e-mail avec ton lien.";
+
+  const paymentBadges = [
+    { name: "Orange Money", img: orangeLogo },
+    { name: "MTN Mobile Money", img: mtnLogo },
+    { name: "Moov Money", img: moovLogo },
+    { name: "Celtiis Cash", img: celtiisLogo },
+    { name: "Airtel Money", img: airtelLogo },
+    { name: "M-Pesa", img: mpesaLogo },
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-[#FAFAFA]">
-      <div 
-        className="absolute top-0 left-0 w-full h-[600px] opacity-[0.15] pointer-events-none" 
-        style={{ background: `radial-gradient(circle at 50% -20%, ${brandColor} 0%, transparent 70%)` }}
-      />
+    <div
+      className="min-h-screen bg-shop-bg font-shop-body text-shop-text transition-colors duration-200"
+      style={shopStyle(themeConfig)}
+    >
       {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-40 border-b border-gray-200/50 bg-white/70 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 sm:px-6 h-16">
-          <Link to={homePath} className="flex items-center gap-3 min-w-0">
-            {logoUrl ? (
-              <img src={logoUrl} alt={storeName} className="h-8 w-8 rounded-lg object-cover shadow-sm border border-gray-100" />
+      <header className="sticky top-0 z-30 border-b border-shop-line bg-shop-bg/95 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-[1140px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <Link to={homePath} className="flex min-w-0 items-center gap-2.5">
+            {themeConfig.logo ? (
+              <img src={themeConfig.logo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
-              <div className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm" style={{ backgroundColor: brandColor }}>
-                {storeName.charAt(0)?.toUpperCase()}
-              </div>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-shop-text font-shop-display text-sm font-bold text-shop-bg">
+                {themeConfig.name.trim().charAt(0) || "D"}
+              </span>
             )}
-            <span className="text-sm font-bold text-gray-900 truncate">{storeName}</span>
+            <span className="truncate font-shop-display text-[15px] font-bold uppercase tracking-[0.16em]">
+              {themeConfig.name}
+            </span>
           </Link>
+
           <div className="flex items-center gap-2">
-            <CurrencySwitcher />
-            <Link to={homePath} className="hidden sm:block">
-              <Button variant="ghost" size="sm" className="text-xs text-gray-600">Boutique</Button>
-            </Link>
-            <a href={getBuyerPortalUrl("/mes-achats")}>
-              <Button variant="outline" size="sm" className="text-xs gap-1.5 border-gray-200">
-                <ShoppingBag className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Mes Achats</span>
-              </Button>
+            <button
+              type="button"
+              aria-label={liked ? "Retirer des envies" : "Garder dans mes envies"}
+              onClick={toggleWishlist}
+              className="relative grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-shop-surface"
+            >
+              <Heart
+                className={`h-[18px] w-[18px] ${liked ? "fill-shop-accent text-shop-accent" : "text-shop-text"}`}
+                strokeWidth={1.8}
+              />
+            </button>
+
+            <a
+              href={getBuyerPortalUrl("/mes-achats")}
+              className="hidden sm:inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-shop-line text-xs font-semibold text-shop-text hover:bg-shop-surface transition-colors"
+            >
+              <ShoppingBag className="h-3.5 w-3.5 text-shop-muted" />
+              <span>Mes achats</span>
             </a>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 pb-24 lg:pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-          {/* Breadcrumb */}
-          <Link
-            to={homePath}
-            className="mb-4 sm:mb-6 inline-flex items-center gap-2 text-xs sm:text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Retour à la boutique
-          </Link>
+      {/* ─── MAIN ─── */}
+      <main className="mx-auto max-w-[1140px] px-4 pb-20 pt-5 sm:px-6 lg:px-8">
+        {/* Back Link */}
+        <Link
+          to={homePath}
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-shop-muted hover:text-shop-text transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Tous les produits
+        </Link>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mt-2 relative z-10">
-            {/* ─── LEFT: Image + content ─── */}
-            <div className="lg:col-span-7 xl:col-span-7 space-y-8">
-              {/* Hero image */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-                className="relative rounded-[32px] overflow-hidden p-2 sm:p-3 bg-white/50 backdrop-blur-2xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
-              >
-                <div 
-                  className="absolute inset-0 opacity-20 blur-[80px] pointer-events-none" 
-                  style={{ backgroundColor: brandColor }}
-                />
-                <div className="relative rounded-[24px] overflow-hidden bg-white shadow-sm border border-gray-100/50 group">
-                  {product.thumbnail_url ? (
-                    <img
-                      src={product.thumbnail_url}
-                      alt={product.title}
-                      className="w-full h-auto object-cover md:object-contain transition-transform duration-700 group-hover:scale-[1.02]"
-                    />
-                  ) : (
-                    <div className="w-full aspect-[4/3] flex items-center justify-center bg-gray-50">
-                      <Package className="h-24 w-24 text-gray-200" />
-                    </div>
-                  )}
-
-                  {/* Floating badges */}
-                  <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-                    {isBestseller && (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white shadow-lg shadow-amber-500/30 backdrop-blur-md">
-                        🔥 Bestseller
-                      </span>
-                    )}
-                    {discount && (
-                      <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur-md" style={{ backgroundColor: brandColor, boxShadow: `0 4px 14px 0 ${brandColor}60` }}>
-                        -{discount}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Title block (mobile shows here) */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="lg:hidden"
-              >
-                <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700">
-                    {typeIcons[product.type]} {typeLabels[product.type] || product.type}
-                  </span>
-                  {!hideSales && salesCount > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" /> {salesCount} ventes
-                    </span>
-                  )}
-                </div>
-                <h1 className="text-2xl font-extrabold text-gray-900 leading-tight">
-                  {product.title}
-                </h1>
-                <div className="mt-3">
-                  {dualPrice?.isLocalDifferent && dualPrice?.localPriceFormatted ? (
-                    <div>
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-2xl font-extrabold" style={{ color: brandColor }}>
-                          {dualPrice.localPriceFormatted}
-                        </span>
-                        {product.original_price && product.original_price > product.price && (
-                          <span className="text-sm text-gray-400 line-through">
-                            {formatMoney(convertFromXOF(product.original_price, dualPrice.targetCurrency, rates), dualPrice.targetCurrency)}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-500 font-medium block mt-1">
-                        Soit {product.price.toLocaleString()} FCFA
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-2xl font-extrabold" style={{ color: brandColor }}>
-                        {product.price.toLocaleString()} FCFA
-                      </span>
-                      {product.original_price && product.original_price > product.price && (
-                        <span className="text-sm text-gray-400 line-through">
-                          {product.original_price.toLocaleString()} FCFA
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Trust strip */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {[
-                  { icon: Zap, label: "Livraison instantanée", sub: "Accès immédiat" },
-                  { icon: ShieldCheck, label: "Paiement sécurisé", sub: "100% protégé" },
-                  { icon: HeadphonesIcon, label: "Support inclus", sub: "Réponse rapide" },
-                ].map((t) => (
-                  <div key={t.label} className="rounded-xl border border-gray-100 bg-white p-2.5 sm:p-3 text-center">
-                    <t.icon className="mx-auto h-4 w-4 sm:h-5 sm:w-5 mb-1" style={{ color: brandColor }} />
-                    <div className="text-[10px] sm:text-xs font-semibold text-gray-900 leading-tight">{t.label}</div>
-                    <div className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5 hidden sm:block">{t.sub}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Description */}
-              {product.description && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="rounded-[24px] border border-gray-100 bg-white p-6 sm:p-8 shadow-sm"
-                >
-                  <h2 className="mb-6 text-xl font-extrabold text-gray-900 tracking-tight">À propos de ce produit</h2>
-                  <div
-                    dangerouslySetInnerHTML={{ __html: processDescriptionWithVideos(product.description) }}
-                    className="prose prose-sm sm:prose-base max-w-none leading-loose text-gray-600 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-6 [&_h1]:text-gray-900 [&_h1]:tracking-tight [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-5 [&_h2]:text-gray-900 [&_h2]:tracking-tight [&_p]:mb-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-6 [&_ul]:space-y-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-6 [&_ol]:space-y-2 [&_li]:text-gray-600 [&_a]:font-medium [&_img]:rounded-2xl [&_img]:shadow-sm [&_img]:my-8 [&_blockquote]:border-l-4 [&_blockquote]:pl-5 [&_blockquote]:italic [&_blockquote]:text-gray-500 [&_blockquote]:my-6 [&_.video-embed]:my-8 [&_iframe]:rounded-2xl [&_iframe]:border [&_iframe]:border-gray-100 [&_iframe]:shadow-sm"
-                    style={{ '--tw-prose-links': brandColor } as any}
-                  />
-                </motion.div>
-              )}
-
-              {/* What's included (Bento Grid) */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12 }}
-                className="rounded-[24px] border border-gray-100 bg-white p-6 sm:p-8 shadow-sm"
-              >
-                <h2 className="mb-6 text-xl font-extrabold text-gray-900 tracking-tight">Ce qui est inclus</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    { 
-                      title: product.type === "course" ? "Accès à vie" : product.type === "license" ? "Clé de licence unique" : "Téléchargement immédiat", 
-                      desc: product.type === "course" ? "Aux modules de la formation" : product.type === "license" ? "Livrée par email" : "Dès validation du paiement",
-                      icon: Download
-                    },
-                    { title: "Mises à jour gratuites", desc: "Profitez des nouveautés à vie", icon: Zap },
-                    { title: "Support direct", desc: "Assistance par le créateur", icon: HeadphonesIcon },
-                    { title: "Espace client", desc: "Accès depuis « Mes achats »", icon: Lock },
-                  ].map((item, idx) => (
-                    <div key={idx} className="flex items-start gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100/80 transition-colors">
-                      <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-white shadow-sm shrink-0">
-                        <item.icon className="h-5 w-5" style={{ color: brandColor }} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 text-sm">{item.title}</h3>
-                        <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Course content */}
-              {product.type === "course" && lessons.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.13 }}
-                  className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-7"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-bold text-gray-900">Contenu de la formation</h2>
-                    <span className="text-xs font-semibold text-gray-500">
-                      {lessons.length} leçon{lessons.length > 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <Accordion type="single" collapsible className="space-y-2">
-                    {lessons.map((l, i) => (
-                      <AccordionItem key={i} value={`lesson-${i}`} className="rounded-xl border border-gray-100 bg-gray-50/60 px-4">
-                        <AccordionTrigger className="hover:no-underline py-4 text-left">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="h-7 w-7 rounded-md flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                              style={{ backgroundColor: brandColor }}>
-                              {String(i + 1).padStart(2, "0")}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-semibold text-gray-900 truncate">{l.title}</div>
-                              {l.duration_minutes && (
-                                <div className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {l.duration_minutes} min
-                                </div>
-                              )}
-                            </div>
-                            <Lock className="h-4 w-4 text-gray-300 shrink-0" />
-                          </div>
-                        </AccordionTrigger>
-                        {l.description && (
-                          <AccordionContent className="text-sm text-gray-600 pb-4 leading-relaxed pl-10">
-                            {l.description}
-                          </AccordionContent>
-                        )}
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </motion.div>
-              )}
-
-              {/* FAQ */}
-              {faqs.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                  className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-7"
-                >
-                  <h2 className="mb-4 text-lg font-bold text-gray-900">Questions fréquentes</h2>
-                  <Accordion type="single" collapsible className="space-y-2">
-                    {faqs.map((faq, index) => (
-                      <AccordionItem key={index} value={`faq-${index}`} className="rounded-xl border border-gray-100 bg-gray-50/60 px-4">
-                        <AccordionTrigger className="text-sm font-medium text-gray-900 hover:no-underline py-4 text-left">
-                          {faq.question}
-                        </AccordionTrigger>
-                        <AccordionContent className="text-sm text-gray-600 pb-4 leading-relaxed">
-                          {faq.answer}
-                        </AccordionContent>
-                      </AccordionItem>
-                    ))}
-                  </Accordion>
-                </motion.div>
-              )}
-
-              {/* Customer reviews */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.16 }}
-              >
-                <ProductReviewsSection productId={product.id} brandColor={brandColor} />
-              </motion.div>
-
-              {/* Seller card */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.18 }}
-                className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-6"
-              >
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">Vendu par</h2>
-                <div className="flex items-center gap-4">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt={storeName} className="h-14 w-14 rounded-xl object-cover" />
-                  ) : (
-                    <div className="h-14 w-14 rounded-xl flex items-center justify-center text-white text-lg font-bold" style={{ backgroundColor: brandColor }}>
-                      {storeName.charAt(0)?.toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="text-base font-bold text-gray-900 truncate">{storeName}</div>
-                    </div>
-                    {profile.store_description && (
-                      <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">
-                        {profile.store_description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()}
-                      </p>
-                    )}
-                  </div>
-                  <Link to={homePath}>
-                    <Button variant="outline" size="sm" className="text-xs">Voir</Button>
-                  </Link>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* ─── RIGHT: Purchase card ─── */}
-            {/* ─── RIGHT: Purchase card ─── */}
-            <div className="lg:col-span-5 xl:col-span-5">
-              {/* Desktop title */}
-              <div className="hidden lg:block mb-6">
-                <div className="flex items-center gap-2 mb-3 text-xs text-gray-500">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-100 px-3 py-1 font-semibold text-gray-700 shadow-sm">
-                    {typeIcons[product.type]} {typeLabels[product.type] || product.type}
-                  </span>
-                  {!hideSales && salesCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-100 px-3 py-1 font-semibold text-gray-700 shadow-sm">
-                      <Users className="h-3.5 w-3.5" /> {salesCount} ventes
-                    </span>
-                  )}
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight tracking-tight">
-                  {product.title}
-                </h1>
-              </div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="lg:sticky lg:top-24 rounded-[32px] border border-gray-100 bg-white p-6 sm:p-8 space-y-6 shadow-[0_8px_40px_rgb(0,0,0,0.06)]"
-              >
-                {/* Price */}
-                <div>
-                  {dualPrice?.isLocalDifferent && dualPrice?.localPriceFormatted ? (
-                    <div>
-                      <div className="flex items-baseline gap-3 flex-wrap">
-                        <span className="text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: brandColor }}>
-                          {dualPrice.localPriceFormatted}
-                        </span>
-                        {product.original_price && product.original_price > product.price && (
-                          <span className="text-lg text-gray-400 line-through font-medium mb-1">
-                            {formatMoney(convertFromXOF(product.original_price, dualPrice.targetCurrency, rates), dualPrice.targetCurrency)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-slate-700 text-xs font-semibold">
-                        <span>Soit {product.price.toLocaleString()} FCFA</span>
-                        <span className="text-[10px] text-slate-500 font-normal">(Taux officiel direct)</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-end gap-3 flex-wrap">
-                      <span className="text-4xl sm:text-5xl font-extrabold tracking-tight" style={{ color: brandColor }}>
-                        {product.price.toLocaleString()} <span className="text-2xl sm:text-3xl">FCFA</span>
-                      </span>
-                      {product.original_price && product.original_price > product.price && (
-                        <span className="text-lg text-gray-400 line-through font-medium mb-1">
-                          {product.original_price.toLocaleString()} FCFA
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-3 mt-3">
-                    {discount && (
-                      <span className="rounded-full bg-emerald-100/80 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                        Économisez {discount}%
-                      </span>
-                    )}
-                    <p className="text-xs text-gray-500 flex items-center gap-1 font-medium">
-                      <Lock className="h-3.5 w-3.5" /> Paiement unique • À vie
-                    </p>
-                  </div>
-                </div>
-
-                {/* CTA */}
-                <div className="relative group">
-                  {!isSoldOut && (
-                    <div 
-                      className="absolute -inset-1 rounded-[20px] blur-lg opacity-40 group-hover:opacity-70 transition duration-500" 
-                      style={{ backgroundColor: brandColor }}
-                    ></div>
-                  )}
-                  <button
-                    className="relative w-full text-lg font-bold py-4 rounded-[16px] text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 overflow-hidden"
-                    style={{ backgroundColor: isSoldOut ? "#9CA3AF" : brandColor }}
-                    onClick={handleBuy}
-                    disabled={isSoldOut}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-1000 ease-in-out" />
-                    {isSoldOut
-                      ? "Épuisé"
-                      : dualPrice?.isLocalDifferent && dualPrice?.localPriceFormatted
-                      ? `Acheter maintenant • ${dualPrice.localPriceFormatted}`
-                      : "Acheter maintenant"}
-                  </button>
-                </div>
-
-                {/* Quick benefits */}
-                <ul className="space-y-3 text-sm text-gray-700 font-medium bg-gray-50/50 p-4 rounded-[16px] border border-gray-100/50">
-                  <li className="flex items-center gap-3">
-                    <Zap className="h-4 w-4" style={{ color: brandColor }} />
-                    Livré instantanément par email
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <ShieldCheck className="h-4 w-4" style={{ color: brandColor }} />
-                    Paiement 100% sécurisé et chiffré
-                  </li>
-                  <li className="flex items-center gap-3">
-                    <Clock className="h-4 w-4" style={{ color: brandColor }} />
-                    Accès à vie depuis votre espace client
-                  </li>
-                </ul>
-
-                <Separator className="bg-gray-100" />
-
-                {/* Payment methods */}
-                <div className="space-y-3">
-                  <p className="text-[11px] uppercase tracking-wider text-gray-400 font-bold text-center">Paiement sécurisé via</p>
-                  <div className="flex items-center justify-center gap-2 flex-wrap">
-                    <div className="h-8 w-12 rounded-lg bg-[#1A1F71] flex items-center justify-center shadow-sm">
-                      <span className="text-[9px] font-bold text-white">VISA</span>
-                    </div>
-                    <div className="h-8 w-12 rounded-lg bg-[#EB001B] flex items-center justify-center shadow-sm">
-                      <span className="text-[9px] font-bold text-white">MC</span>
-                    </div>
-                    <img src="/images/mtn-momo.webp" alt="MTN" className="h-8 w-8 rounded-full object-cover shadow-sm" />
-                    <img src="/images/orange-money.png" alt="Orange" className="h-8 w-8 rounded-full object-cover shadow-sm" />
-                    <img src="/images/moov-money.png" alt="Moov" className="h-8 w-8 rounded-full object-cover shadow-sm" />
-                    <img src="/images/wave.png" alt="Wave" className="h-8 w-8 rounded-full object-cover shadow-sm" />
-                  </div>
-                </div>
-
-                <Separator className="bg-gray-100" />
-
-                <div className="flex items-center justify-center gap-6 text-xs text-gray-500 font-medium">
-                  <button onClick={handleShare} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors">
-                    <Share2 className="h-4 w-4" />
-                    Partager
-                  </button>
-                  {profile.contact && (
-                    <a href={`mailto:${profile.contact}`} className="flex items-center gap-1.5 hover:text-gray-900 transition-colors">
-                      <MessageCircle className="h-4 w-4" />
-                      Contact
-                    </a>
-                  )}
-                  <button className="flex items-center gap-1.5 hover:text-gray-900 transition-colors" onClick={() => setReportOpen(true)}>
-                    <Flag className="h-4 w-4" />
-                    Signaler
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Related products */}
-          {relatedProducts.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
-              className="mt-14"
-            >
-              <h2 className="text-xl font-bold text-gray-900 mb-5">
-                Autres produits de {storeName}
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {relatedProducts.map((rp) => {
-                  const rDisc = rp.original_price && rp.original_price > rp.price
-                    ? Math.round(((rp.original_price - rp.price) / rp.original_price) * 100) : null;
-                  return (
-                    <Link key={rp.id} to={getRelatedProductPath(rp.id)}
-                      className="group border border-gray-100 rounded-2xl overflow-hidden bg-white hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300">
-                      <div className="relative aspect-square overflow-hidden bg-gray-50">
-                        {rp.thumbnail_url ? (
-                          <img src={rp.thumbnail_url} alt={rp.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center">
-                            <Package className="h-8 w-8 text-gray-200" />
-                          </div>
-                        )}
-                        {rDisc && (
-                          <span className="absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: brandColor }}>
-                            -{rDisc}%
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3 space-y-1">
-                        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight">{rp.title}</h3>
-                        {(() => {
-                          const rDual = formatDual(rp.price);
-                          return rDual.isLocalDifferent && rDual.localPriceFormatted ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold" style={{ color: brandColor }}>
-                                {rDual.localPriceFormatted}
-                              </span>
-                              <span className="text-[10px] text-gray-500 font-medium">
-                                Soit {rp.price.toLocaleString()} FCFA
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-baseline gap-1.5">
-                              <span className="text-sm font-bold" style={{ color: brandColor }}>{rp.price.toLocaleString()} FCFA</span>
-                              {rp.original_price && rp.original_price > rp.price && (
-                                <span className="text-[10px] line-through text-gray-300">{rp.original_price.toLocaleString()}</span>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-100 bg-white mt-12 hidden lg:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
-            <div className="flex items-center gap-2.5">
-              {logoUrl ? (
-                <img src={logoUrl} alt={storeName} className="h-7 w-7 rounded-md object-cover" />
-              ) : (
-                <div className="h-7 w-7 rounded-md flex items-center justify-center text-white text-[11px] font-bold" style={{ backgroundColor: brandColor }}>
-                  {storeName.charAt(0)?.toUpperCase()}
-                </div>
-              )}
-              <span className="text-base font-bold text-gray-900">{storeName}</span>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Liens</h3>
-              <ul className="space-y-2.5">
-                <li>
-                  <Link to="/mes-achats" className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:opacity-70">
-                    <ShoppingBag className="h-4 w-4" /> Voir mes commandes
-                  </Link>
-                </li>
-                <li>
-                  <Link to={homePath} className="text-sm text-gray-600 hover:text-gray-900">
-                    Boutique
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Légal</h3>
-              <ul className="space-y-2.5">
-                <li><Link to={legalPath} className="text-sm text-gray-600 hover:text-gray-900">Mentions légales</Link></li>
-                <li><Link to={termsPath} className="text-sm text-gray-600 hover:text-gray-900">Conditions générales</Link></li>
-                <li><Link to={privacyPath} className="text-sm text-gray-600 hover:text-gray-900">Politique de confidentialité</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          {storeInfo?.footer_disclaimer && (
-            <p className="mt-10 text-xs leading-relaxed text-gray-400 max-w-4xl">
-              {storeInfo.footer_disclaimer}
-            </p>
-          )}
-
-          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-gray-400">{storeName} © {new Date().getFullYear()}  Tous droits réservés.</p>
-            <p className="text-xs text-gray-300">
-              Propulsé par{" "}
-              <Link to="/" className="hover:underline font-medium" style={{ color: brandColor }}>Dukaio</Link>
-            </p>
-          </div>
-        </div>
-      </footer>
-
-
-      {/* ─── MOBILE STICKY CTA ─── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200/50 z-50 shadow-[0_-10px_40px_rgb(0,0,0,0.05)]">
-        <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Paiement unique</span>
-            {dualPrice?.isLocalDifferent && dualPrice?.localPriceFormatted ? (
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-xl font-extrabold text-gray-900 leading-none">{dualPrice.localPriceFormatted}</span>
-                <span className="text-[11px] font-medium text-gray-500">({product.price.toLocaleString()} FCFA)</span>
-              </div>
-            ) : (
-              <div className="flex items-baseline gap-1">
-                <span className="text-xl font-extrabold text-gray-900 leading-none">{product.price.toLocaleString()}</span>
-                <span className="text-sm font-bold text-gray-900">FCFA</span>
-              </div>
+        {/* 2-Column Product Grid */}
+        <div className="mt-5 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+          {/* Left Column: Sticky Square Product Image */}
+          <div className="relative self-start overflow-hidden rounded-[var(--shop-radius)] bg-shop-surface lg:sticky lg:top-24">
+            <img
+              src={
+                product.thumbnail_url ||
+                "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1024&auto=format&fit=crop"
+              }
+              alt={product.title}
+              className="aspect-square h-full w-full object-cover"
+            />
+            {discount && (
+              <span className="absolute left-3.5 top-3.5 rounded-full bg-shop-accent px-3 py-1 text-xs font-bold text-shop-accent-foreground shadow-sm">
+                -{discount}%
+              </span>
+            )}
+            {salesCount > 15 && (
+              <span className="absolute right-3.5 top-3.5 rounded-full bg-black/70 backdrop-blur-md px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
+                🔥 Populaire
+              </span>
             )}
           </div>
-          <button
-            className="flex-1 text-sm font-bold py-3.5 rounded-xl text-white transition-all active:scale-[0.98] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: isSoldOut ? "#9CA3AF" : brandColor }}
-            onClick={handleBuy}
-            disabled={isSoldOut}
-          >
-            {isSoldOut ? "Épuisé" : "Acheter maintenant"}
-          </button>
+
+          {/* Right Column: Details & Purchase Card */}
+          <div className="min-w-0">
+            {/* Format info */}
+            <p className="flex items-center gap-1.5 text-xs text-shop-muted font-medium">
+              <FileDown className="h-3.5 w-3.5" strokeWidth={1.8} />
+              <span>{formatLabel}</span>
+              <span>·</span>
+              <span>Accès immédiat</span>
+            </p>
+
+            {/* Title */}
+            <h1 className="mt-2.5 font-shop-display text-[26px] font-bold leading-tight tracking-tight sm:text-[32px] lg:text-[34px]">
+              {product.title}
+            </h1>
+
+            {/* Seller & Rating metadata */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-shop-muted">
+              <span>
+                Par <span className="font-semibold text-shop-text underline underline-offset-2">{sellerName}</span>
+              </span>
+              <span className="flex items-center gap-1 font-medium">
+                <Star className="h-3.5 w-3.5 fill-shop-text text-shop-text" /> 5.0
+              </span>
+              {!product.hide_sales_count && (
+                <span className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" /> {salesCount} ventes
+                </span>
+              )}
+            </div>
+
+            {/* Price Row */}
+            <div className="mt-6 flex flex-wrap items-baseline gap-3">
+              <span className="font-shop-display text-[30px] sm:text-[34px] font-bold tracking-tight">
+                {formatMoney(product.price, "XOF")}
+              </span>
+              {product.original_price && product.original_price > product.price && (
+                <span className="text-sm text-shop-muted line-through">
+                  {formatMoney(product.original_price, "XOF")}
+                </span>
+              )}
+            </div>
+
+            {/* Dual Currency if different */}
+            {isLocalDifferent && (
+              <p className="mt-1 text-xs text-shop-muted font-medium">
+                Soit environ {formatMoney(convertFromXOF(product.price, targetCurrency, rates), targetCurrency)}
+              </p>
+            )}
+
+            {/* Primary Action Button « Je le veux » */}
+            <button
+              type="button"
+              onClick={handleBuy}
+              className={`mt-6 h-[52px] w-full rounded-[min(var(--shop-radius),14px)] text-[15px] font-bold transition-all hover:opacity-90 active:scale-[0.99] shadow-sm ${
+                themeConfig.appearance.buttons === "solid"
+                  ? "bg-shop-accent text-shop-accent-foreground"
+                  : "border border-shop-text bg-shop-text text-shop-bg"
+              }`}
+            >
+              Je le veux
+            </button>
+
+            {/* Reassurance text */}
+            <p className="mt-3.5 flex gap-2 text-[13px] leading-relaxed text-shop-muted">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-shop-text" />
+              <span>{reassuranceText}</span>
+            </p>
+
+            {/* 3 Trust Badges Grid */}
+            <div className="mt-5 grid grid-cols-3 divide-x divide-shop-line rounded-[min(var(--shop-radius),12px)] border border-shop-line bg-shop-surface/30">
+              {[
+                { icon: Smartphone, label: "Mobile Money ou carte" },
+                { icon: Mail, label: "Reçu par e-mail" },
+                { icon: ShoppingBag, label: "Retrouvé dans Mes achats" },
+              ].map(({ icon: Icon, label }) => (
+                <div
+                  key={label}
+                  className="flex flex-col items-center gap-1.5 px-2 py-3.5 text-center text-[11px] sm:text-xs leading-tight font-medium"
+                >
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-shop-surface">
+                    <Icon className="h-3.5 w-3.5 text-shop-text" strokeWidth={1.8} />
+                  </span>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Wishlist & Share Row */}
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={toggleWishlist}
+                className="flex h-11 items-center justify-center gap-2 rounded-[min(var(--shop-radius),12px)] border border-shop-line text-[13px] font-medium hover:border-shop-text transition-colors"
+              >
+                <Heart
+                  className={`h-4 w-4 ${liked ? "fill-shop-accent text-shop-accent" : ""}`}
+                  strokeWidth={1.6}
+                />
+                <span>{liked ? "Dans mes envies" : "Garder dans mes envies"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex h-11 items-center justify-center gap-2 rounded-[min(var(--shop-radius),12px)] border border-shop-line text-[13px] font-medium hover:border-shop-text transition-colors"
+              >
+                <Share2 className="h-4 w-4" strokeWidth={1.6} />
+                <span>{copied ? "Lien copié !" : "Partager"}</span>
+              </button>
+            </div>
+
+            {/* Payment Trust Box */}
+            <div className="mt-6 rounded-[min(var(--shop-radius),12px)] border border-shop-line bg-shop-surface/20">
+              <div className="flex items-center justify-between gap-3 px-4 pt-3.5">
+                <p className="flex items-center gap-1.5 text-xs font-semibold">
+                  <Lock className="h-3.5 w-3.5" strokeWidth={1.8} /> Paiement 100 % sécurisé
+                </p>
+                <p className="text-[11px] text-shop-muted">Mobile Money ou carte</p>
+              </div>
+
+              {/* Payment operator logos */}
+              <div className="flex flex-wrap items-center gap-2 px-4 pb-4 pt-3">
+                {paymentBadges.map((p) => (
+                  <span
+                    key={p.name}
+                    title={p.name}
+                    className="grid h-9 w-[54px] place-items-center rounded-md border border-shop-line bg-white px-1 shadow-2xs"
+                  >
+                    <img src={p.img} alt={p.name} loading="lazy" className="max-h-5 max-w-full object-contain" />
+                  </span>
+                ))}
+                {/* Visa & Mastercard badges */}
+                <span className="grid h-9 w-[54px] place-items-center rounded-md border border-shop-line bg-[#1A1F71] px-1 shadow-2xs">
+                  <span className="text-[10px] font-extrabold text-white tracking-wider">VISA</span>
+                </span>
+                <span className="grid h-9 w-[54px] place-items-center rounded-md border border-shop-line bg-[#EB001B] px-1 shadow-2xs">
+                  <span className="text-[10px] font-extrabold text-white tracking-wider">MC</span>
+                </span>
+              </div>
+
+              {/* Link to Buyer Portal */}
+              <a
+                href={getBuyerPortalUrl("/mes-achats")}
+                className="group flex items-center justify-between border-t border-shop-line px-4 py-3 text-[13px] text-shop-muted hover:text-shop-text transition-colors"
+              >
+                <span>
+                  Déjà acheté ? <span className="font-semibold text-shop-text">Retrouve-le dans Mes achats</span>
+                </span>
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.6} />
+              </a>
+            </div>
+          </div>
         </div>
+
+        {/* ─── DESCRIPTION SECTION ─── */}
+        {product.description && (
+          <section className="mt-14 max-w-[760px] lg:mt-20">
+            <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Description</h2>
+            <div
+              dangerouslySetInnerHTML={{ __html: processDescriptionWithVideos(product.description) }}
+              className="mt-4 prose prose-neutral max-w-none text-shop-text/80 text-[15px] leading-relaxed [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-2 [&_img]:rounded-xl [&_img]:my-4"
+            />
+          </section>
+        )}
+
+        {/* ─── COURSE LESSONS (if applicable) ─── */}
+        {product.type === "course" && lessons.length > 0 && (
+          <section className="mt-12 max-w-[760px]">
+            <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Programme de la formation</h2>
+            <p className="mt-1 text-sm text-shop-muted">{lessons.length} module(s) et leçon(s)</p>
+            <div className="mt-4 divide-y divide-shop-line rounded-[var(--shop-radius)] border border-shop-line">
+              {lessons.map((lesson, idx) => (
+                <div key={idx} className="flex items-start justify-between gap-4 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-shop-surface text-xs font-semibold">
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-semibold">{lesson.title}</h3>
+                      {lesson.description && (
+                        <p className="mt-1 text-xs text-shop-muted">{lesson.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  {lesson.duration_minutes && (
+                    <span className="flex shrink-0 items-center gap-1 text-xs text-shop-muted">
+                      <Clock className="h-3.5 w-3.5" /> {lesson.duration_minutes} min
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ─── FAQS SECTION (if applicable) ─── */}
+        {faqs.length > 0 && (
+          <section className="mt-12 max-w-[760px]">
+            <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Questions fréquentes</h2>
+            <Accordion type="single" collapsible className="mt-4 space-y-2">
+              {faqs.map((faq, index) => (
+                <AccordionItem
+                  key={index}
+                  value={`faq-${index}`}
+                  className="rounded-[var(--shop-radius)] border border-shop-line px-4"
+                >
+                  <AccordionTrigger className="text-sm font-semibold text-shop-text hover:no-underline py-4 text-left">
+                    {faq.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-shop-muted pb-4 leading-relaxed">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+        )}
+
+        {/* ─── REVIEWS SECTION ─── */}
+        <section className="mt-14 max-w-[760px]">
+          <ProductReviewsSection productId={product.id} brandColor="var(--shop-accent)" />
+        </section>
+
+        {/* ─── RELATED PRODUCTS ("Vous aimerez aussi") ─── */}
+        {relatedProducts.length > 0 && (
+          <section className="mt-16 border-t border-shop-line pt-12 sm:mt-20 sm:pt-14">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Vous aimerez aussi</h2>
+              <Link to={homePath} className="text-[13px] text-shop-muted underline-offset-2 hover:text-shop-text hover:underline">
+                Voir tout
+              </Link>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 md:grid-cols-4 lg:gap-x-6">
+              {relatedProducts.map((p) => {
+                const relDiscount =
+                  p.original_price && p.original_price > p.price
+                    ? Math.round(((p.original_price - p.price) / p.original_price) * 100)
+                    : null;
+                return (
+                  <Link key={p.id} to={getProductHref(p.id)} className="group min-w-0">
+                    <div className="relative aspect-square overflow-hidden rounded-[var(--shop-radius)] bg-shop-surface">
+                      <img
+                        src={
+                          p.thumbnail_url ||
+                          "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop"
+                        }
+                        alt={p.title}
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                      />
+                      {relDiscount && (
+                        <span className="absolute left-2.5 top-2.5 rounded-full bg-shop-accent px-2 py-0.5 text-[11px] font-bold text-shop-accent-foreground shadow-xs">
+                          -{relDiscount}%
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2.5 line-clamp-2 text-[13px] font-semibold leading-snug group-hover:underline">
+                      {p.title}
+                    </p>
+                    <p className="mt-1 text-[13px] font-bold">{formatMoney(p.price, "XOF")}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* ─── MOBILE STICKY BOTTOM BAR ─── */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-shop-line bg-shop-bg/95 px-4 py-3 backdrop-blur-md lg:hidden">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs text-shop-muted">{product.title}</p>
+          <p className="font-bold text-[15px]">{formatMoney(product.price, "XOF")}</p>
+        </div>
+        <button
+          type="button"
+          onClick={handleBuy}
+          className="h-11 rounded-[min(var(--shop-radius),12px)] bg-shop-accent px-6 text-sm font-bold text-shop-accent-foreground shadow-sm hover:opacity-90 active:scale-95 transition-all"
+        >
+          Je le veux
+        </button>
       </div>
 
-      <ProductReportDialog
-        open={reportOpen}
-        onOpenChange={setReportOpen}
-        productId={product.id}
-        productTitle={product.title}
-      />
+      {/* ─── FOOTER ─── */}
+      <footer className="border-t border-shop-line pb-20 lg:pb-0">
+        <div className="mx-auto flex max-w-[1140px] flex-wrap justify-between gap-3 px-4 py-6 text-xs text-shop-muted sm:px-6 lg:px-8">
+          <span>{storeName}</span>
+          <a href={getBuyerPortalUrl("/mes-achats")} className="hover:text-shop-text transition-colors">
+            Mes achats · boutique propulsée par DUKAIO
+          </a>
+        </div>
+      </footer>
     </div>
   );
-};
-
-export default StoreProductDetail;
+}

@@ -83,6 +83,14 @@ const tools: Tool[] = [
     bg: "bg-sky-50 dark:bg-sky-950/40 border-sky-200/70 dark:border-sky-900/50",
   },
   {
+    title: "Studio Boutique",
+    subtitle: "Personnaliser l'apparence plein écran",
+    url: "/dashboard/store-editor",
+    icon: Sparkles,
+    iconColor: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-200/70 dark:border-blue-900/50",
+  },
+  {
     title: "Boutiques",
     subtitle: "Gérer vos boutiques en ligne",
     url: "/dashboard/stores",

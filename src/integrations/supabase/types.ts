@@ -1160,6 +1160,7 @@ export type Database = {
           store_slug: string | null
           store_sort_order: string | null
           store_theme: string | null
+          theme_config: Json | null
           tiktok_pixel_id: string | null
           updated_at: string
           username: string | null
@@ -1197,6 +1198,7 @@ export type Database = {
           store_slug?: string | null
           store_sort_order?: string | null
           store_theme?: string | null
+          theme_config?: Json | null
           tiktok_pixel_id?: string | null
           updated_at?: string
           username?: string | null
@@ -1234,6 +1236,7 @@ export type Database = {
           store_slug?: string | null
           store_sort_order?: string | null
           store_theme?: string | null
+          theme_config?: Json | null
           tiktok_pixel_id?: string | null
           updated_at?: string
           username?: string | null
@@ -1435,6 +1438,7 @@ export type Database = {
           sort_order: string | null
           terms_of_use: string | null
           theme: string | null
+          theme_config: Json | null
           updated_at: string
         }
         Insert: {
@@ -1463,6 +1467,7 @@ export type Database = {
           sort_order?: string | null
           terms_of_use?: string | null
           theme?: string | null
+          theme_config?: Json | null
           updated_at?: string
         }
         Update: {
@@ -1491,6 +1496,7 @@ export type Database = {
           sort_order?: string | null
           terms_of_use?: string | null
           theme?: string | null
+          theme_config?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -2143,6 +2149,7 @@ export type Database = {
           store_slug: string | null
           store_sort_order: string | null
           store_theme: string | null
+          theme_config: Json | null
           tiktok_pixel_id: string | null
           updated_at: string
           username: string | null

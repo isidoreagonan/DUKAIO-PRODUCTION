@@ -161,9 +161,31 @@ const DashboardAppearanceTab = () => {
   const storeSlug = activeStore?.slug;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      {/* Left: Settings */}
-      <div className="flex-1 max-w-2xl space-y-6">
+    <div className="space-y-6">
+      {/* Studio Plein Écran Banner */}
+      <div className="rounded-2xl border-2 border-primary/20 bg-gradient-to-r from-blue-500/10 via-background to-indigo-500/10 p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="text-base sm:text-lg font-bold text-foreground">
+              Studio de Personnalisation en Plein Écran
+            </h2>
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl leading-relaxed">
+            Éditeur visuel en direct avec écran scindé : réglages à gauche et aperçu responsive (Mobile, Tablette, Ordinateur) en temps réel à droite.
+          </p>
+        </div>
+        <Button className="gap-2 shrink-0 font-bold bg-primary text-primary-foreground shadow-sm hover:opacity-90" asChild>
+          <a href="/dashboard/store-editor">
+            <Paintbrush className="h-4 w-4" />
+            Ouvrir le Studio
+          </a>
+        </Button>
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: Settings */}
+        <div className="flex-1 max-w-2xl space-y-6">
         <div className="flex items-center gap-3 flex-wrap">
           <StoreSelector stores={stores} activeStoreId={activeStoreId} onSelect={setActiveStoreId} />
           {storeSlug && (
@@ -321,6 +343,7 @@ const DashboardAppearanceTab = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 
