@@ -247,3 +247,4 @@ export function editorReducer(state: EditorHistory, action: EditorAction): Edito
     }
   }
 }
+

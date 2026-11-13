@@ -5,9 +5,6 @@ import {
   Check,
   ChevronRight,
   Clock,
-  Download,
-  BookOpen,
-  Key,
   FileDown,
   Heart,
   Lock,
@@ -22,19 +19,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useTrackingPixels, trackEvent } from "@/hooks/useTrackingPixels";
 import { useCurrency, convertFromXOF, formatMoney } from "@/lib/currency";
-import { getStoreSubdomain, getStoreUrl, getBuyerPortalUrl } from "@/lib/subdomain";
+import { getStoreSubdomain, getBuyerPortalUrl } from "@/lib/subdomain";
 import { normalizeShopConfig, shopStyle, type ShopConfig } from "@/lib/shopConfig";
 import { processDescriptionWithVideos } from "@/components/RichTextEditor";
 import ProductReviewsSection from "@/components/store/ProductReviewsSection";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
-
-import mtnLogo from "@/assets/payment-logos/providers/mtn.png";
-import moovLogo from "@/assets/payment-logos/providers/moov.png";
-import orangeLogo from "@/assets/payment-logos/providers/orange.png";
-import celtiisLogo from "@/assets/payment-logos/providers/celtiis.png";
-import airtelLogo from "@/assets/payment-logos/providers/airtel.png";
-import mpesaLogo from "@/assets/payment-logos/providers/mpesa.png";
 
 interface Profile {
   id: string;
@@ -85,14 +75,12 @@ export default function StoreProductDetail() {
   const [liked, setLiked] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { countryCode, targetCurrency, isLocalDifferent, rates, formatDual } = useCurrency();
+  const { countryCode, targetCurrency, isLocalDifferent, rates } = useCurrency();
 
-  // Always force light mode on public store pages
   useEffect(() => {
     document.documentElement.classList.remove("dark");
   }, []);
 
-  // Check wishlist state
   useEffect(() => {
     if (!product) return;
     try {
@@ -139,7 +127,6 @@ export default function StoreProductDetail() {
           return;
         }
 
-        // 1. Fetch store
         let { data: store } = await supabase
           .from("stores")
           .select("*")
@@ -159,7 +146,6 @@ export default function StoreProductDetail() {
 
         let ownerId = store?.owner_id;
 
-        // 2. Fetch product by cleanProductId
         let { data: prod } = await supabase
           .from("products")
           .select("*")
@@ -187,7 +173,6 @@ export default function StoreProductDetail() {
           ownerId = prod.creator_id;
         }
 
-        // 3. Fetch profile
         let { data: prof } = await supabase
           .from("profiles")
           .select("id, display_name, avatar_url, store_slug, store_description, store_logo_url, contact, facebook_pixel_id, tiktok_pixel_id, google_ads_id, theme_config")
@@ -215,7 +200,6 @@ export default function StoreProductDetail() {
         setProfile(prof as Profile);
         setProduct(prod as Product);
 
-        // Compute Theme Config
         const storeName = store?.name || prof?.display_name || "DUKAIO";
         const storeLogo = store?.logo_url || prof?.avatar_url || null;
         const config = normalizeShopConfig(store?.theme_config || prof?.theme_config, {
@@ -230,7 +214,6 @@ export default function StoreProductDetail() {
         });
         setThemeConfig(config);
 
-        // Track ViewContent
         trackEvent("ViewContent", {
           content_name: prod.title,
           content_ids: [prod.id],
@@ -239,7 +222,6 @@ export default function StoreProductDetail() {
           currency: "XOF",
         });
 
-        // 4. Fetch FAQs
         const { data: faqData } = await supabase
           .from("product_faqs")
           .select("question, answer")
@@ -247,7 +229,6 @@ export default function StoreProductDetail() {
           .order("position");
         if (faqData) setFaqs(faqData as any);
 
-        // 5. Fetch lessons if course
         if (prod.type === "course") {
           const { data: lessonsData } = await supabase
             .from("course_lessons")
@@ -257,7 +238,6 @@ export default function StoreProductDetail() {
           if (lessonsData) setLessons(lessonsData as any);
         }
 
-        // 6. Fetch related products
         const { data: related } = await supabase
           .from("products")
           .select("id, title, price, original_price, type, thumbnail_url, sales_count, category")
@@ -299,7 +279,7 @@ export default function StoreProductDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#FCFBF9]">
         <div className="h-9 w-9 animate-spin rounded-full border-4 border-gray-200 border-t-black" />
       </div>
     );
@@ -307,8 +287,8 @@ export default function StoreProductDetail() {
 
   if (notFound || !product || !themeConfig) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4 text-center">
-        <Package className="h-16 w-16 text-gray-200 mb-4" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FCFBF9] px-4 text-center">
+        <Package className="h-16 w-16 text-gray-300 mb-4" />
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Produit introuvable</h1>
         <p className="text-gray-500 mb-6 max-w-sm">
           Ce produit n'est plus disponible ou a été déplacé.
@@ -335,145 +315,121 @@ export default function StoreProductDetail() {
   const salesCount = product.sales_count || 14;
   const formatLabel =
     product.type === "course"
-      ? "Formation vidéo"
+      ? "Formation vidéo · PDF"
       : product.type === "file"
       ? "Fichier numérique"
       : product.type === "license"
       ? "Licence & clé"
       : "Ressource digitale";
 
-  const reassuranceText =
-    product.type === "course"
-      ? "Accès immédiat à la formation et à votre espace membre tout de suite après paiement."
-      : product.type === "license"
-      ? "Votre clé de licence envoyée par e-mail et accessible immédiatement après paiement."
-      : "Le fichier à télécharger, tout de suite après le paiement, et un e-mail avec ton lien.";
-
-  const paymentBadges = [
-    { name: "Orange Money", img: orangeLogo },
-    { name: "MTN Mobile Money", img: mtnLogo },
-    { name: "Moov Money", img: moovLogo },
-    { name: "Celtiis Cash", img: celtiisLogo },
-    { name: "Airtel Money", img: airtelLogo },
-    { name: "M-Pesa", img: mpesaLogo },
-  ];
-
   return (
     <div
-      className="min-h-screen bg-shop-bg font-shop-body text-shop-text transition-colors duration-200"
+      className="min-h-screen bg-[#FCFBF9] text-[#20201F]"
       style={shopStyle(themeConfig)}
     >
-      {/* ─── HEADER ─── */}
-      <header className="sticky top-0 z-30 border-b border-shop-line bg-shop-bg/95 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-[1140px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      {/* ─── HEADER (Solid white/clean, exact image 2) ─── */}
+      <header className="sticky top-0 z-30 border-b border-[#E7E3DC] bg-[#FCFBF9]/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-16 max-w-[1140px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to={homePath} className="flex min-w-0 items-center gap-2.5">
             {themeConfig.logo ? (
               <img src={themeConfig.logo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-shop-text font-shop-display text-sm font-bold text-shop-bg">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#18181B] font-bold text-xs text-white uppercase tracking-wider">
                 {themeConfig.name.trim().charAt(0) || "D"}
               </span>
             )}
-            <span className="truncate font-shop-display text-[15px] font-bold uppercase tracking-[0.16em]">
+            <span className="truncate text-[15px] font-bold tracking-[0.16em] uppercase text-[#18181B]">
               {themeConfig.name}
             </span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          {/* Right Header Icons: Wishlist & Bag */}
+          <div className="flex items-center gap-1">
             <button
               type="button"
               aria-label={liked ? "Retirer des envies" : "Garder dans mes envies"}
               onClick={toggleWishlist}
-              className="relative grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-shop-surface"
+              className="grid h-10 w-10 place-items-center rounded-full hover:bg-[#F4F2EE] transition-colors"
             >
               <Heart
-                className={`h-[18px] w-[18px] ${liked ? "fill-shop-accent text-shop-accent" : "text-shop-text"}`}
-                strokeWidth={1.8}
+                className={`h-[18px] w-[18px] ${liked ? "fill-[#E86F3D] text-[#E86F3D]" : "text-[#20201F]"}`}
+                strokeWidth={1.7}
               />
             </button>
 
             <a
               href={getBuyerPortalUrl("/mes-achats")}
-              className="hidden sm:inline-flex items-center gap-1.5 h-10 px-4 rounded-full border border-shop-line text-xs font-semibold text-shop-text hover:bg-shop-surface transition-colors"
+              className="grid h-10 w-10 place-items-center rounded-full hover:bg-[#F4F2EE] transition-colors"
+              title="Mes achats"
             >
-              <ShoppingBag className="h-3.5 w-3.5 text-shop-muted" />
-              <span>Mes achats</span>
+              <ShoppingBag className="h-[18px] w-[18px] text-[#20201F]" strokeWidth={1.7} />
             </a>
           </div>
         </div>
       </header>
 
-      {/* ─── MAIN ─── */}
-      <main className="mx-auto max-w-[1140px] px-4 pb-20 pt-5 sm:px-6 lg:px-8">
+      {/* ─── MAIN CONTENT ─── */}
+      <main className="mx-auto max-w-[1140px] px-4 pb-24 pt-6 sm:px-6 lg:px-8">
         {/* Back Link */}
         <Link
           to={homePath}
-          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-shop-muted hover:text-shop-text transition-colors"
+          className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#74716B] hover:text-[#20201F] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Tous les produits
         </Link>
 
-        {/* 2-Column Product Grid */}
+        {/* 2-Column Product Grid (Exact Image 2) */}
         <div className="mt-5 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-          {/* Left Column: Sticky Square Product Image */}
-          <div className="relative self-start overflow-hidden rounded-[var(--shop-radius)] bg-shop-surface lg:sticky lg:top-24">
+          {/* Left Column: Product Image in rounded container */}
+          <div className="relative self-start overflow-hidden rounded-2xl bg-[#F3F4F6] p-4 sm:p-6 lg:p-8 flex items-center justify-center lg:sticky lg:top-24 border border-[#E5E7EB]/60">
             <img
               src={
                 product.thumbnail_url ||
                 "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1024&auto=format&fit=crop"
               }
               alt={product.title}
-              className="aspect-square h-full w-full object-cover"
+              className="aspect-square w-full h-auto max-h-[480px] object-contain rounded-xl"
             />
             {discount && (
-              <span className="absolute left-3.5 top-3.5 rounded-full bg-shop-accent px-3 py-1 text-xs font-bold text-shop-accent-foreground shadow-sm">
+              <span className="absolute left-3.5 top-3.5 rounded-full bg-[#E86F3D] px-2.5 py-1 text-xs font-bold text-white shadow-sm">
                 -{discount}%
-              </span>
-            )}
-            {salesCount > 15 && (
-              <span className="absolute right-3.5 top-3.5 rounded-full bg-black/70 backdrop-blur-md px-3 py-1 text-[11px] font-semibold text-white shadow-sm">
-                🔥 Populaire
               </span>
             )}
           </div>
 
-          {/* Right Column: Details & Purchase Card */}
+          {/* Right Column: Title, Price, CTA and Badges (Exact Image 2) */}
           <div className="min-w-0">
             {/* Format info */}
-            <p className="flex items-center gap-1.5 text-xs text-shop-muted font-medium">
-              <FileDown className="h-3.5 w-3.5" strokeWidth={1.8} />
-              <span>{formatLabel}</span>
-              <span>·</span>
-              <span>Accès immédiat</span>
+            <p className="flex items-center gap-1.5 text-xs text-[#74716B] font-medium">
+              <FileDown className="h-3.5 w-3.5 text-[#74716B]" strokeWidth={1.7} />
+              <span>{formatLabel} · fichier à télécharger</span>
             </p>
 
             {/* Title */}
-            <h1 className="mt-2.5 font-shop-display text-[26px] font-bold leading-tight tracking-tight sm:text-[32px] lg:text-[34px]">
+            <h1 className="mt-2.5 text-[26px] sm:text-[32px] font-extrabold text-[#111827] leading-tight tracking-[-0.02em]">
               {product.title}
             </h1>
 
             {/* Seller & Rating metadata */}
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-shop-muted">
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[#74716B]">
               <span>
-                Par <span className="font-semibold text-shop-text underline underline-offset-2">{sellerName}</span>
+                Par <span className="font-semibold text-[#111827] underline underline-offset-2">{sellerName}</span>
               </span>
-              <span className="flex items-center gap-1 font-medium">
-                <Star className="h-3.5 w-3.5 fill-shop-text text-shop-text" /> 5.0
+              <span className="flex items-center gap-1 font-medium text-[#111827]">
+                <Star className="h-3.5 w-3.5 fill-[#111827] text-[#111827]" /> 4.9
               </span>
               {!product.hide_sales_count && (
-                <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> {salesCount} ventes
-                </span>
+                <span>{salesCount} ventes</span>
               )}
             </div>
 
             {/* Price Row */}
             <div className="mt-6 flex flex-wrap items-baseline gap-3">
-              <span className="font-shop-display text-[30px] sm:text-[34px] font-bold tracking-tight">
+              <span className="text-[28px] sm:text-[34px] font-extrabold text-[#111827] tracking-tight">
                 {formatMoney(product.price, "XOF")}
               </span>
               {product.original_price && product.original_price > product.price && (
-                <span className="text-sm text-shop-muted line-through">
+                <span className="text-sm sm:text-base text-[#9CA3AF] line-through font-medium">
                   {formatMoney(product.original_price, "XOF")}
                 </span>
               )}
@@ -481,32 +437,28 @@ export default function StoreProductDetail() {
 
             {/* Dual Currency if different */}
             {isLocalDifferent && (
-              <p className="mt-1 text-xs text-shop-muted font-medium">
+              <p className="mt-1 text-xs text-[#74716B] font-medium">
                 Soit environ {formatMoney(convertFromXOF(product.price, targetCurrency, rates), targetCurrency)}
               </p>
             )}
 
-            {/* Primary Action Button « Je le veux » */}
+            {/* Primary Action Button « Je le veux » (SOLID BLACK, EXACT IMAGE 2) */}
             <button
               type="button"
               onClick={handleBuy}
-              className={`mt-6 h-[52px] w-full rounded-[min(var(--shop-radius),14px)] text-[15px] font-bold transition-all hover:opacity-90 active:scale-[0.99] shadow-sm ${
-                themeConfig.appearance.buttons === "solid"
-                  ? "bg-shop-accent text-shop-accent-foreground"
-                  : "border border-shop-text bg-shop-text text-shop-bg"
-              }`}
+              className="mt-6 h-[52px] w-full rounded-xl bg-[#18181B] text-white text-[15px] font-bold hover:bg-black active:scale-[0.99] shadow-sm flex items-center justify-center transition-all"
             >
               Je le veux
             </button>
 
             {/* Reassurance text */}
-            <p className="mt-3.5 flex gap-2 text-[13px] leading-relaxed text-shop-muted">
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-shop-text" />
-              <span>{reassuranceText}</span>
+            <p className="mt-3.5 flex gap-2 text-[13px] leading-relaxed text-[#74716B]">
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#111827]" />
+              <span>Le fichier à télécharger, tout de suite après le paiement, et un e-mail avec ton lien.</span>
             </p>
 
-            {/* 3 Trust Badges Grid */}
-            <div className="mt-5 grid grid-cols-3 divide-x divide-shop-line rounded-[min(var(--shop-radius),12px)] border border-shop-line bg-shop-surface/30">
+            {/* 3 Trust Badges Grid (Exact Image 2) */}
+            <div className="mt-5 grid grid-cols-3 divide-x divide-[#E7E3DC] rounded-xl border border-[#E7E3DC] bg-[#FCFBF9]">
               {[
                 { icon: Smartphone, label: "Mobile Money ou carte" },
                 { icon: Mail, label: "Reçu par e-mail" },
@@ -514,25 +466,25 @@ export default function StoreProductDetail() {
               ].map(({ icon: Icon, label }) => (
                 <div
                   key={label}
-                  className="flex flex-col items-center gap-1.5 px-2 py-3.5 text-center text-[11px] sm:text-xs leading-tight font-medium"
+                  className="flex flex-col items-center gap-1.5 px-2 py-3.5 text-center text-[11px] sm:text-xs leading-tight font-medium text-[#20201F]"
                 >
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-shop-surface">
-                    <Icon className="h-3.5 w-3.5 text-shop-text" strokeWidth={1.8} />
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#F4F2EE]">
+                    <Icon className="h-3.5 w-3.5 text-[#20201F]" strokeWidth={1.8} />
                   </span>
                   <span>{label}</span>
                 </div>
               ))}
             </div>
 
-            {/* Wishlist & Share Row */}
+            {/* Wishlist & Share Row (Exact Image 2) */}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={toggleWishlist}
-                className="flex h-11 items-center justify-center gap-2 rounded-[min(var(--shop-radius),12px)] border border-shop-line text-[13px] font-medium hover:border-shop-text transition-colors"
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E7E3DC] bg-[#FCFBF9] text-[13px] font-medium text-[#20201F] hover:border-[#20201F] transition-colors"
               >
                 <Heart
-                  className={`h-4 w-4 ${liked ? "fill-shop-accent text-shop-accent" : ""}`}
+                  className={`h-4 w-4 ${liked ? "fill-[#E86F3D] text-[#E86F3D]" : ""}`}
                   strokeWidth={1.6}
                 />
                 <span>{liked ? "Dans mes envies" : "Garder dans mes envies"}</span>
@@ -541,49 +493,47 @@ export default function StoreProductDetail() {
               <button
                 type="button"
                 onClick={handleShare}
-                className="flex h-11 items-center justify-center gap-2 rounded-[min(var(--shop-radius),12px)] border border-shop-line text-[13px] font-medium hover:border-shop-text transition-colors"
+                className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#E7E3DC] bg-[#FCFBF9] text-[13px] font-medium text-[#20201F] hover:border-[#20201F] transition-colors"
               >
                 <Share2 className="h-4 w-4" strokeWidth={1.6} />
                 <span>{copied ? "Lien copié !" : "Partager"}</span>
               </button>
             </div>
 
-            {/* Payment Trust Box */}
-            <div className="mt-6 rounded-[min(var(--shop-radius),12px)] border border-shop-line bg-shop-surface/20">
+            {/* Payment Trust Box with Crisp Logos (Exact Image 2) */}
+            <div className="mt-6 rounded-xl border border-[#E7E3DC] bg-[#FCFBF9]">
               <div className="flex items-center justify-between gap-3 px-4 pt-3.5">
-                <p className="flex items-center gap-1.5 text-xs font-semibold">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-[#111827]">
                   <Lock className="h-3.5 w-3.5" strokeWidth={1.8} /> Paiement 100 % sécurisé
                 </p>
-                <p className="text-[11px] text-shop-muted">Mobile Money ou carte</p>
+                <p className="text-[11px] text-[#74716B]">Mobile Money ou carte</p>
               </div>
 
-              {/* Payment operator logos */}
-              <div className="flex flex-wrap items-center gap-2 px-4 pb-4 pt-3">
-                {paymentBadges.map((p) => (
-                  <span
-                    key={p.name}
-                    title={p.name}
-                    className="grid h-9 w-[54px] place-items-center rounded-md border border-shop-line bg-white px-1 shadow-2xs"
-                  >
-                    <img src={p.img} alt={p.name} loading="lazy" className="max-h-5 max-w-full object-contain" />
-                  </span>
-                ))}
-                {/* Visa & Mastercard badges */}
-                <span className="grid h-9 w-[54px] place-items-center rounded-md border border-shop-line bg-[#1A1F71] px-1 shadow-2xs">
-                  <span className="text-[10px] font-extrabold text-white tracking-wider">VISA</span>
-                </span>
-                <span className="grid h-9 w-[54px] place-items-center rounded-md border border-shop-line bg-[#EB001B] px-1 shadow-2xs">
-                  <span className="text-[10px] font-extrabold text-white tracking-wider">MC</span>
-                </span>
+              {/* Logos properly sized, direct on background, EXACT IMAGE 2 */}
+              <div className="flex flex-wrap items-center gap-3.5 px-4 pb-4 pt-3">
+                <img src="/images/orange-money.png" alt="Orange Money" className="h-7 w-auto object-contain" />
+                <img src="/images/mtn-momo.webp" alt="MTN MoMo" className="h-7 w-auto object-contain" />
+                <img src="/images/wave.png" alt="Wave" className="h-7 w-auto object-contain" />
+                <img src="/images/moov-money.png" alt="Moov Money" className="h-7 w-auto object-contain" />
+                {/* Official Visa SVG */}
+                <svg className="h-5 w-auto" viewBox="0 0 48 16" fill="none">
+                  <path d="M18.88 1.13L12.37 15.22H8.13L4.95 3.73C4.76 3 4.56 2.74 3.97 2.41C3 1.9 1.41 1.41 0 1.13L0.1 0.69H7.13C8.03 0.69 8.84 1.28 9.03 2.32L10.74 11.23L14.94 1.13H18.88ZM35.43 10.63C35.46 6.84 29.98 6.63 30.01 4.9C30.03 4.38 30.55 3.82 31.75 3.66C32.34 3.58 34.02 3.52 35.85 4.33L36.6 1.01C35.57 0.64 34.25 0.33 32.58 0.33C28.62 0.33 25.83 2.37 25.8 5.3C25.77 7.45 27.75 8.65 29.27 9.37C30.83 10.11 31.35 10.58 31.34 11.24C31.33 12.25 30.09 12.7 28.94 12.72C26.92 12.74 25.75 12.2 24.81 11.78L24.03 15.25C25.04 15.7 26.9 16.08 28.81 16.1C32.99 16.1 35.41 14.1 35.43 10.63ZM45.98 15.22H49.46L46.43 1.13H43.25C42.53 1.13 41.92 1.54 41.67 2.15L35.6 15.22H39.77L40.6 12.96H45.69L45.98 15.22ZM41.74 9.87L43.83 4.29L45.03 9.87H41.74ZM24.78 1.13L21.57 15.22H17.65L20.86 1.13H24.78Z" fill="#1434CB"/>
+                </svg>
+                {/* Official Mastercard SVG */}
+                <svg className="h-6 w-auto" viewBox="0 0 38 24" fill="none">
+                  <circle cx="12" cy="12" r="12" fill="#EB001B"/>
+                  <circle cx="26" cy="12" r="12" fill="#F79E1B"/>
+                  <path d="M19 4.8C21.2 6.7 22.6 9.2 22.6 12C22.6 14.8 21.2 17.3 19 19.2C16.8 17.3 15.4 14.8 15.4 12C15.4 9.2 16.8 6.7 19 4.8Z" fill="#FF5F00"/>
+                </svg>
               </div>
 
               {/* Link to Buyer Portal */}
               <a
                 href={getBuyerPortalUrl("/mes-achats")}
-                className="group flex items-center justify-between border-t border-shop-line px-4 py-3 text-[13px] text-shop-muted hover:text-shop-text transition-colors"
+                className="group flex items-center justify-between border-t border-[#E7E3DC] px-4 py-3 text-[13px] text-[#74716B] hover:text-[#111827] transition-colors"
               >
                 <span>
-                  Déjà acheté ? <span className="font-semibold text-shop-text">Retrouve-le dans Mes achats</span>
+                  Déjà acheté ? <span className="font-semibold text-[#111827]">Retrouve-le dans Mes achats</span>
                 </span>
                 <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.6} />
               </a>
@@ -591,38 +541,38 @@ export default function StoreProductDetail() {
           </div>
         </div>
 
-        {/* ─── DESCRIPTION SECTION ─── */}
+        {/* ─── DESCRIPTION SECTION (Clean, readable) ─── */}
         {product.description && (
           <section className="mt-14 max-w-[760px] lg:mt-20">
-            <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Description</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#111827]">Description</h2>
             <div
               dangerouslySetInnerHTML={{ __html: processDescriptionWithVideos(product.description) }}
-              className="mt-4 prose prose-neutral max-w-none text-shop-text/80 text-[15px] leading-relaxed [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-2 [&_img]:rounded-xl [&_img]:my-4"
+              className="mt-4 prose prose-neutral max-w-none text-[#4B5563] text-[15px] leading-relaxed [&_p]:mb-4 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1.5 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-6 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-5 [&_h3]:mb-2 [&_img]:rounded-xl [&_img]:my-4"
             />
           </section>
         )}
 
-        {/* ─── COURSE LESSONS (if applicable) ─── */}
+        {/* ─── COURSE LESSONS ─── */}
         {product.type === "course" && lessons.length > 0 && (
           <section className="mt-12 max-w-[760px]">
-            <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Programme de la formation</h2>
-            <p className="mt-1 text-sm text-shop-muted">{lessons.length} module(s) et leçon(s)</p>
-            <div className="mt-4 divide-y divide-shop-line rounded-[var(--shop-radius)] border border-shop-line">
+            <h2 className="text-xl sm:text-2xl font-bold text-[#111827]">Programme de la formation</h2>
+            <p className="mt-1 text-sm text-[#74716B]">{lessons.length} module(s) et leçon(s)</p>
+            <div className="mt-4 divide-y divide-[#E7E3DC] rounded-xl border border-[#E7E3DC] bg-[#FCFBF9]">
               {lessons.map((lesson, idx) => (
                 <div key={idx} className="flex items-start justify-between gap-4 p-4">
                   <div className="flex items-start gap-3">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-shop-surface text-xs font-semibold">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F4F2EE] text-xs font-semibold text-[#111827]">
                       {idx + 1}
                     </span>
                     <div>
-                      <h3 className="text-sm font-semibold">{lesson.title}</h3>
+                      <h3 className="text-sm font-semibold text-[#111827]">{lesson.title}</h3>
                       {lesson.description && (
-                        <p className="mt-1 text-xs text-shop-muted">{lesson.description}</p>
+                        <p className="mt-1 text-xs text-[#74716B]">{lesson.description}</p>
                       )}
                     </div>
                   </div>
                   {lesson.duration_minutes && (
-                    <span className="flex shrink-0 items-center gap-1 text-xs text-shop-muted">
+                    <span className="flex shrink-0 items-center gap-1 text-xs text-[#74716B]">
                       <Clock className="h-3.5 w-3.5" /> {lesson.duration_minutes} min
                     </span>
                   )}
@@ -632,21 +582,21 @@ export default function StoreProductDetail() {
           </section>
         )}
 
-        {/* ─── FAQS SECTION (if applicable) ─── */}
+        {/* ─── FAQS SECTION ─── */}
         {faqs.length > 0 && (
           <section className="mt-12 max-w-[760px]">
-            <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Questions fréquentes</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-[#111827]">Questions fréquentes</h2>
             <Accordion type="single" collapsible className="mt-4 space-y-2">
               {faqs.map((faq, index) => (
                 <AccordionItem
                   key={index}
                   value={`faq-${index}`}
-                  className="rounded-[var(--shop-radius)] border border-shop-line px-4"
+                  className="rounded-xl border border-[#E7E3DC] px-4 bg-[#FCFBF9]"
                 >
-                  <AccordionTrigger className="text-sm font-semibold text-shop-text hover:no-underline py-4 text-left">
+                  <AccordionTrigger className="text-sm font-semibold text-[#111827] hover:no-underline py-4 text-left">
                     {faq.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-shop-muted pb-4 leading-relaxed">
+                  <AccordionContent className="text-sm text-[#74716B] pb-4 leading-relaxed">
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -657,15 +607,15 @@ export default function StoreProductDetail() {
 
         {/* ─── REVIEWS SECTION ─── */}
         <section className="mt-14 max-w-[760px]">
-          <ProductReviewsSection productId={product.id} brandColor="var(--shop-accent)" />
+          <ProductReviewsSection productId={product.id} brandColor="#18181B" />
         </section>
 
-        {/* ─── RELATED PRODUCTS ("Vous aimerez aussi") ─── */}
+        {/* ─── RELATED PRODUCTS ("Vous aimerez aussi", exact Image 2) ─── */}
         {relatedProducts.length > 0 && (
-          <section className="mt-16 border-t border-shop-line pt-12 sm:mt-20 sm:pt-14">
+          <section className="mt-16 border-t border-[#E7E3DC] pt-12 sm:mt-20 sm:pt-14">
             <div className="flex items-end justify-between gap-4">
-              <h2 className="font-shop-display text-xl font-bold sm:text-2xl">Vous aimerez aussi</h2>
-              <Link to={homePath} className="text-[13px] text-shop-muted underline-offset-2 hover:text-shop-text hover:underline">
+              <h2 className="text-xl sm:text-2xl font-bold text-[#111827]">Vous aimerez aussi</h2>
+              <Link to={homePath} className="text-[13px] text-[#74716B] underline-offset-2 hover:text-[#111827] hover:underline">
                 Voir tout
               </Link>
             </div>
@@ -678,7 +628,7 @@ export default function StoreProductDetail() {
                     : null;
                 return (
                   <Link key={p.id} to={getProductHref(p.id)} className="group min-w-0">
-                    <div className="relative aspect-square overflow-hidden rounded-[var(--shop-radius)] bg-shop-surface">
+                    <div className="relative aspect-square overflow-hidden rounded-2xl bg-[#F3F4F6] p-4 flex items-center justify-center border border-[#E5E7EB]/60">
                       <img
                         src={
                           p.thumbnail_url ||
@@ -686,18 +636,18 @@ export default function StoreProductDetail() {
                         }
                         alt={p.title}
                         loading="lazy"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
                       />
                       {relDiscount && (
-                        <span className="absolute left-2.5 top-2.5 rounded-full bg-shop-accent px-2 py-0.5 text-[11px] font-bold text-shop-accent-foreground shadow-xs">
+                        <span className="absolute left-2.5 top-2.5 rounded-full bg-[#E86F3D] px-2 py-0.5 text-[11px] font-bold text-white shadow-xs">
                           -{relDiscount}%
                         </span>
                       )}
                     </div>
-                    <p className="mt-2.5 line-clamp-2 text-[13px] font-semibold leading-snug group-hover:underline">
+                    <p className="mt-2.5 line-clamp-2 text-[13px] font-semibold text-[#111827] leading-snug group-hover:underline">
                       {p.title}
                     </p>
-                    <p className="mt-1 text-[13px] font-bold">{formatMoney(p.price, "XOF")}</p>
+                    <p className="mt-1 text-[13px] font-bold text-[#111827]">{formatMoney(p.price, "XOF")}</p>
                   </Link>
                 );
               })}
@@ -706,26 +656,26 @@ export default function StoreProductDetail() {
         )}
       </main>
 
-      {/* ─── MOBILE STICKY BOTTOM BAR ─── */}
-      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-shop-line bg-shop-bg/95 px-4 py-3 backdrop-blur-md lg:hidden">
+      {/* ─── MOBILE STICKY BOTTOM BAR (Solid black button, exact Image 2) ─── */}
+      <div className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-3 border-t border-[#E7E3DC] bg-[#FCFBF9]/95 px-4 py-3 backdrop-blur-md lg:hidden">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs text-shop-muted">{product.title}</p>
-          <p className="font-bold text-[15px]">{formatMoney(product.price, "XOF")}</p>
+          <p className="truncate text-xs text-[#74716B]">{product.title}</p>
+          <p className="font-bold text-[15px] text-[#111827]">{formatMoney(product.price, "XOF")}</p>
         </div>
         <button
           type="button"
           onClick={handleBuy}
-          className="h-11 rounded-[min(var(--shop-radius),12px)] bg-shop-accent px-6 text-sm font-bold text-shop-accent-foreground shadow-sm hover:opacity-90 active:scale-95 transition-all"
+          className="h-11 rounded-xl bg-[#18181B] px-6 text-sm font-bold text-white shadow-sm hover:bg-black active:scale-95 transition-all"
         >
           Je le veux
         </button>
       </div>
 
       {/* ─── FOOTER ─── */}
-      <footer className="border-t border-shop-line pb-20 lg:pb-0">
-        <div className="mx-auto flex max-w-[1140px] flex-wrap justify-between gap-3 px-4 py-6 text-xs text-shop-muted sm:px-6 lg:px-8">
+      <footer className="border-t border-[#E7E3DC] pb-20 lg:pb-0">
+        <div className="mx-auto flex max-w-[1140px] flex-wrap justify-between gap-3 px-4 py-6 text-xs text-[#74716B] sm:px-6 lg:px-8">
           <span>{storeName}</span>
-          <a href={getBuyerPortalUrl("/mes-achats")} className="hover:text-shop-text transition-colors">
+          <a href={getBuyerPortalUrl("/mes-achats")} className="hover:text-[#111827] transition-colors">
             Mes achats · boutique propulsée par DUKAIO
           </a>
         </div>

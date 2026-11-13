@@ -266,3 +266,34 @@ html { font-size: 16px; }
   pointer-events: none;
   height: 0;
 }
+
+/* ─── CREATOR STOREFRONT & CUSTOMIZER STYLES ─── */
+:root {
+  --shop-bg: #fcfbf9;
+  --shop-surface: #f4f2ee;
+  --shop-text: #20201f;
+  --shop-muted: #74716b;
+  --shop-line: #e7e3dc;
+  --shop-hero: #20211f;
+  --shop-accent: #e86f3d;
+  --shop-accent-foreground: #ffffff;
+  --shop-display: "Sora", sans-serif;
+  --shop-body: "Manrope", sans-serif;
+  --shop-radius: 14px;
+}
+
+.bg-shop-bg { background-color: var(--shop-bg) !important; }
+.bg-shop-surface { background-color: var(--shop-surface) !important; }
+.bg-shop-text { background-color: var(--shop-text) !important; }
+.bg-shop-hero { background-color: var(--shop-hero, #20211f) !important; }
+.bg-shop-accent { background-color: var(--shop-accent, #e86f3d) !important; }
+.text-shop-bg { color: var(--shop-bg) !important; }
+.text-shop-text { color: var(--shop-text) !important; }
+.text-shop-muted { color: var(--shop-muted) !important; }
+.text-shop-accent { color: var(--shop-accent, #e86f3d) !important; }
+.text-shop-accent-foreground { color: var(--shop-accent-foreground, #ffffff) !important; }
+.border-shop-line { border-color: var(--shop-line) !important; }
+.border-shop-text { border-color: var(--shop-text) !important; }
+.font-shop-display { font-family: var(--shop-display, "Sora", sans-serif) !important; }
+.font-shop-body { font-family: var(--shop-body, "Manrope", sans-serif) !important; }
+

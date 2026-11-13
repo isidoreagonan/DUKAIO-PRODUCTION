@@ -248,6 +248,8 @@ const App = () => {
                 <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
                 <Route path="/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
                 <Route path="/dashboard/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
+                <Route path="/boutique" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
+                <Route path="/dashboard/boutique" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
                 <Route path="/store-editor" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
                 <Route path="/dashboard/store-editor" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
                 <Route path="/customizer" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />

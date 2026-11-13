@@ -110,6 +110,7 @@ export function DashboardSidebar({
       icon: Package,
       badge: productsCount > 0 ? String(productsCount) : undefined,
     },
+    { title: "Boutique", url: "/dashboard/boutique", icon: Store },
     { title: "Ventes", url: "/dashboard/sales", icon: ShoppingCart },
     { title: "Clients", url: "/dashboard/clients", icon: Users },
     { title: "Revenus", url: "/dashboard/revenue", icon: DollarSign },
@@ -477,20 +478,20 @@ export function DashboardSidebar({
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </button>
 
-                {/* Personnaliser ma boutique (Studio Plein Écran) */}
+                {/* Boutique */}
                 <button
                   onClick={() => {
-                    navigate("/dashboard/store-editor");
+                    navigate("/dashboard/boutique");
                     setProfilePopoverOpen(false);
                     onNavigate?.();
                   }}
-                  className="w-full flex items-center justify-between p-2 rounded-xl text-primary font-semibold hover:bg-primary/10 transition-colors text-left"
+                  className="w-full flex items-center justify-between p-2 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span>Personnaliser ma boutique</span>
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                    <span>Boutique</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </button>
 
                 {/* Paramètres du compte */}
@@ -710,20 +711,20 @@ export function DashboardSidebar({
                       <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
                     </button>
 
-                    {/* Personnaliser ma boutique (Studio Plein Écran) */}
+                    {/* Boutique */}
                 <button
                   onClick={() => {
-                    navigate("/dashboard/store-editor");
+                    navigate("/dashboard/boutique");
                     setProfilePopoverOpen(false);
                     onNavigate?.();
                   }}
-                  className="w-full flex items-center justify-between p-2 rounded-xl text-primary font-semibold hover:bg-primary/10 transition-colors text-left"
+                  className="w-full flex items-center justify-between p-2 rounded-xl text-foreground hover:bg-secondary/70 transition-colors text-left"
                 >
                   <div className="flex items-center gap-2.5">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <span>Personnaliser ma boutique</span>
+                    <Store className="h-4 w-4 text-muted-foreground" />
+                    <span>Boutique</span>
                   </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-primary/70" />
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </button>
 
                 {/* Paramètres du compte */}

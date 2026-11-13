@@ -738,3 +738,4 @@ export function EditorPanels(props: PanelProps & { activePanel: EditorPanelId })
     </div>
   );
 }
+
