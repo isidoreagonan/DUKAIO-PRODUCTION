@@ -269,11 +269,12 @@ export default function Wallet() {
         return acc + Math.round(gross * 0.95);
       }, 0);
 
-      const totalCompletedWithdrawn = (userWithdrawals || [])
-        .filter((w) => w.status === "completed")
+      // All withdrawals that were initiated and not cancelled/rejected must be deducted
+      const totalActiveWithdrawn = (userWithdrawals || [])
+        .filter((w) => w.status !== "rejected" && w.status !== "failed" && w.status !== "cancelled")
         .reduce((acc, w) => acc + Number(w.amount || 0), 0);
 
-      const realAvailable = Math.max(0, totalNetEarned - totalCompletedWithdrawn);
+      const realAvailable = Math.max(0, totalNetEarned - totalActiveWithdrawn);
       let currentBal = Number(uw?.balance_fcfa ?? 0);
       if (currentBal !== realAvailable) {
         currentBal = realAvailable;
@@ -286,7 +287,7 @@ export default function Wallet() {
 
       setBalanceFcfa(currentBal);
       setTotalEarned(totalNetEarned);
-      setTotalWithdrawn(totalCompletedWithdrawn);
+      setTotalWithdrawn(totalActiveWithdrawn);
 
       const saved = (walletsList as SavedWallet[]) || [];
       setSavedWallets(saved);

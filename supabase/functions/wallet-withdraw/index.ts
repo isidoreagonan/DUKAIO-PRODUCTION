@@ -95,13 +95,13 @@ Deno.serve(async (req) => {
         0
       );
 
-      const { data: completedWithdrawals } = await service
+      const { data: activeWithdrawals } = await service
         .from("withdrawals")
         .select("amount")
         .eq("user_id", user.id)
-        .eq("status", "completed");
+        .in("status", ["completed", "processing", "pending"]);
 
-      const totalDisbursed = (completedWithdrawals || []).reduce(
+      const totalDisbursed = (activeWithdrawals || []).reduce(
         (sum, w) => sum + Number(w.amount || 0),
         0
       );
@@ -130,9 +130,12 @@ Deno.serve(async (req) => {
     await service.from("user_wallets").update({ balance_fcfa: newBalance }).eq("user_id", user.id);
     debited = true;
 
-    const providerCode = String(provider).toLowerCase();
+    let providerCode = String(provider).toLowerCase();
     const operatorName = providerCode.split("_")[0];
     const countryCode = (country || providerCode.split("_")[1] || "BJ").toUpperCase();
+    if (!providerCode.includes("_")) {
+      providerCode = `${providerCode}_${countryCode.toLowerCase()}`;
+    }
 
     // Create withdrawal record
     const { data: withdrawal, error: insErr } = await service.from("withdrawals").insert({
@@ -176,12 +179,12 @@ Deno.serve(async (req) => {
         currency: currency,
         country: countryCode,
         method: providerCode, // Exact SaaSPay network code (e.g. celtiis_bj, mtn_bj, wave_ci, mixx_tg, allbanks_ng)
-        recipient: { msisdn: formattedPhone },
+        recipient: { msisdn: cleanPhone }, // SaaSPay strictly expects digits without '+'
         customer: {
           email: user.email || "creator@dukaio.com",
           first_name: firstName,
           last_name: lastName,
-          phone: formattedPhone,
+          phone: cleanPhone,
         },
         description: `Retrait DUKAIO #${withdrawal.id.slice(0, 8).toUpperCase()}`,
         fee_charge_mode: "ADD_ON",
@@ -231,9 +234,10 @@ Deno.serve(async (req) => {
 
         if (isSuccess) {
           const payoutId = data.id || data.payout_id || idempotencyKey;
+          const isDone = data.status === "success" || data.status === "completed" || data.status === "successful";
           await service.from("withdrawals").update({
             pawapay_payout_id: payoutId,
-            status: "processing",
+            status: isDone ? "completed" : "processing",
           }).eq("id", withdrawal.id);
 
           // Log transaction in wallet_transactions only upon gateway confirmation
