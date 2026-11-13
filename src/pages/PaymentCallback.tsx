@@ -79,6 +79,30 @@ const PaymentCallback = () => {
                 currency: "XOF",
                 num_items: 1,
               });
+
+              // Server-Side Meta CAPI Dispatch
+              supabase.functions
+                .invoke("meta-capi", {
+                  body: {
+                    store_owner_id: order.store_owner_id,
+                    event_id: order.id,
+                    event_name: "Purchase",
+                    event_source_url: window.location.href,
+                    user_data: {
+                      email: order.customers?.email || email,
+                      phone: order.customers?.phone,
+                      first_name: order.customers?.name || pendingCheckout?.customerName,
+                    },
+                    custom_data: {
+                      currency: "XOF",
+                      value: order.amount,
+                      content_name: order.products?.title || "Produit",
+                      content_ids: order.product_id ? [order.product_id] : [],
+                      content_type: "product",
+                    },
+                  },
+                })
+                .catch((capiErr) => console.warn("Meta CAPI dispatch error:", capiErr));
             })
             .catch((e) => console.warn("Pixel tracking error:", e));
         } else {

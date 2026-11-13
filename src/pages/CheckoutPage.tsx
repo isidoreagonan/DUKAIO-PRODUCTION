@@ -680,8 +680,34 @@ export default function CheckoutPage() {
         currency: currencyCode,
         num_items: 1,
       });
+
+      // Server-Side Meta CAPI Dispatch
+      if (product.creator_id) {
+        supabase.functions
+          .invoke("meta-capi", {
+            body: {
+              store_owner_id: product.creator_id,
+              event_id: finalOrderId,
+              event_name: "Purchase",
+              event_source_url: window.location.href,
+              user_data: {
+                email: customerEmail,
+                phone: phone,
+                first_name: customerName,
+              },
+              custom_data: {
+                currency: currencyCode,
+                value: priceAmount,
+                content_name: product.title,
+                content_ids: [product.id],
+                content_type: "product",
+              },
+            },
+          })
+          .catch((capiErr) => console.warn("Meta CAPI checkout error:", capiErr));
+      }
     }
-  }, [step, product, completedOrderId, paymentId, orderReference, priceAmount, currencyCode]);
+  }, [step, product, completedOrderId, paymentId, orderReference, priceAmount, currencyCode, customerEmail, phone, customerName]);
 
   // -------------------------------------------------------------
   // Submit payment to SaaSPay (with African USSD Hotspot resilience)

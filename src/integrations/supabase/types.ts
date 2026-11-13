@@ -1134,6 +1134,7 @@ export type Database = {
           country_code: string | null
           created_at: string
           display_name: string | null
+          facebook_capi_token: string | null
           facebook_pixel_id: string | null
           first_name: string | null
           google_ads_id: string | null
@@ -1170,6 +1171,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           display_name?: string | null
+          facebook_capi_token?: string | null
           facebook_pixel_id?: string | null
           first_name?: string | null
           google_ads_id?: string | null
@@ -1206,6 +1208,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           display_name?: string | null
+          facebook_capi_token?: string | null
           facebook_pixel_id?: string | null
           first_name?: string | null
           google_ads_id?: string | null
@@ -2114,6 +2117,7 @@ export type Database = {
           country_code: string | null
           created_at: string
           display_name: string | null
+          facebook_capi_token: string | null
           facebook_pixel_id: string | null
           first_name: string | null
           google_ads_id: string | null
