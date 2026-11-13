@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Check, ChevronDown, CreditCard, Lock, MessageCircle,
   Package, ShieldCheck, Smartphone, Loader2, Sparkles, AlertCircle, RefreshCw,
-  Landmark, Copy, ExternalLink, Clock, Tag, X
+  Landmark, Copy, ExternalLink, Clock, Tag, X, Wifi, WifiOff
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
@@ -225,6 +225,8 @@ export default function CheckoutPage() {
   const [orderReference, setOrderReference] = useState<string>("");
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [checkingStatus, setCheckingStatus] = useState(false);
   const [bankTransfer, setBankTransfer] = useState<{
     bank_name: string;
     account_number: string;
@@ -416,7 +418,108 @@ export default function CheckoutPage() {
     (currentMethodMeta.kind !== "momo" || isPhoneValid);
 
   // -------------------------------------------------------------
-  // Submit payment to SaaSPay
+  // Restore pending transaction from localStorage on mount (e.g. if user refreshed after network cut)
+  // -------------------------------------------------------------
+  useEffect(() => {
+    if (!productId) return;
+    try {
+      const raw = localStorage.getItem("dukaio_active_tx");
+      if (raw) {
+        const tx = JSON.parse(raw);
+        if (tx.productId === productId && Date.now() - tx.timestamp < 15 * 60 * 1000) {
+          if (tx.reference) setOrderReference(tx.reference);
+          if (tx.paymentId) setPaymentId(tx.paymentId);
+          if (tx.customerEmail) setCustomerEmail(tx.customerEmail);
+          if (tx.customerName) setCustomerName(tx.customerName);
+          if (tx.phone) setPhone(tx.phone);
+          if (tx.method) setMethod(tx.method);
+          setStep("pending");
+
+          // Check if already finalized while offline
+          supabase.functions
+            .invoke("saaspay-status", {
+              body: {
+                paymentId: tx.paymentId || tx.reference,
+                reference: tx.reference,
+              },
+            })
+            .then(({ data }) => {
+              if (data?.status === "success") {
+                setCompletedOrderId(data.orderId || null);
+                setStep("done");
+                try { localStorage.removeItem("dukaio_active_tx"); } catch {}
+              }
+            })
+            .catch(() => {});
+        } else if (Date.now() - tx.timestamp >= 15 * 60 * 1000) {
+          localStorage.removeItem("dukaio_active_tx");
+        }
+      }
+    } catch {}
+  }, [productId]);
+
+  // -------------------------------------------------------------
+  // Online / Offline network listeners
+  // -------------------------------------------------------------
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (step === "pending" || step === "bank_transfer") {
+        toast.success(t("Connexion rétablie ! Vérification du statut...", "Connection restored! Checking status..."));
+        verifyStatus(false);
+      }
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [step, orderReference, paymentId]);
+
+  // -------------------------------------------------------------
+  // Verify status helper
+  // -------------------------------------------------------------
+  const verifyStatus = async (showToast = false) => {
+    if (!orderReference && !paymentId) return;
+    setCheckingStatus(true);
+    try {
+      const { data } = await supabase.functions.invoke("saaspay-status", {
+        body: {
+          paymentId: paymentId || orderReference,
+          reference: orderReference,
+        },
+      });
+
+      if (data?.status === "success") {
+        setCompletedOrderId(data.orderId || null);
+        setStep("done");
+        try { localStorage.removeItem("dukaio_active_tx"); } catch {}
+        toast.success(t("Paiement validé avec succès !", "Payment successfully approved!"));
+      } else if (data?.status === "failed") {
+        setErrorMessage(data.error || t("Paiement refusé ou annulé.", "Payment declined or cancelled."));
+        setStep("failed");
+        try { localStorage.removeItem("dukaio_active_tx"); } catch {}
+      } else if (showToast) {
+        toast.info(t("En attente de validation. Veuillez vérifier votre téléphone pour saisir le code PIN.", "Awaiting confirmation. Please check your phone for the PIN prompt."));
+      }
+    } catch (pollErr) {
+      console.warn("Status check network glitch:", pollErr);
+      if (showToast) {
+        toast.info(t("Vérification en attente de reconnexion...", "Verification awaiting connection..."));
+      }
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Submit payment to SaaSPay (with African USSD Hotspot resilience)
   // -------------------------------------------------------------
   const handlePayment = async () => {
     if (!product) return;
@@ -453,15 +556,45 @@ export default function CheckoutPage() {
       return;
     }
 
+    const saaspayMethod = getSaaSPayMethodCode(method, country.code);
+    const fullPhone = `${country.dial}${phone.replace(/\D/g, "")}`;
+    const clientRef = `DK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    setOrderReference(clientRef);
     setSubmitting(true);
     setErrorMessage("");
 
-    try {
-      const saaspayMethod = getSaaSPayMethodCode(method, country.code);
-      const fullPhone = `${country.dial}${phone.replace(/\D/g, "")}`;
+    const isMoMo = currentMethodMeta.kind === "momo";
 
+    // For Mobile Money (Celtiis, MTN, Moov, Orange):
+    // Save transaction locally and switch IMMEDIATELY to pending
+    // because cellular operators immediately pause 4G data/Wi-Fi hotspot during USSD PIN prompt
+    if (isMoMo) {
+      try {
+        localStorage.setItem(
+          "dukaio_active_tx",
+          JSON.stringify({
+            reference: clientRef,
+            productId: product.id,
+            customerEmail: customerEmail.trim().toLowerCase(),
+            customerName: customerName.trim(),
+            phone: fullPhone,
+            method,
+            amount: priceAmount,
+            countryCode: country.code,
+            timestamp: Date.now(),
+          })
+        );
+      } catch {}
+
+      setStep("pending");
+      toast.info(t("Demande envoyée ! Consultez votre téléphone pour saisir votre code PIN.", "Request sent! Check your phone to enter your PIN."));
+    }
+
+    try {
       const { data, error: callErr } = await supabase.functions.invoke("saaspay-create-payment", {
         body: {
+          reference: clientRef,
           amount: priceAmount,
           currency: currencyCode,
           country: country.code.toUpperCase(),
@@ -478,29 +611,36 @@ export default function CheckoutPage() {
             store_owner_id: product.creator_id,
             promo_code: appliedPromo?.code || null,
             original_price: originalPrice,
-            return_url: `${window.location.origin}/checkout/${product.id}?ref=saaspay`,
+            return_url: `${window.location.origin}/checkout/${product.id}?ref=${clientRef}`,
             cancel_url: window.location.href,
           },
         },
       });
 
       if (callErr) {
-        let msg = callErr.message || "Erreur réseau";
-        try {
-          if ((callErr as any).context && typeof (callErr as any).context.json === "function") {
-            const errJson = await (callErr as any).context.json();
-            if (errJson?.error) msg = typeof errJson.error === "string" ? errJson.error : JSON.stringify(errJson.error);
-          }
-        } catch {}
-        throw new Error(msg);
-      }
-      if (data?.error) throw new Error(typeof data.error === "string" ? data.error : JSON.stringify(data.error));
+        const isNetInterrupted =
+          !navigator.onLine ||
+          callErr.message?.toLowerCase().includes("failed to fetch") ||
+          callErr.message?.toLowerCase().includes("network") ||
+          callErr.message?.toLowerCase().includes("timeout") ||
+          callErr.message?.toLowerCase().includes("load failed");
 
-      setPaymentId(data.paymentId);
-      setOrderReference(data.reference);
+        if (isMoMo && isNetInterrupted) {
+          console.warn("[Checkout] Cellular hotspot paused during USSD push. Resilient pending maintained.");
+          return;
+        }
+        throw callErr;
+      }
+
+      if (data?.error) {
+        throw new Error(typeof data.error === "string" ? data.error : JSON.stringify(data.error));
+      }
+
+      if (data?.paymentId) setPaymentId(data.paymentId);
+      if (data?.reference) setOrderReference(data.reference);
 
       // If dynamic Nigerian bank transfer returned, show native bank transfer UI
-      if (data.bankTransfer) {
+      if (data?.bankTransfer) {
         setBankTransfer(data.bankTransfer);
         setBankTransferCheckoutUrl(data.checkoutUrl || "");
         setStep("bank_transfer");
@@ -509,16 +649,30 @@ export default function CheckoutPage() {
       }
 
       // If Checkout URL returned (Cards, Crypto, Wave Web), redirect
-      if (data.checkoutUrl) {
+      if (data?.checkoutUrl) {
         toast.info("Redirection vers la passerelle sécurisée...");
         window.location.href = data.checkoutUrl;
         return;
       }
 
-      // If direct USSD push (MTN, Moov, Celtiis, Orange), switch to pending screen
-      setStep("pending");
-      toast.info("Demande envoyée ! Consultez votre téléphone pour valider le code PIN.");
+      if (!isMoMo) {
+        setStep("pending");
+        toast.info("Demande envoyée ! Consultez votre téléphone pour valider le code PIN.");
+      }
     } catch (err: any) {
+      const isNetInterrupted =
+        !navigator.onLine ||
+        err.message?.toLowerCase().includes("failed to fetch") ||
+        err.message?.toLowerCase().includes("network") ||
+        err.message?.toLowerCase().includes("load failed");
+
+      if (isMoMo && isNetInterrupted) {
+        console.warn("[Checkout] Network pause caught during USSD prompt. Staying in pending.");
+        setStep("pending");
+        return;
+      }
+
+      setStep("form");
       setErrorMessage(err.message || "Impossible de lancer le paiement.");
       toast.error(err.message || "Erreur lors du paiement");
     } finally {
@@ -568,15 +722,21 @@ export default function CheckoutPage() {
   // Realtime & Polling check when step is 'pending' or 'bank_transfer'
   // -------------------------------------------------------------
   useEffect(() => {
-    if ((step !== "pending" && step !== "bank_transfer") || !paymentId) return;
+    if ((step !== "pending" && step !== "bank_transfer") || (!paymentId && !orderReference)) return;
 
     let isSubscribed = true;
 
-    // Polling interval every 3 seconds
+    // Polling interval every 3 seconds (only when online)
     const interval = setInterval(async () => {
+      if (!isSubscribed) return;
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
       try {
         const { data } = await supabase.functions.invoke("saaspay-status", {
-          body: { paymentId, reference: orderReference },
+          body: {
+            paymentId: paymentId || orderReference,
+            reference: orderReference,
+          },
         });
 
         if (!isSubscribed) return;
@@ -584,15 +744,17 @@ export default function CheckoutPage() {
         if (data?.status === "success") {
           setCompletedOrderId(data.orderId || null);
           setStep("done");
+          try { localStorage.removeItem("dukaio_active_tx"); } catch {}
           toast.success("Paiement validé avec succès !");
           clearInterval(interval);
         } else if (data?.status === "failed") {
           setErrorMessage(data.error || "Paiement refusé ou annulé.");
           setStep("failed");
+          try { localStorage.removeItem("dukaio_active_tx"); } catch {}
           clearInterval(interval);
         }
       } catch (pollErr) {
-        console.warn("Polling status error:", pollErr);
+        // Silently catch momentary network dips
       }
     }, 3000);
 
@@ -1100,10 +1262,25 @@ export default function CheckoutPage() {
             {/* STEP 2: PENDING (USSD Prompt on Mobile)              */}
             {/* ---------------------------------------------------- */}
             {step === "pending" && (
-              <div className="flex min-h-[420px] flex-col items-center justify-center text-center p-4 animate-in fade-in-50">
-                <div className="relative flex h-16 w-16 items-center justify-center mb-6">
+              <div className="flex min-h-[440px] flex-col items-center justify-center text-center p-4 animate-in fade-in-50">
+                <div className="relative flex h-16 w-16 items-center justify-center mb-4">
                   <span className="absolute inset-0 animate-spin rounded-full border-2 border-[#E2E8F0] border-t-[#0F172A]" />
                   <LogoBadge id={method} size="sm" />
+                </div>
+
+                {/* Connection Status Pill */}
+                <div className="mb-3">
+                  {!isOnline ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                      <WifiOff className="h-3.5 w-3.5 text-amber-600" />
+                      <span>{t("Connexion mobile en pause (code PIN en cours)", "Mobile data paused (PIN in progress)")}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
+                      <Wifi className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>{t("Connecté — Vérification en direct", "Connected — Checking live")}</span>
+                    </span>
+                  )}
                 </div>
 
                 <h2 className="text-lg font-bold tracking-tight text-[#0F172A]">
@@ -1117,17 +1294,53 @@ export default function CheckoutPage() {
                   )}
                 </p>
 
-                <div className="mt-6 flex items-center gap-2 text-xs font-semibold text-[#0F172A] animate-pulse">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                {/* African Hotspot / Single-SIM Explanation Notice */}
+                <div className="mt-4 w-full max-w-sm rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 text-left text-xs space-y-1.5">
+                  <div className="flex items-center gap-2 font-bold text-[#0F172A]">
+                    <Smartphone className="h-4 w-4 text-[#0F172A] shrink-0" />
+                    <span>{t("Partage Wi-Fi ou connexion coupée ?", "Wi-Fi hotspot or data paused?")}</span>
+                  </div>
+                  <p className="text-[11px] text-[#64748B] leading-relaxed">
+                    {t(
+                      "C'est tout à fait normal : lorsqu'un opérateur (Celtiis, MTN, Moov) affiche l'invite de code PIN, le réseau mobile suspend brièvement la 4G/Wi-Fi. Dès que vous avez validé votre code PIN sur votre téléphone, votre connexion reviendra aussitôt et votre achat sera confirmé !",
+                      "This is normal: mobile operators pause cellular data while the PIN prompt is active. Once you enter your PIN, connection will resume immediately and confirm your order!"
+                    )}
+                  </p>
+                </div>
+
+                {/* Active check pulse */}
+                <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-[#0F172A]">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0F172A]" />
                   <span>{t("En attente de votre validation PIN...", "Waiting for your PIN approval...")}</span>
                 </div>
 
-                <div className="mt-8 pt-4 border-t border-[#E2E8F0] w-full max-w-xs flex flex-col gap-2">
+                {/* Primary Action Button: Manual Verify Now */}
+                <div className="mt-6 w-full max-w-xs space-y-2.5">
+                  <button
+                    type="button"
+                    disabled={checkingStatus}
+                    onClick={() => verifyStatus(true)}
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#0F172A] text-xs font-bold text-white shadow-sm hover:bg-[#1E293B] transition-colors disabled:opacity-50 cursor-pointer active:scale-98"
+                  >
+                    {checkingStatus ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>{t("Vérification en cours...", "Checking...")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span>{t("J'ai validé mon code PIN — Vérifier", "I entered my PIN — Verify")}</span>
+                      </>
+                    )}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => {
                       setStep("form");
                       setPaymentId(null);
+                      try { localStorage.removeItem("dukaio_active_tx"); } catch {}
                     }}
                     className="w-full h-10 rounded-xl border border-[#E2E8F0] text-xs font-semibold text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
                   >

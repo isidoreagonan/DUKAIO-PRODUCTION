@@ -11,6 +11,7 @@ const corsHeaders = {
 const SAASPAY_BASE_URL = Deno.env.get("SAASPAY_BASE_URL") || "https://api.saspay.me/api/v1";
 
 interface CreatePaymentBody {
+  reference?: string;
   amount: number;
   currency?: string;
   country: string; // ISO 2 code: BJ, CI, SN, TG, BF, ML, CM, etc.
@@ -95,20 +96,21 @@ Deno.serve(async (req) => {
       customerId = createdCust.id;
     }
 
-    // Generate unique reference
-    const reference = `DK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // Generate or re-use client-provided unique reference
+    const reference = body.reference || `DK-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const amountFormatted = Math.round(Number(body.amount)).toFixed(2);
     // DUKAIO products are priced in FCFA (XOF).
     // Passing currency: "XOF" ensures SaaSPay's official FX engine converts to local currency (NGN, ZMW, KES, etc.) at the official central bank exchange rate without loss.
     const currency = "XOF";
 
-    // Track payment event in database
+    // Track payment event in database with reference immediately recorded
     const { data: paymentEvent, error: eventErr } = await supabase
       .from("payment_events")
       .insert({
         amount: Number(body.amount),
         product_id: body.metadata.product_id,
         store_owner_id: body.metadata.store_owner_id,
+        moneroo_transaction_id: reference,
         session_id: `${email}|${customerId}|${reference}|${body.metadata.promo_code || ""}|${body.metadata.original_price || body.amount}`,
         status: "pending",
       })

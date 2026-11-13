@@ -44,12 +44,30 @@ Deno.serve(async (req) => {
       return json({ status: "success", orderId: existingOrder.id });
     }
 
-    // 2. Query SaaSPay verify API if paymentId is available
+    // 2. Query SaaSPay verify API
+    let resolvedPaymentId = paymentId;
+
+    // If client only has the reference (e.g. mobile data paused during USSD PIN prompt), lookup paymentId from payment_events
+    if ((!resolvedPaymentId || resolvedPaymentId.startsWith("DK-")) && reference) {
+      const { data: ev } = await supabase
+        .from("payment_events")
+        .select("pawapay_deposit_id, status")
+        .eq("moneroo_transaction_id", reference)
+        .maybeSingle();
+
+      if (ev?.pawapay_deposit_id) {
+        resolvedPaymentId = ev.pawapay_deposit_id;
+      }
+      if (ev?.status === "success" && existingOrder?.status === "completed") {
+        return json({ status: "success", orderId: existingOrder.id });
+      }
+    }
+
     const apiKey = Deno.env.get("SAASPAY_SECRET_KEY");
-    if (apiKey && paymentId && !paymentId.startsWith("DK-")) {
+    if (apiKey && resolvedPaymentId && !resolvedPaymentId.startsWith("DK-")) {
       try {
         // Try Softpay verify endpoint first
-        let verifyRes = await fetch(`${SAASPAY_BASE_URL}/payments/${paymentId}/verify/`, {
+        let verifyRes = await fetch(`${SAASPAY_BASE_URL}/payments/${resolvedPaymentId}/verify/`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${apiKey}`,
@@ -59,7 +77,7 @@ Deno.serve(async (req) => {
 
         // If not found, try Checkout Sessions endpoint
         if (verifyRes.status === 404) {
-          verifyRes = await fetch(`${SAASPAY_BASE_URL}/checkout-sessions/${paymentId}/`, {
+          verifyRes = await fetch(`${SAASPAY_BASE_URL}/checkout-sessions/${resolvedPaymentId}/`, {
             method: "GET",
             headers: {
               "Authorization": `Bearer ${apiKey}`,
@@ -70,7 +88,7 @@ Deno.serve(async (req) => {
 
         // If not found, try Checkout Status endpoint
         if (verifyRes.status === 404) {
-          verifyRes = await fetch(`${SAASPAY_BASE_URL}/checkout/${paymentId}/status/`, {
+          verifyRes = await fetch(`${SAASPAY_BASE_URL}/checkout/${resolvedPaymentId}/status/`, {
             method: "GET",
             headers: {
               "Authorization": `Bearer ${apiKey}`,
@@ -109,7 +127,7 @@ Deno.serve(async (req) => {
               const { data: ev } = await supabase
                 .from("payment_events")
                 .select("*")
-                .or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${reference}`)
+                .or(`pawapay_deposit_id.eq.${resolvedPaymentId},moneroo_transaction_id.eq.${reference}`)
                 .maybeSingle();
 
               if (ev) {
@@ -128,7 +146,7 @@ Deno.serve(async (req) => {
                     currency: "XOF",
                     payment_provider: "saaspay",
                     payment_method: txn.network_code || "mobile_money",
-                    pawapay_deposit_id: paymentId,
+                    pawapay_deposit_id: resolvedPaymentId,
                     moneroo_transaction_id: reference || txn.reference,
                     status: "completed",
                     funds_available_at: new Date().toISOString(), // 0-minute hold
@@ -144,7 +162,7 @@ Deno.serve(async (req) => {
             await supabase
               .from("payment_events")
               .update({ status: "success" })
-              .or(`pawapay_deposit_id.eq.${paymentId},moneroo_transaction_id.eq.${reference}`);
+              .or(`pawapay_deposit_id.eq.${resolvedPaymentId},moneroo_transaction_id.eq.${reference}`);
 
             // Credit seller wallet with 95% immediately (0-minute hold)
             if (sellerId && grossAmount > 0) {
