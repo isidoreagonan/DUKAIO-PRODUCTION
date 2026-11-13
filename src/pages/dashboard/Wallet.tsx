@@ -98,24 +98,14 @@ export default function Wallet() {
 
   // Modals & Drawers
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [kycModalOpen, setKycModalOpen] = useState(false);
   const [kycStatus, setKycStatus] = useState<string>("none");
 
   // Withdrawal form state
-  const [selectedWalletId, setSelectedWalletId] = useState<string>("new");
+  const [selectedWalletId, setSelectedWalletId] = useState<string>("");
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
-
-  // New account form state
-  const [accCountry, setAccCountry] = useState<string>("bj");
-  const [accOperator, setAccOperator] = useState<string>("mtn_bj");
-  const [accPhone, setAccPhone] = useState<string>("");
-  const [accLabel, setAccLabel] = useState<string>("");
-  const [accHolderName, setAccHolderName] = useState<string>("");
-  const [accSaveForNext, setAccSaveForNext] = useState<boolean>(true);
-  const [savingAccount, setSavingAccount] = useState<boolean>(false);
 
   // PIN security flow state
   const [hasPin, setHasPin] = useState<boolean>(false);
@@ -292,9 +282,10 @@ export default function Wallet() {
       const saved = (walletsList as SavedWallet[]) || [];
       setSavedWallets(saved);
       if (saved.length > 0) {
-        setSelectedWalletId(saved[0].id);
+        const def = saved.find((w) => w.is_default) || saved[0];
+        setSelectedWalletId(def.id);
       } else {
-        setSelectedWalletId("new");
+        setSelectedWalletId("");
       }
 
       // Valid withdrawals that were actually accepted or completed by payment gateway
@@ -371,40 +362,12 @@ export default function Wallet() {
     setWithdrawModalOpen(true);
   };
 
-  // Open withdraw modal if ?action=withdraw in query
+  // Clean action query if present so it never auto-opens modal on page visits or refresh
   useEffect(() => {
-    const isAdmin = isAdminUser(user?.email);
-    if (searchParams.get("action") === "withdraw" && !loading) {
-      if (!isAdmin && kycStatus !== "approved") {
-        setKycModalOpen(true);
-      } else {
-        setWithdrawModalOpen(true);
-      }
+    if (searchParams.get("action")) {
+      navigate("/dashboard/wallet", { replace: true });
     }
-  }, [searchParams, kycStatus, loading, user]);
-
-  // Selected Country in Account Form
-  const currentCountryConfig = useMemo(() => {
-    return (
-      SAASPAY_PAYOUT_COUNTRIES.find((c) => c.code === accCountry) ||
-      SAASPAY_PAYOUT_COUNTRIES[0]
-    );
-  }, [accCountry]);
-
-  // Networks available for the selected country
-  const countryNetworks = useMemo(() => {
-    return currentCountryConfig?.networks || [];
-  }, [currentCountryConfig]);
-
-  // Sync operator when country changes
-  useEffect(() => {
-    if (countryNetworks.length > 0) {
-      const exists = countryNetworks.some((n) => n.code === accOperator);
-      if (!exists) {
-        setAccOperator(countryNetworks[0].code);
-      }
-    }
-  }, [accCountry, countryNetworks]);
+  }, [searchParams, navigate]);
 
   // Handle Amount validation
   const numericAmount = parseFloat(withdrawAmount) || 0;
@@ -420,78 +383,13 @@ export default function Wallet() {
   };
 
   const withdrawalCountry = useMemo(() => {
-    if (selectedWalletId === "new") return accCountry;
-    const sw = savedWallets.find((w) => w.id === selectedWalletId);
-    return sw ? sw.country.toLowerCase() : accCountry;
-  }, [selectedWalletId, accCountry, savedWallets]);
+    const sw = savedWallets.find((w) => w.id === selectedWalletId) || savedWallets.find((w) => w.is_default) || savedWallets[0];
+    return sw ? sw.country.toLowerCase() : "bj";
+  }, [selectedWalletId, savedWallets]);
 
   const withdrawalCurrency = useMemo(() => {
     return getCurrencyForCountry(withdrawalCountry);
   }, [withdrawalCountry]);
-
-  // -------------------------------------------------------------
-  // SAVE A NEW WALLET ACCOUNT
-  // -------------------------------------------------------------
-  const handleSaveAccount = async () => {
-    if (!user) return;
-    const cleanPh = accPhone.replace(/\D/g, "");
-    if (cleanPh.length < 5) {
-      toast.error("Veuillez saisir un numéro ou compte valide");
-      return;
-    }
-
-    setSavingAccount(true);
-    try {
-      const isDefault = savedWallets.length === 0;
-      const selectedNet = countryNetworks.find((n) => n.code === accOperator) || countryNetworks[0];
-      const providerCode = selectedNet ? selectedNet.code : accOperator;
-      const dialCode = currentCountryConfig.dial.replace(/\D/g, "");
-      const fullPhone = cleanPh.startsWith(dialCode) ? `+${cleanPh}` : `+${dialCode}${cleanPh}`;
-
-      const { data, error } = await supabase
-        .from("wallets")
-        .insert({
-          user_id: user.id,
-          name: accLabel.trim() || `${selectedNet?.name || "Compte de retrait"}`,
-          country: accCountry.toUpperCase(),
-          provider_code: providerCode,
-          phone: fullPhone,
-          holder_first_name: accHolderName.trim() || profile?.display_name || "Créateur",
-          holder_last_name: "",
-          is_default: isDefault,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast.success("Compte de retrait enregistré avec succès !");
-      setSavedWallets((prev) => [data as SavedWallet, ...prev]);
-      setSelectedWalletId(data.id);
-      setAccountModalOpen(false);
-      setAccPhone("");
-      setAccLabel("");
-      setAccHolderName("");
-    } catch (err: any) {
-      toast.error("Erreur lors de l'enregistrement : " + err.message);
-    } finally {
-      setSavingAccount(false);
-    }
-  };
-
-  // Delete saved account
-  const handleDeleteAccount = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm("Voulez-vous supprimer ce compte de retrait ?")) return;
-    try {
-      await supabase.from("wallets").delete().eq("id", id);
-      setSavedWallets((prev) => prev.filter((w) => w.id !== id));
-      if (selectedWalletId === id) setSelectedWalletId("new");
-      toast.success("Compte supprimé");
-    } catch (err: any) {
-      toast.error("Erreur de suppression : " + err.message);
-    }
-  };
 
   // -------------------------------------------------------------
   // INITIATE WITHDRAWAL CLICK
@@ -515,12 +413,11 @@ export default function Wallet() {
       return;
     }
 
-    if (selectedWalletId === "new") {
-      const clean = accPhone.replace(/\D/g, "");
-      if (clean.length < 5) {
-        toast.error("Veuillez saisir votre numéro ou compte de réception");
-        return;
-      }
+    if (savedWallets.length === 0) {
+      toast.error("Veuillez d'abord enregistrer un compte de retrait");
+      setWithdrawModalOpen(false);
+      navigate("/dashboard/wallet/accounts");
+      return;
     }
 
     // Open PIN verification modal
@@ -558,28 +455,13 @@ export default function Wallet() {
         }
       }
 
-      let targetPhone = "";
-      let targetProvider = "";
-      let targetCountry = "";
-
-      if (selectedWalletId === "new") {
-        const selectedNet = countryNetworks.find((n) => n.code === accOperator) || countryNetworks[0];
-        const dial = currentCountryConfig.dial.replace(/\D/g, "");
-        const clean = accPhone.replace(/\D/g, "");
-        targetPhone = clean.startsWith(dial) ? `+${clean}` : `+${dial}${clean}`;
-        targetProvider = selectedNet ? selectedNet.code : accOperator;
-        targetCountry = accCountry.toUpperCase();
-
-        if (accSaveForNext) {
-          handleSaveAccount().catch(console.error);
-        }
-      } else {
-        const sw = savedWallets.find((w) => w.id === selectedWalletId);
-        if (!sw) throw new Error("Compte de retrait introuvable");
-        targetPhone = sw.phone;
-        targetProvider = sw.provider_code;
-        targetCountry = sw.country;
+      const sw = savedWallets.find((w) => w.id === selectedWalletId) || savedWallets.find((w) => w.is_default) || savedWallets[0];
+      if (!sw) {
+        throw new Error("Compte de retrait introuvable. Veuillez ajouter un compte de retrait.");
       }
+      const targetPhone = sw.phone;
+      const targetProvider = sw.provider_code;
+      const targetCountry = sw.country;
 
       // Call wallet-withdraw Edge Function (calls SaaSPay Payout API with exact network method)
       const { data: withdrawRes, error: wErr } = await supabase.functions.invoke("wallet-withdraw", {
@@ -775,7 +657,7 @@ export default function Wallet() {
             {/* Action 2: Comptes de retrait */}
             <div className="flex flex-col items-center gap-2">
               <button
-                onClick={() => setAccountModalOpen(true)}
+                onClick={() => navigate("/dashboard/wallet/accounts")}
                 className="h-14 w-14 sm:h-16 sm:w-16 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shadow-xs active:scale-95 transition-all"
               >
                 <Smartphone className="h-6 w-6 stroke-[2]" />
@@ -1059,200 +941,122 @@ export default function Wallet() {
 
             {/* Compte de retrait sélection */}
             <div>
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                Compte de réception
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Compte de réception
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWithdrawModalOpen(false);
+                    navigate("/dashboard/wallet/accounts");
+                  }}
+                  className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="h-3 w-3" />
+                  Gérer mes comptes
+                </button>
+              </div>
 
-              {savedWallets.length > 0 && (
-                <div className="space-y-2 mb-2">
-                  {savedWallets.map((sw) => {
-                    const meta = getOperatorMeta(sw.provider_code, sw.country);
-                    const isSelected = selectedWalletId === sw.id;
+              {savedWallets.length === 0 ? (
+                <div className="p-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-center space-y-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Aucun compte de retrait enregistré pour le moment.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setWithdrawModalOpen(false);
+                      navigate("/dashboard/wallet/accounts");
+                    }}
+                    className="h-8 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Ajouter mon compte de retrait
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {(() => {
+                    const activeAccount =
+                      savedWallets.find((w) => w.id === selectedWalletId) ||
+                      savedWallets.find((w) => w.is_default) ||
+                      savedWallets[0];
+                    const meta = activeAccount ? getOperatorMeta(activeAccount.provider_code, activeAccount.country) : null;
+
                     return (
-                      <div
-                        key={sw.id}
-                        onClick={() => setSelectedWalletId(sw.id)}
-                        className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                          isSelected
-                            ? "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-900/90 ring-1 ring-[#0F172A] dark:ring-white shadow-xs"
-                            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative h-11 w-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1.5 shrink-0 shadow-2xs overflow-hidden">
-                            {meta.logo ? (
-                              <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
-                            ) : (
-                              <Smartphone className="h-5 w-5 text-slate-500" />
-                            )}
-                            {meta.flagUrl && (
-                              <img
-                                src={meta.flagUrl}
-                                alt={meta.country}
-                                className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs"
-                              />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
-                              <span>{sw.name}</span>
-                              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                                {meta.name}
-                              </span>
-                            </p>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                              {sw.phone} • {meta.country} ({meta.currency})
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {sw.is_default && (
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-200/80 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                              Défaut
+                      <>
+                        {meta && (
+                          <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 flex items-center justify-between shadow-2xs">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="relative h-11 w-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1.5 shrink-0 shadow-2xs overflow-hidden">
+                                {meta.logo ? (
+                                  <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
+                                ) : (
+                                  <Smartphone className="h-5 w-5 text-slate-500" />
+                                )}
+                                {meta.flagUrl && (
+                                  <img
+                                    src={meta.flagUrl}
+                                    alt={meta.country}
+                                    className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs"
+                                  />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                    {activeAccount.name}
+                                  </p>
+                                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                    {meta.name}
+                                  </span>
+                                  {activeAccount.is_default && (
+                                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/40">
+                                      Par défaut
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5">
+                                  {activeAccount.phone}
+                                </p>
+                              </div>
+                            </div>
+
+                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-1 rounded-md shrink-0">
+                              Sélectionné
                             </span>
-                          )}
-                          <div
-                            className={`h-4 w-4 rounded-full border flex items-center justify-center transition-colors ${
-                              isSelected ? "border-[#0F172A] dark:border-white bg-[#0F172A] dark:bg-white" : "border-slate-300 dark:border-slate-600"
-                            }`}
-                          >
-                            {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white dark:bg-slate-900" />}
                           </div>
-                        </div>
-                      </div>
+                        )}
+
+                        {/* Select other account if more than 1 */}
+                        {savedWallets.length > 1 && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              Changer de compte
+                            </label>
+                            <select
+                              value={selectedWalletId}
+                              onChange={(e) => setSelectedWalletId(e.target.value)}
+                              className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            >
+                              {savedWallets.map((w) => {
+                                const m = getOperatorMeta(w.provider_code, w.country);
+                                return (
+                                  <option key={w.id} value={w.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                    {w.name} ({m.name} • {w.phone}) {w.is_default ? "★ [Par défaut]" : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        )}
+                      </>
                     );
-                  })}
+                  })()}
                 </div>
               )}
-
-              {/* Option to use another number */}
-              <div
-                onClick={() => setSelectedWalletId("new")}
-                className={`p-3 rounded-2xl border flex items-center justify-between cursor-pointer transition-all ${
-                  selectedWalletId === "new"
-                    ? "border-[#0F172A] dark:border-white bg-slate-50 dark:bg-slate-900/90 ring-1 ring-[#0F172A] dark:ring-white shadow-xs"
-                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700"
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center">
-                    <Plus className="h-4 w-4" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    Utiliser un autre compte / numéro
-                  </span>
-                </div>
-                <div
-                  className={`h-4 w-4 rounded-full border flex items-center justify-center ${
-                    selectedWalletId === "new" ? "border-[#0F172A] dark:border-white bg-[#0F172A] dark:bg-white" : "border-slate-300 dark:border-slate-600"
-                  }`}
-                >
-                  {selectedWalletId === "new" && <div className="h-1.5 w-1.5 rounded-full bg-white dark:bg-slate-900" />}
-                </div>
-              </div>
             </div>
-
-            {/* If "new" selected, show rich visual inputs */}
-            {selectedWalletId === "new" && (
-              <div className="p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-3 mt-2">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                    Pays de réception
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={accCountry}
-                      onChange={(e) => setAccCountry(e.target.value)}
-                      className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white text-xs font-semibold px-3 pr-10 focus:ring-2 focus:ring-primary focus:outline-none appearance-none cursor-pointer"
-                    >
-                      {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
-                        <option key={c.code} value={c.code} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
-                          {c.name} ({c.dial} • {c.currency})
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
-                      <img
-                        src={`https://flagcdn.com/w40/${accCountry.toLowerCase()}.png`}
-                        alt={accCountry}
-                        className="h-4 w-5 rounded object-cover shadow-2xs border border-slate-200 dark:border-slate-700"
-                      />
-                      <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
-                    Réseau officiel ({countryNetworks.length} disponible{countryNetworks.length > 1 ? "s" : ""})
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                    {countryNetworks.map((net) => {
-                      const opMeta = SAASPAY_METHODS[net.operatorKey] || SAASPAY_METHODS.mtn;
-                      const isSel = accOperator === net.code;
-                      return (
-                        <button
-                          key={net.code}
-                          type="button"
-                          onClick={() => setAccOperator(net.code)}
-                          className={`p-2.5 rounded-xl border flex items-center gap-2.5 transition-all text-left ${
-                            isSel
-                              ? "border-[#0F172A] dark:border-white bg-[#0F172A]/5 dark:bg-white/10 ring-1 ring-[#0F172A] dark:ring-white shadow-2xs"
-                              : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:border-slate-300 dark:hover:border-slate-600"
-                          }`}
-                        >
-                          <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
-                            {opMeta?.logos?.[0] ? (
-                              <img src={opMeta.logos[0]} alt={net.name} className="h-full w-full object-contain" />
-                            ) : (
-                              <Smartphone className="h-4 w-4 text-slate-500" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
-                              {net.name}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-semibold block">
-                              Devise : {net.currency}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                    Numéro de réception / Compte
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                      {currentCountryConfig.dial}
-                    </span>
-                    <Input
-                      value={accPhone}
-                      onChange={(e) => setAccPhone(e.target.value)}
-                      placeholder={currentCountryConfig.placeholder}
-                      className="h-10 text-xs font-semibold pl-14 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <input
-                    type="checkbox"
-                    id="saveForNext"
-                    checked={accSaveForNext}
-                    onChange={(e) => setAccSaveForNext(e.target.checked)}
-                    className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
-                  />
-                  <label htmlFor="saveForNext" className="text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
-                    Enregistrer ce compte pour mes prochains retraits
-                  </label>
-                </div>
-              </div>
-            )}
 
             {/* Montant Input */}
             <div>
@@ -1548,190 +1352,6 @@ export default function Wallet() {
               </button>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ======================================================== */}
-      {/* DIALOG 3: GESTION DES COMPTES DE RETRAIT                */}
-      {/* ======================================================== */}
-      <Dialog open={accountModalOpen} onOpenChange={setAccountModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-6 bg-white dark:bg-[#151C2B] border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-primary" />
-              Mes comptes de retrait
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
-              Gérez vos numéros Mobile Money et comptes bancaires enregistrés.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 pt-2">
-            {savedWallets.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-4">
-                Aucun compte enregistré pour le moment.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                {savedWallets.map((sw) => {
-                  const meta = getOperatorMeta(sw.provider_code, sw.country);
-                  return (
-                    <div
-                      key={sw.id}
-                      className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="relative h-11 w-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1.5 shrink-0 shadow-2xs overflow-hidden">
-                          {meta.logo ? (
-                            <img src={meta.logo} alt={meta.name} className="h-full w-full object-contain" />
-                          ) : (
-                            <Smartphone className="h-5 w-5 text-slate-500" />
-                          )}
-                          {meta.flagUrl && (
-                            <img
-                              src={meta.flagUrl}
-                              alt={meta.country}
-                              className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full object-cover border border-white dark:border-slate-800 shadow-2xs"
-                            />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate flex items-center gap-1.5">
-                            <span>{sw.name}</span>
-                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                              {meta.name}
-                            </span>
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                            {sw.phone} • {meta.country} ({meta.currency})
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => handleDeleteAccount(sw.id, e)}
-                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors shrink-0"
-                        title="Supprimer ce compte"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Form to add a new account */}
-            <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-3">
-              <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                <Plus className="h-4 w-4 text-primary" />
-                Ajouter un nouveau compte
-              </h4>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                  Pays de réception
-                </label>
-                <div className="relative">
-                  <select
-                    value={accCountry}
-                    onChange={(e) => setAccCountry(e.target.value)}
-                    className="w-full h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white text-xs font-semibold px-3 pr-10 focus:ring-2 focus:ring-primary focus:outline-none appearance-none cursor-pointer"
-                  >
-                    {SAASPAY_PAYOUT_COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.code} className="bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white">
-                        {c.name} ({c.dial} • {c.currency})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
-                    <img
-                      src={`https://flagcdn.com/w40/${accCountry.toLowerCase()}.png`}
-                      alt={accCountry}
-                      className="h-4 w-5 rounded object-cover shadow-2xs border border-slate-200 dark:border-slate-700"
-                    />
-                    <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
-                  Réseau officiel ({countryNetworks.length} disponible{countryNetworks.length > 1 ? "s" : ""})
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                  {countryNetworks.map((net) => {
-                    const opMeta = SAASPAY_METHODS[net.operatorKey] || SAASPAY_METHODS.mtn;
-                    const isSel = accOperator === net.code;
-                    return (
-                      <button
-                        key={net.code}
-                        type="button"
-                        onClick={() => setAccOperator(net.code)}
-                        className={`p-2.5 rounded-xl border flex items-center gap-2.5 transition-all text-left ${
-                          isSel
-                            ? "border-[#0F172A] dark:border-white bg-[#0F172A]/5 dark:bg-white/10 ring-1 ring-[#0F172A] dark:ring-white shadow-2xs"
-                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] hover:border-slate-300 dark:hover:border-slate-600"
-                        }`}
-                      >
-                        <div className="h-8 w-8 rounded-lg bg-white dark:bg-slate-800 p-1 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0">
-                          {opMeta?.logos?.[0] ? (
-                            <img src={opMeta.logos[0]} alt={net.name} className="h-full w-full object-contain" />
-                          ) : (
-                            <Smartphone className="h-4 w-4 text-slate-500" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
-                            {net.name}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-semibold block">
-                            Devise : {net.currency}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                  Numéro de téléphone / Compte
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                    {currentCountryConfig.dial}
-                  </span>
-                  <Input
-                    value={accPhone}
-                    onChange={(e) => setAccPhone(e.target.value)}
-                    placeholder={currentCountryConfig.placeholder}
-                    className="h-10 text-xs font-semibold pl-14 bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
-                  Nom du label (ex: Mon compte principal)
-                </label>
-                <Input
-                  value={accLabel}
-                  onChange={(e) => setAccLabel(e.target.value)}
-                  placeholder="Mon compte principal"
-                  className="h-10 text-xs font-semibold bg-white dark:bg-[#1E293B] text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                />
-              </div>
-
-              <Button
-                onClick={handleSaveAccount}
-                disabled={savingAccount}
-                className="w-full h-11 font-bold text-xs bg-[#0F172A] hover:bg-[#1E293B] dark:bg-white dark:hover:bg-slate-100 text-white dark:text-[#0F172A]"
-              >
-                {savingAccount ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enregistrer ce compte"}
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>

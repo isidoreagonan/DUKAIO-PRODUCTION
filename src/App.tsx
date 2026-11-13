@@ -54,6 +54,7 @@ import DashboardLicenses from "./pages/dashboard/DashboardLicenses";
 import DashboardWithdrawals from "./pages/dashboard/DashboardWithdrawals";
 import WithdrawNew from "./pages/dashboard/WithdrawNew";
 import Wallet from "./pages/dashboard/Wallet";
+import WalletAccounts from "./pages/dashboard/WalletAccounts";
 import DashboardKYC from "./pages/dashboard/DashboardKYC";
 import AdminKYC from "./pages/dashboard/AdminKYC";
 import AdminUsers from "./pages/dashboard/AdminUsers";
@@ -197,6 +198,7 @@ const App = () => (
             <Route path="/dashboard/withdrawals" element={<ProtectedRoute><DashboardWithdrawals /></ProtectedRoute>} />
             <Route path="/dashboard/withdrawals/new" element={<ProtectedRoute><WithdrawNew /></ProtectedRoute>} />
             <Route path="/dashboard/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+            <Route path="/dashboard/wallet/accounts" element={<ProtectedRoute><WalletAccounts /></ProtectedRoute>} />
             <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKYC /></ProtectedRoute>} />
             <Route path="/dashboard/webhooks" element={<ProtectedRoute><DashboardWebhooks /></ProtectedRoute>} />
             <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
