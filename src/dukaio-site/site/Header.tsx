@@ -32,7 +32,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:pt-4">
+    <header className="fixed inset-x-0 top-[var(--banner-height,0px)] z-50 px-3 pt-3 md:pt-4 transition-[top] duration-200">
       <div
         className={`mx-auto flex items-center justify-between rounded-[1.25rem] border border-border bg-background/80 pl-5 pr-2.5 shadow-[0_10px_40px_-14px_oklch(0.25_0.06_258/0.22)] backdrop-blur-2xl backdrop-saturate-150 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:pl-7 lg:pr-3 ${
           scrolled ? "h-[4.75rem] max-w-[1040px]" : "h-[4.75rem] max-w-[1200px]"

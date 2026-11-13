@@ -44,7 +44,7 @@ const Navbar = () => {
     <motion.nav
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="fixed top-0 left-0 right-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-hair"
+      className="fixed top-[var(--banner-height,0px)] left-0 right-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-hair transition-[top] duration-200"
     >
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
         <Link to="/" className="flex items-center gap-2.5">
