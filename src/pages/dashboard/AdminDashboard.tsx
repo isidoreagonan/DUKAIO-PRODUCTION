@@ -195,30 +195,30 @@ const AdminDashboard = () => {
                 <div className="space-y-6 flex-1">
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-semibold">Accueil</span>
+                      <span className="font-semibold text-foreground">Accueil</span>
                       <span className="text-primary font-bold">{stats.funnel.home} vues</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                       <div className="h-full bg-blue-600 rounded-full" style={{ width: `${(stats.funnel.home / maxFunnel) * 100}%` }}></div>
                     </div>
                   </div>
                   
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-semibold">Page d'Inscription</span>
+                      <span className="font-semibold text-foreground">Page d'Inscription</span>
                       <span className="text-primary font-bold">{stats.funnel.register} vues</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                       <div className="h-full bg-blue-500 rounded-full" style={{ width: `${(stats.funnel.register / maxFunnel) * 100}%` }}></div>
                     </div>
                   </div>
                   
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="font-semibold">Inscrits (Dashboard)</span>
+                      <span className="font-semibold text-foreground">Inscrits (Dashboard)</span>
                       <span className="text-primary font-bold">{stats.funnel.dashboard} vues</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                       <div className="h-full bg-blue-400 rounded-full" style={{ width: `${(stats.funnel.dashboard / maxFunnel) * 100}%` }}></div>
                     </div>
                   </div>
@@ -261,12 +261,12 @@ const AdminDashboard = () => {
                   {stats.topReferrers.map((ref, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-sm">
-                         <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
-                           <LinkIcon className="w-3 h-3 text-slate-500" />
+                         <div className="w-6 h-6 rounded bg-muted/60 flex items-center justify-center">
+                           <LinkIcon className="w-3 h-3 text-muted-foreground" />
                          </div>
-                         <span className="font-medium truncate max-w-[150px]">{ref.name}</span>
+                         <span className="font-medium truncate max-w-[150px] text-foreground">{ref.name}</span>
                       </div>
-                      <span className="font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-700">{ref.count}</span>
+                      <span className="font-bold text-sm bg-muted/70 px-2 py-0.5 rounded text-foreground">{ref.count}</span>
                     </div>
                   ))}
                 </div>
@@ -279,12 +279,12 @@ const AdminDashboard = () => {
                   {stats.topPages.map((page, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-sm">
-                         <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
-                           <FileText className="w-3 h-3 text-slate-500" />
+                         <div className="w-6 h-6 rounded bg-muted/60 flex items-center justify-center">
+                           <FileText className="w-3 h-3 text-muted-foreground" />
                          </div>
-                         <span className="font-medium truncate max-w-[150px]">{page.name}</span>
+                         <span className="font-medium truncate max-w-[150px] text-foreground">{page.name}</span>
                       </div>
-                      <span className="font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-700">{page.count}</span>
+                      <span className="font-bold text-sm bg-muted/70 px-2 py-0.5 rounded text-foreground">{page.count}</span>
                     </div>
                   ))}
                 </div>
@@ -296,8 +296,8 @@ const AdminDashboard = () => {
                 <div className="space-y-4">
                   {stats.topBrowsers.map((b, i) => (
                     <div key={i} className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{b.name}</span>
-                      <span className="font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-700">{b.count}</span>
+                      <span className="text-sm font-medium text-foreground">{b.name}</span>
+                      <span className="font-bold text-sm bg-muted/70 px-2 py-0.5 rounded text-foreground">{b.count}</span>
                     </div>
                   ))}
                 </div>
@@ -308,14 +308,14 @@ const AdminDashboard = () => {
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Pays & Localisation</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {stats.topCountries.map((c, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                    <div key={i} className="flex items-center justify-between p-2 hover:bg-muted/40 rounded-lg transition-colors">
                       <div className="flex items-center gap-2">
                         <span className="text-lg leading-none">
                           {getCountryFlag(c.name)}
                         </span>
-                        <span className="text-sm font-medium">{getCountryName(c.name)}</span>
+                        <span className="text-sm font-medium text-foreground">{getCountryName(c.name)}</span>
                       </div>
-                      <span className="font-bold text-sm bg-slate-100 px-2 py-0.5 rounded text-slate-700">{c.count}</span>
+                      <span className="font-bold text-sm bg-muted/70 px-2 py-0.5 rounded text-foreground">{c.count}</span>
                     </div>
                   ))}
                 </div>
