@@ -9,6 +9,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminProtectedRoute from "@/components/AdminProtectedRoute";
+import DomainMigrationBanner from "@/components/DomainMigrationBanner";
 import { dukaioSiteRoutes } from "@/dukaio-site/SiteRoutes";
 
 import SearchPage from "./pages/SearchPage";
@@ -132,6 +133,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <DomainMigrationBanner />
         <ThemeRouteSync />
         <AnalyticsWrapper />
         <ScrollToTop />

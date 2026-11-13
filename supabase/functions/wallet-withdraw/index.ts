@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const SAASPAY_BASE_URL = Deno.env.get("SAASPAY_BASE_URL") || "https://api.saspay.me/api/v1";
 const PAWAPAY_BASE = "https://api.pawapay.io";
-const DEFAULT_RELAY_URL = "https://ecom-revolt.com/api/saaspay-payout-relay";
+const DEFAULT_RELAY_URL = "https://dukaio.com/api/saaspay-payout-relay";
 
 // Accurate currency mapping for every African & international payout country
 const COUNTRY_CURRENCY_MAP: Record<string, string> = {

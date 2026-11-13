@@ -282,7 +282,7 @@ export default function CheckoutPage() {
 
   const qrCheckoutUrl = useMemo(() => {
     if (!product?.id) return "";
-    let origin = typeof window !== "undefined" ? window.location.origin : "https://ecom-revolt.com";
+    let origin = typeof window !== "undefined" ? window.location.origin : "https://dukaio.com";
     if (origin.includes("localhost") || origin.includes("127.0.0.1")) {
       origin = `http://10.192.143.112:${window.location.port || "8080"}`;
     }
