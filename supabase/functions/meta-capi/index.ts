@@ -38,6 +38,10 @@ serve(async (req) => {
       test_event_code,
     } = body;
 
+    // Clean inputs
+    pixel_id = String(pixel_id || "").trim().replace(/['"`]/g, "");
+    access_token = String(access_token || "").trim().replace(/[\r\n\t\s'"]/g, "");
+
     // If store_owner_id is provided, look up pixel_id & access_token from profiles
     if ((!pixel_id || !access_token) && store_owner_id) {
       const { data: profile } = await supabaseAdmin
@@ -47,17 +51,18 @@ serve(async (req) => {
         .maybeSingle();
 
       if (profile) {
-        if (!pixel_id) pixel_id = profile.facebook_pixel_id;
-        if (!access_token) access_token = profile.facebook_capi_token;
+        if (!pixel_id) pixel_id = String(profile.facebook_pixel_id || "").trim().replace(/['"`]/g, "");
+        if (!access_token) access_token = String(profile.facebook_capi_token || "").trim().replace(/[\r\n\t\s'"]/g, "");
       }
     }
 
     if (!pixel_id || !access_token) {
       return new Response(
         JSON.stringify({
+          success: false,
           error: "Pixel ID et Access Token Meta sont requis pour l'API Conversions (CAPI).",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -68,16 +73,14 @@ serve(async (req) => {
       user_data.client_ip_address;
     const clientUserAgent = req.headers.get("user-agent") || user_data.client_user_agent;
 
-    const formattedUserData: Record<string, any> = {
-      client_ip_address: clientIp,
-      client_user_agent: clientUserAgent,
-    };
+    const formattedUserData: Record<string, any> = {};
+    if (clientIp) formattedUserData.client_ip_address = clientIp;
+    if (clientUserAgent) formattedUserData.client_user_agent = clientUserAgent;
 
     if (user_data.email) {
       formattedUserData.em = [await sha256(user_data.email)];
     }
     if (user_data.phone) {
-      // Clean phone to only digits and country code
       const cleanPhone = String(user_data.phone).replace(/[^0-9]/g, "");
       if (cleanPhone) formattedUserData.ph = [await sha256(cleanPhone)];
     }
@@ -113,13 +116,13 @@ serve(async (req) => {
     };
 
     if (test_event_code) {
-      fbRequestBody.test_event_code = test_event_code;
+      fbRequestBody.test_event_code = String(test_event_code).trim();
     }
 
     // Post to Meta Graph API
     const fbUrl = `https://graph.facebook.com/v19.0/${encodeURIComponent(
-      pixel_id.trim()
-    )}/events?access_token=${encodeURIComponent(access_token.trim())}`;
+      pixel_id
+    )}/events?access_token=${encodeURIComponent(access_token)}`;
 
     const fbRes = await fetch(fbUrl, {
       method: "POST",
@@ -133,10 +136,14 @@ serve(async (req) => {
       console.error("[Meta CAPI Error]", fbData);
       return new Response(
         JSON.stringify({
+          success: false,
           error: fbData.error?.message || "Erreur de transmission vers Meta Conversions API",
+          meta_code: fbData.error?.code,
+          meta_type: fbData.error?.type,
+          meta_subcode: fbData.error?.error_subcode,
           details: fbData,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: fbRes.status || 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -146,14 +153,13 @@ serve(async (req) => {
         events_received: fbData.events_received,
         fb_trace_id: fbData.fb_trace_id,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error: any) {
     console.error("[Meta CAPI Handler Exception]", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Erreur interne" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      JSON.stringify({ success: false, error: error.message || "Erreur interne" }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   }
 });
-

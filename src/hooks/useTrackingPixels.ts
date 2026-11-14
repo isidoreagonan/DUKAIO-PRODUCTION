@@ -574,6 +574,64 @@ export function trackEvent(
   } catch (err) {
     console.error("[Tracking] Google Ads event error:", err);
   }
+
+  // 4. Snapchat Pixel
+  try {
+    const snap = (window as any).snaptr;
+    if (typeof snap === "function") {
+      const snapData: Record<string, any> = {
+        currency,
+        price: value,
+        item_ids: contentIds,
+      };
+
+      if (eventName === "PageView") {
+        snap("track", "PAGE_VIEW");
+        debugLog("Snapchat Pixel", "track PAGE_VIEW");
+      } else if (eventName === "ViewContent") {
+        snap("track", "VIEW_CONTENT", snapData);
+        debugLog("Snapchat Pixel", "track VIEW_CONTENT", snapData);
+      } else if (eventName === "AddToCart") {
+        snap("track", "ADD_CART", snapData);
+        debugLog("Snapchat Pixel", "track ADD_CART", snapData);
+      } else if (eventName === "InitiateCheckout") {
+        snap("track", "START_CHECKOUT", snapData);
+        debugLog("Snapchat Pixel", "track START_CHECKOUT", snapData);
+      } else if (eventName === "AddPaymentInfo") {
+        snap("track", "ADD_BILLING", snapData);
+        debugLog("Snapchat Pixel", "track ADD_BILLING", snapData);
+      } else if (eventName === "Purchase") {
+        snap("track", "PURCHASE", {
+          ...snapData,
+          transaction_id: options?.eventId || payload.order_id,
+        });
+        debugLog("Snapchat Pixel", "track PURCHASE", snapData);
+      }
+    }
+  } catch (err) {
+    console.error("[Tracking] Snapchat event error:", err);
+  }
+
+  // 5. Google Tag Manager (dataLayer)
+  try {
+    if (window.dataLayer && Array.isArray(window.dataLayer)) {
+      window.dataLayer.push({
+        event: eventName,
+        ecommerce: {
+          currency,
+          value,
+          items: contentIds.map((id) => ({
+            item_id: id,
+            item_name: payload.content_name,
+            price: value,
+          })),
+        },
+      });
+      debugLog("Google Tag Manager", `dataLayer push ${eventName}`);
+    }
+  } catch (err) {
+    console.error("[Tracking] GTM event error:", err);
+  }
 }
 
 /**
