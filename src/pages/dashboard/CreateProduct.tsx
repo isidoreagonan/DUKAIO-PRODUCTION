@@ -40,194 +40,12 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 }
 
-const DigitalProductsIllustration = ({ className = "w-48 h-36" }: { className?: string }) => (
-  <svg
-    viewBox="0 0 240 180"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <defs>
-      <filter id="dp-blur" x="20" y="130" width="200" height="30" filterUnits="userSpaceOnUse">
-        <feGaussianBlur stdDeviation="5" />
-      </filter>
-      <linearGradient id="dp-yellow" x1="120" y1="40" x2="120" y2="78" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#FDE047" />
-        <stop offset="1" stopColor="#EAB308" />
-      </linearGradient>
-      <linearGradient id="dp-magenta" x1="120" y1="72" x2="120" y2="110" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#F472B6" />
-        <stop offset="1" stopColor="#C026D3" />
-      </linearGradient>
-      <linearGradient id="dp-blue" x1="120" y1="104" x2="120" y2="142" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#60A5FA" />
-        <stop offset="1" stopColor="#2563EB" />
-      </linearGradient>
-      <filter id="dp-drop" x="20" y="20" width="200" height="150" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="3" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.14" />
-      </filter>
-    </defs>
-
-    {/* Ambient Floor Shadow */}
-    <ellipse cx="120" cy="148" rx="76" ry="9" fill="#000000" fillOpacity="0.12" filter="url(#dp-blur)" />
-
-    {/* Bottom Layer: Vibrant Blue */}
-    <g filter="url(#dp-drop)">
-      <rect x="40" y="104" width="160" height="38" rx="12" fill="url(#dp-blue)" />
-      {/* Front bottom notch/handle */}
-      <rect x="100" y="126" width="40" height="6" rx="3" fill="#1D4ED8" fillOpacity="0.7" />
-      {/* Subtle top reflection line */}
-      <rect x="48" y="106" width="144" height="2" rx="1" fill="#FFFFFF" fillOpacity="0.25" />
-    </g>
-
-    {/* Middle Layer: Magenta / Fuchsia */}
-    <g filter="url(#dp-drop)">
-      <rect x="51" y="72" width="138" height="38" rx="12" fill="url(#dp-magenta)" />
-      {/* Subtle top reflection line */}
-      <rect x="59" y="74" width="122" height="2" rx="1" fill="#FFFFFF" fillOpacity="0.3" />
-    </g>
-
-    {/* Top Layer: Sunny Yellow */}
-    <g filter="url(#dp-drop)">
-      <rect x="63" y="40" width="114" height="38" rx="12" fill="url(#dp-yellow)" />
-      {/* Top reflection line */}
-      <rect x="71" y="42" width="98" height="2.5" rx="1.25" fill="#FFFFFF" fillOpacity="0.45" />
-    </g>
-  </svg>
-);
-
-const CourseIllustration = ({ className = "w-48 h-36" }: { className?: string }) => (
-  <svg
-    viewBox="0 0 240 180"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <defs>
-      <filter id="course-blur" x="30" y="140" width="180" height="25" filterUnits="userSpaceOnUse">
-        <feGaussianBlur stdDeviation="4.5" />
-      </filter>
-      <linearGradient id="course-bezel" x1="120" y1="34" x2="120" y2="128" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#1E293B" />
-        <stop offset="1" stopColor="#0F172A" />
-      </linearGradient>
-      <linearGradient id="course-orange" x1="120" y1="63" x2="120" y2="99" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#FB923C" />
-        <stop offset="1" stopColor="#EA580C" />
-      </linearGradient>
-      <filter id="course-play-glow" x="90" y="55" width="60" height="60" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#EA580C" floodOpacity="0.4" />
-      </filter>
-      <filter id="course-cap-shadow" x="35" y="10" width="70" height="50" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.25" />
-      </filter>
-    </defs>
-
-    {/* Ambient Floor Shadow */}
-    <ellipse cx="120" cy="154" rx="60" ry="7" fill="#000000" fillOpacity="0.14" filter="url(#course-blur)" />
-
-    {/* Stand Foot and Stem */}
-    <rect x="113" y="122" width="14" height="24" rx="2" fill="#1E293B" />
-    <rect x="90" y="143" width="60" height="7" rx="3.5" fill="#334155" />
-
-    {/* Monitor Frame */}
-    <rect x="48" y="34" width="144" height="94" rx="12" fill="url(#course-bezel)" stroke="#334155" strokeWidth="1.5" />
-
-    {/* Inner Screen */}
-    <rect x="55" y="41" width="130" height="80" rx="8" fill="#0B0F19" />
-
-    {/* Ambient Center Glow */}
-    <circle cx="120" cy="81" r="32" fill="#EA580C" fillOpacity="0.08" />
-
-    {/* Orange Play Button */}
-    <g filter="url(#course-play-glow)">
-      <circle cx="120" cy="81" r="18" fill="url(#course-orange)" />
-      {/* White Play Triangle */}
-      <polygon points="115,71 115,91 131,81" fill="#FFFFFF" />
-    </g>
-
-    {/* Graduation Cap floating on top-left of the monitor */}
-    <g transform="translate(52, 14) rotate(-10)" filter="url(#course-cap-shadow)">
-      {/* Skullcap base */}
-      <path d="M14 20 C14 27 38 27 38 20 Z" fill="#312E81" />
-      {/* Mortarboard Diamond Top */}
-      <polygon points="26,7 50,17 26,27 2,17" fill="#4338CA" stroke="#4F46E5" strokeWidth="1" />
-      {/* Center Button */}
-      <circle cx="26" cy="17" r="2.5" fill="#FBBF24" />
-      {/* Golden Tassel */}
-      <path d="M26 17 Q36 21 40 30" stroke="#F59E0B" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      <circle cx="40" cy="31" r="1.8" fill="#FBBF24" />
-    </g>
-  </svg>
-);
-
-const ServicesIllustration = ({ className = "w-48 h-36" }: { className?: string }) => (
-  <svg
-    viewBox="0 0 240 180"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <defs>
-      <filter id="serv-blur" x="30" y="135" width="180" height="25" filterUnits="userSpaceOnUse">
-        <feGaussianBlur stdDeviation="4.5" />
-      </filter>
-      <linearGradient id="serv-box" x1="120" y1="62" x2="120" y2="138" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#FDE047" />
-        <stop offset="1" stopColor="#F59E0B" />
-      </linearGradient>
-      <linearGradient id="serv-ribbon" x1="120" y1="62" x2="120" y2="138" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#60A5FA" />
-        <stop offset="1" stopColor="#3B82F6" />
-      </linearGradient>
-      <filter id="serv-box-shadow" x="40" y="50" width="160" height="100" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000000" floodOpacity="0.12" />
-      </filter>
-      <filter id="serv-badge-shadow" x="145" y="22" width="75" height="36" filterUnits="userSpaceOnUse">
-        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.08" />
-      </filter>
-    </defs>
-
-    {/* Ambient Floor Shadow */}
-    <ellipse cx="120" cy="148" rx="66" ry="8" fill="#000000" fillOpacity="0.12" filter="url(#serv-blur)" />
-
-    {/* Decorative Soft Mint Circle with Checkmark (Behind Left) */}
-    <g transform="translate(56, 56)">
-      <circle cx="14" cy="14" r="15" fill="#A7F3D0" fillOpacity="0.85" />
-      <path d="M8.5 14.5 L12.5 18.5 L19.5 10.5" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </g>
-
-    {/* Decorative Soft Rose Circle (Behind Right) */}
-    <circle cx="180" cy="66" r="14" fill="#FDA4AF" fillOpacity="0.8" />
-
-    {/* Package / Box */}
-    <g filter="url(#serv-box-shadow)">
-      {/* Box Body */}
-      <rect x="60" y="62" width="120" height="76" rx="16" fill="url(#serv-box)" />
-      {/* Vertical Blue Ribbon */}
-      <rect x="106" y="62" width="28" height="76" fill="url(#serv-ribbon)" />
-      {/* Ribbon Light Accent */}
-      <rect x="108" y="62" width="4" height="76" fill="#FFFFFF" fillOpacity="0.2" />
-      {/* Box Top Light Accent */}
-      <rect x="68" y="64" width="104" height="2.5" rx="1.25" fill="#FFFFFF" fillOpacity="0.35" />
-    </g>
-
-    {/* "BIENTÔT" Pill Badge (Floating Top Right) */}
-    <g filter="url(#serv-badge-shadow)">
-      <rect x="152" y="26" width="62" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
-      <text x="183" y="42" textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="700" letterSpacing="0.8" fontFamily="system-ui, -apple-system, sans-serif">
-        BIENTÔT
-      </text>
-    </g>
-  </svg>
-);
-
 const productTypes = [
   {
     type: "file" as ProductType,
     label: "Produits digitaux",
     description: "E-books, templates, audios : téléchargement instantané.",
-    illustration: <DigitalProductsIllustration />,
+    image: "/images/product-types/digital-product.png",
     features: ["Tous formats acceptés (PDF, ZIP, MP3…)", "Livraison automatique", "Téléchargement sécurisé"],
     icon: FileText,
     color: "bg-blue-600",
@@ -236,7 +54,7 @@ const productTypes = [
     type: "course" as ProductType,
     label: "Formations",
     description: "Créez des formations avec vidéo et contenu téléchargeable.",
-    illustration: <CourseIllustration />,
+    image: "/images/product-types/course.png",
     features: ["Contenu vidéo, texte & téléchargeable", "Suivi de progression des étudiants", "Modules structurés"],
     icon: GraduationCap,
     color: "bg-orange-500",
@@ -245,7 +63,7 @@ const productTypes = [
     type: "service" as ProductType,
     label: "Services",
     description: "Vendez vos prestations de services en ligne.",
-    illustration: <ServicesIllustration />,
+    image: "/images/product-types/service.png",
     features: ["Planification", "Paiement d'avance", "Gestion client"],
     icon: Layers,
     color: "bg-rose-500",
@@ -766,7 +584,7 @@ const CreateProduct = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl lg:max-w-5xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
           <Button variant="ghost" size="icon" onClick={() => step > 1 ? setStep(step - 1) : navigate("/dashboard/products")}>
@@ -780,9 +598,7 @@ const CreateProduct = () => {
         {selectedTypeData && step > 1 && (
           <div className="flex items-center gap-3 md:gap-4 mb-6 p-3 md:p-4 rounded-xl bg-secondary border border-border/50">
             <div className="relative h-14 w-16 md:h-16 md:w-20 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm flex items-center justify-center bg-card p-1">
-              <div className="w-full h-full flex items-center justify-center">
-                {selectedTypeData.illustration}
-              </div>
+              <img src={selectedTypeData.image} alt={selectedTypeData.label} className="w-full h-full object-contain" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">{selectedTypeData.label}</p>
@@ -819,7 +635,7 @@ const CreateProduct = () => {
                 <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-8 italic tracking-tight">
                   Quel type de produit désirez-vous créer ?
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                   {productTypes.map((pt) => {
                     const isSelected = selectedType === pt.type;
                     return (
@@ -828,32 +644,42 @@ const CreateProduct = () => {
                         type="button"
                         disabled={pt.comingSoon}
                         onClick={() => setSelectedType(pt.type)}
-                        className={`relative rounded-3xl border-2 text-left transition-colors duration-200 p-6 flex flex-col justify-between min-h-[310px] md:min-h-[350px] bg-card ${
+                        className={`group relative rounded-2xl border text-left transition-all duration-150 p-3.5 sm:p-4 flex flex-col justify-between bg-white dark:bg-card shadow-xs ${
                           isSelected
-                            ? "border-amber-400 dark:border-amber-500 shadow-md ring-2 ring-amber-400/20"
+                            ? "border-2 border-amber-500 ring-2 ring-amber-500/20"
                             : pt.comingSoon
                               ? "border-border/60 opacity-60 cursor-not-allowed"
-                              : "border-border hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
+                              : "border-slate-200 dark:border-border hover:border-slate-300 dark:hover:border-slate-700"
                         }`}
                       >
                         {/* Selected Checkmark Badge */}
                         {isSelected && (
-                          <div className="absolute top-4 right-4 z-20 h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm">
-                            <Check className="h-3.5 w-3.5 stroke-[3]" />
+                          <div className="absolute top-2.5 right-2.5 z-20 h-5 w-5 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                            <Check className="h-3 w-3 stroke-[3]" />
                           </div>
                         )}
 
-                        {/* Illustration Container with 100% transparent background */}
-                        <div className="w-full h-44 flex items-center justify-center select-none">
-                          {pt.illustration}
+                        {/* Top Inner Frame with light background as in reference Capture 2 */}
+                        <div className="w-full h-36 sm:h-40 rounded-xl bg-[#F8F9FA] dark:bg-slate-800/50 flex items-center justify-center p-3 relative overflow-hidden">
+                          <img
+                            src={pt.image}
+                            alt={pt.label}
+                            className="h-24 sm:h-28 w-auto max-w-[85%] object-contain select-none"
+                            loading="eager"
+                          />
+                          {pt.comingSoon && (
+                            <span className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-white/95 dark:bg-slate-900/90 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shadow-xs border border-slate-200/80 dark:border-slate-700/80">
+                              BIENTÔT
+                            </span>
+                          )}
                         </div>
 
                         {/* Text Content */}
-                        <div className="mt-4">
-                          <h3 className="text-lg font-bold text-foreground mb-1.5">
+                        <div className="mt-3">
+                          <h3 className="text-base font-bold text-slate-900 dark:text-white mb-1">
                             {pt.label}
                           </h3>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
                             {pt.description}
                           </p>
                         </div>
