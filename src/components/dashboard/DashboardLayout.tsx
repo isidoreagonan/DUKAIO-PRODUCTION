@@ -186,7 +186,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }`}
         >
           {/* Top Header inside the Main Card (Curves harmoniously with rounded-tl-[22px]) */}
-          <header className="h-14 2xl:h-16 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-6 2xl:px-8 flex items-center justify-between shrink-0 select-none">
+          <header className="relative z-40 h-14 2xl:h-16 bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#263043] px-6 2xl:px-8 flex items-center justify-between shrink-0 select-none">
             {/* Left: Dynamic page title + back button */}
             <div className="flex items-center gap-2.5 min-w-0">
               {!currentPage.isRoot && (
@@ -301,7 +301,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ======================================================== */}
       <div className="lg:hidden flex flex-col min-h-screen">
         {/* 1. Mobile Floating Top Header Card (with smooth rounded arcs on all 4 corners) */}
-        <header className="sticky top-2.5 z-30 mx-3 my-2 h-14 rounded-[20px] border border-[#E2E8F0] dark:border-[#263043] bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md shadow-2xs px-3.5 flex items-center justify-between select-none">
+        <header className="sticky top-2.5 z-40 mx-3 my-2 h-14 rounded-[20px] border border-[#E2E8F0] dark:border-[#263043] bg-white/95 dark:bg-[#151C2B]/95 backdrop-blur-md shadow-2xs px-3.5 flex items-center justify-between select-none">
           {/* Left: Brand logo & Store Name */}
           <div
             onClick={() => navigate("/dashboard")}
