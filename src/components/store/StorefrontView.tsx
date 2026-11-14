@@ -412,7 +412,9 @@ export function StorefrontView({
     newsletter: (
       <section
         aria-label="Suivre la boutique"
-        className="my-12 grid gap-6 rounded-2xl border p-6 sm:my-16 sm:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center transition-colors"
+        className={`my-8 sm:my-16 grid gap-6 rounded-2xl border p-5 sm:p-10 transition-colors ${
+          isMobile ? "grid-cols-1" : "lg:grid-cols-[1fr_1.3fr] lg:items-center"
+        }`}
         style={{
           backgroundColor: "var(--shop-surface)",
           borderColor: "var(--shop-line)",
@@ -436,7 +438,7 @@ export function StorefrontView({
             e.preventDefault();
             alert("Merci de suivre notre boutique !");
           }}
-          className="grid gap-2 sm:grid-cols-[1fr_1.4fr_auto]"
+          className={`grid gap-2.5 ${isMobile ? "grid-cols-1 w-full" : "sm:grid-cols-[1fr_1.4fr_auto]"}`}
         >
           <input
             aria-label="Prénom"
@@ -446,7 +448,7 @@ export function StorefrontView({
               borderColor: "var(--shop-line)",
               color: "var(--shop-text)",
             }}
-            className="h-11 min-w-0 rounded-full border px-4 text-sm outline-none"
+            className="h-11 w-full rounded-full border px-4 text-sm outline-none"
           />
           <input
             aria-label="Adresse e-mail"
@@ -458,7 +460,7 @@ export function StorefrontView({
               borderColor: "var(--shop-line)",
               color: "var(--shop-text)",
             }}
-            className="h-11 min-w-0 rounded-full border px-4 text-sm outline-none"
+            className="h-11 w-full rounded-full border px-4 text-sm outline-none"
           />
           <button
             type="submit"
@@ -467,7 +469,9 @@ export function StorefrontView({
               backgroundColor: "var(--shop-accent)",
               color: "var(--shop-accent-foreground)",
             }}
-            className="h-11 px-6 text-sm font-bold transition-opacity hover:opacity-90 shadow-xs"
+            className={`h-11 px-6 text-sm font-bold transition-opacity hover:opacity-90 shadow-xs flex items-center justify-center ${
+              isMobile ? "w-full" : "w-full sm:w-auto"
+            }`}
           >
             {config.newsletter.buttonLabel || "Suivre"}
           </button>
@@ -636,7 +640,11 @@ export function StorefrontView({
         style={{ borderColor: "var(--shop-line)" }}
       >
         <div
-          className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-8 text-xs sm:flex-row sm:justify-between sm:px-6 lg:px-8"
+          className={`mx-auto flex max-w-[1280px] gap-3 px-4 py-8 text-xs ${
+            isMobile
+              ? "flex-col items-center text-center"
+              : "flex-col sm:flex-row sm:justify-between sm:px-6 lg:px-8"
+          }`}
           style={{ color: "var(--shop-muted)" }}
         >
           <span>
