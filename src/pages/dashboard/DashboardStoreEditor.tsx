@@ -111,6 +111,46 @@ export default function DashboardStoreEditor() {
     loadStore();
   }, [user, activeStore?.id]);
 
+  // Warn before leaving if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = "Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter ?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty]);
+
+  // Keyboard shortcuts: Ctrl+Z (Undo), Ctrl+Shift+Z / Ctrl+Y (Redo), Ctrl+S (Save)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't intercept if user is typing in a textarea or text input for standard typing, except for Ctrl+S
+      const isInput = ["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName);
+
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        if (e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          handleSave();
+        } else if (!isInput && e.key.toLowerCase() === "z" && !e.shiftKey) {
+          if (history.past.length > 0) {
+            e.preventDefault();
+            dispatch({ type: "undo" });
+          }
+        } else if (!isInput && ((e.key.toLowerCase() === "z" && e.shiftKey) || e.key.toLowerCase() === "y")) {
+          if (history.future.length > 0) {
+            e.preventDefault();
+            dispatch({ type: "redo" });
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [history, dirty, config]);
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);

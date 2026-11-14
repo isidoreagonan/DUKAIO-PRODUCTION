@@ -446,7 +446,8 @@ export default function StoreProductDetail() {
             <button
               type="button"
               onClick={handleBuy}
-              className="mt-6 h-[52px] w-full rounded-xl bg-[#18181B] text-white text-[15px] font-bold hover:bg-black active:scale-[0.99] shadow-sm flex items-center justify-center transition-all"
+              style={{ borderRadius: "var(--shop-radius, 12px)" }}
+              className="mt-6 h-[52px] w-full bg-[#18181B] text-white text-[15px] font-bold hover:bg-black active:scale-[0.99] shadow-sm flex items-center justify-center transition-all"
             >
               Je le veux
             </button>
@@ -665,7 +666,8 @@ export default function StoreProductDetail() {
         <button
           type="button"
           onClick={handleBuy}
-          className="h-11 rounded-xl bg-[#18181B] px-6 text-sm font-bold text-white shadow-sm hover:bg-black active:scale-95 transition-all"
+          style={{ borderRadius: "var(--shop-radius, 12px)" }}
+          className="h-11 bg-[#18181B] px-6 text-sm font-bold text-white shadow-sm hover:bg-black active:scale-95 transition-all"
         >
           Je le veux
         </button>

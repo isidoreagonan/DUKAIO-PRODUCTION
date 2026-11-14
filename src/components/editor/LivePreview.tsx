@@ -130,13 +130,9 @@ export function LivePreview({
   const chromeHeight = 36;
   const contentHeight = outerHeight - chromeHeight;
 
-  // When previewing, if seller has 0 or 1 product, complement with demo products to preview realistic layout
-  const displayProducts =
-    products.length === 0
-      ? defaultDemoProducts
-      : products.length < 2
-      ? [...products, ...defaultDemoProducts.slice(1)]
-      : products;
+  // If the seller has any published products in their store, display strictly their real products.
+  // Never mix demo products into an existing store. Only show demo products if the account has 0 products.
+  const displayProducts = products.length > 0 ? products : defaultDemoProducts;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-slate-100/60 dark:bg-slate-900/40">

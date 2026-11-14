@@ -117,7 +117,8 @@ export function StorefrontView({
     hero: (
       <section
         aria-label="Bandeau de la boutique"
-        className={`relative mt-4 flex items-center overflow-hidden rounded-2xl bg-[#1F2937] text-white shadow-sm ${
+        style={{ backgroundColor: "var(--shop-hero)" }}
+        className={`relative mt-4 flex items-center overflow-hidden rounded-2xl text-white shadow-sm transition-colors duration-200 ${
           isMobile
             ? "min-h-32 px-6 py-6"
             : config.hero.height === "compact"
@@ -125,16 +126,23 @@ export function StorefrontView({
             : "min-h-36 px-6 sm:mt-6 sm:min-h-44 sm:px-12 lg:min-h-48"
         }`}
       >
-        {/* Glow accent */}
-        <div className="absolute inset-0 bg-[radial-gradient(60%_120%_at_85%_50%,rgba(232,111,61,0.35),transparent_70%)] pointer-events-none" />
+        {/* Glow accent dynamically driven by var(--shop-accent) */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(60% 120% at 85% 50%, color-mix(in srgb, var(--shop-accent) 40%, transparent), transparent 70%)",
+          }}
+        />
         <h1
           className={`relative font-extrabold leading-none tracking-tight text-white ${
             isMobile ? "text-3xl" : "text-3xl sm:text-5xl lg:text-6xl"
           }`}
+          style={{ fontFamily: "var(--shop-display)" }}
         >
           {heroTitle.length > 2 ? heroTitle.slice(0, -2) : heroTitle}
           {heroTitle.length > 2 && (
-            <span className="text-[#E86F3D]">{heroTitle.slice(-2)}</span>
+            <span style={{ color: "var(--shop-accent)" }}>{heroTitle.slice(-2)}</span>
           )}
         </h1>
       </section>
@@ -144,10 +152,13 @@ export function StorefrontView({
         {/* Title & Sorting */}
         <div className={`flex flex-col gap-4 ${isMobile ? "" : "sm:flex-row sm:items-end sm:justify-between"}`}>
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold sm:text-3xl text-[#111827]">
+            <h2
+              className="text-2xl font-bold sm:text-3xl"
+              style={{ color: "var(--shop-text)", fontFamily: "var(--shop-display)" }}
+            >
               {config.products.title || "Tous les produits"}
             </h2>
-            <p className="mt-1 text-sm text-[#74716B]">
+            <p className="mt-1 text-sm" style={{ color: "var(--shop-muted)" }}>
               {filteredProducts.length} produit{filteredProducts.length > 1 ? "s" : ""} disponible
               {filteredProducts.length > 1 ? "s" : ""}
             </p>
@@ -156,7 +167,12 @@ export function StorefrontView({
             aria-label="Trier les produits"
             value={sort}
             onChange={(event) => setSort(event.target.value)}
-            className={`h-11 rounded-full border border-[#E7E3DC] bg-[#FCFBF9] px-4 text-sm text-[#20201F] outline-none focus:border-[#18181B] font-medium ${
+            style={{
+              backgroundColor: "var(--shop-surface)",
+              borderColor: "var(--shop-line)",
+              color: "var(--shop-text)",
+            }}
+            className={`h-11 rounded-full border px-4 text-sm outline-none font-medium transition-colors ${
               isMobile ? "w-full mt-2" : "w-full sm:w-auto"
             }`}
           >
@@ -170,16 +186,22 @@ export function StorefrontView({
         {/* Search for mobile (Clean rounded pill below sort) */}
         {config.products.search && (
           <label
-            className={`mt-4 flex h-11 items-center gap-2.5 rounded-full border border-[#E7E3DC] bg-white px-4 text-sm focus-within:border-[#18181B] ${
+            style={{
+              borderColor: "var(--shop-line)",
+              backgroundColor: "var(--shop-surface)",
+              color: "var(--shop-text)",
+            }}
+            className={`mt-4 flex h-11 items-center gap-2.5 rounded-full border px-4 text-sm transition-colors ${
               isMobile ? "flex" : "lg:hidden"
             }`}
           >
-            <Search className="h-4 w-4 shrink-0 text-[#74716B]" />
+            <Search className="h-4 w-4 shrink-0" style={{ color: "var(--shop-muted)" }} />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Rechercher un produit…"
-              className="w-full bg-transparent outline-none placeholder:text-[#74716B]"
+              className="w-full bg-transparent outline-none"
+              style={{ color: "var(--shop-text)" }}
             />
           </label>
         )}
@@ -187,28 +209,39 @@ export function StorefrontView({
         {/* Category Filter Pills (Exact Image 1 & 3) */}
         {config.products.categories && categoryList.length > 1 && (
           <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 scrollbar-none">
-            {categoryList.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setCategory(item)}
-                className={`h-9 shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors ${
-                  category === item
-                    ? "border-[#18181B] bg-[#18181B] text-white"
-                    : "border-[#E7E3DC] bg-white text-[#74716B] hover:border-[#18181B] hover:text-[#18181B]"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
+            {categoryList.map((item) => {
+              const active = category === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCategory(item)}
+                  style={{
+                    backgroundColor: active ? "var(--shop-text)" : "var(--shop-surface)",
+                    color: active ? "var(--shop-bg)" : "var(--shop-muted)",
+                    borderColor: active ? "var(--shop-text)" : "var(--shop-line)",
+                  }}
+                  className="h-9 shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors"
+                >
+                  {item}
+                </button>
+              );
+            })}
           </div>
         )}
 
         {/* Product Cards Grid: strictly 2 cols on mobile, 4 on desktop */}
         {filteredProducts.length === 0 ? (
-          <div className="mt-8 rounded-2xl border border-dashed border-[#E7E3DC] py-16 text-center">
-            <p className="font-semibold text-base text-[#111827]">Aucun produit trouvé</p>
-            <p className="mt-1 text-sm text-[#74716B]">Essayez une autre recherche ou filtre.</p>
+          <div
+            className="mt-8 rounded-2xl border border-dashed py-16 text-center"
+            style={{ borderColor: "var(--shop-line)" }}
+          >
+            <p className="font-semibold text-base" style={{ color: "var(--shop-text)" }}>
+              Aucun produit trouvé
+            </p>
+            <p className="mt-1 text-sm" style={{ color: "var(--shop-muted)" }}>
+              Essayez une autre recherche ou filtre.
+            </p>
           </div>
         ) : (
           <div
@@ -229,7 +262,10 @@ export function StorefrontView({
               return (
                 <article key={product.id} className="group flex min-w-0 flex-col">
                   {/* Image container: Edge-to-edge square rounded, NO inner padding, NO glass border (Exact Capture 1) */}
-                  <div className="relative aspect-square w-full overflow-hidden rounded-[14px] bg-[#F4F2EE]">
+                  <div
+                    className="relative aspect-square w-full overflow-hidden rounded-[14px] transition-colors"
+                    style={{ backgroundColor: "var(--shop-surface)" }}
+                  >
                     <Link
                       to={productUrl}
                       onClick={(e) => {
@@ -252,7 +288,13 @@ export function StorefrontView({
                     />
 
                     {discount > 0 && (
-                      <span className="absolute left-2.5 top-2.5 z-20 rounded-full bg-[#E86F3D] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-xs">
+                      <span
+                        className="absolute left-2.5 top-2.5 z-20 rounded-full px-2.5 py-0.5 text-[11px] font-bold shadow-xs"
+                        style={{
+                          backgroundColor: "var(--shop-accent)",
+                          color: "var(--shop-accent-foreground)",
+                        }}
+                      >
                         -{discount}%
                       </span>
                     )}
@@ -269,7 +311,11 @@ export function StorefrontView({
                       data-on={isLiked}
                     >
                       <Heart
-                        className={`h-4 w-4 ${isLiked ? "fill-[#E86F3D] text-[#E86F3D]" : "text-[#18181B]"}`}
+                        className="h-4 w-4"
+                        style={{
+                          color: isLiked ? "var(--shop-accent)" : "var(--shop-text)",
+                          fill: isLiked ? "var(--shop-accent)" : "none",
+                        }}
                         strokeWidth={1.8}
                       />
                     </button>
@@ -277,14 +323,14 @@ export function StorefrontView({
 
                   {/* Metadata */}
                   {(config.products.showRatings || config.products.showSales) && (
-                    <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-[#74716B]">
+                    <div className="mt-3 flex items-center justify-between gap-2 text-[11px]" style={{ color: "var(--shop-muted)" }}>
                       <span className="truncate uppercase tracking-wider font-semibold">
                         {product.category || product.type || "Digital"}
                       </span>
-                      <span className="flex shrink-0 items-center gap-1 font-medium text-[#111827]">
+                      <span className="flex shrink-0 items-center gap-1 font-medium" style={{ color: "var(--shop-text)" }}>
                         {config.products.showRatings && (
                           <>
-                            <Star className="h-3 w-3 fill-[#111827] text-[#111827]" /> 4.9
+                            <Star className="h-3 w-3 fill-current" /> 4.9
                           </>
                         )}
                         {config.products.showSales && (
@@ -297,7 +343,10 @@ export function StorefrontView({
                   )}
 
                   {/* Title & Seller */}
-                  <h3 className="mt-1.5 line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug sm:text-[15px] text-[#111827]">
+                  <h3
+                    className="mt-1.5 line-clamp-2 min-h-[2.75em] text-sm font-semibold leading-snug sm:text-[15px]"
+                    style={{ color: "var(--shop-text)", fontFamily: "var(--shop-body)" }}
+                  >
                     <Link
                       to={productUrl}
                       onClick={(e) => {
@@ -311,23 +360,23 @@ export function StorefrontView({
                       {product.title}
                     </Link>
                   </h3>
-                  <p className="mt-1 truncate text-xs text-[#74716B]">
-                    par <span className="text-[#111827] font-medium">{sellerName}</span>
+                  <p className="mt-1 truncate text-xs" style={{ color: "var(--shop-muted)" }}>
+                    par <span className="font-medium" style={{ color: "var(--shop-text)" }}>{sellerName}</span>
                   </p>
 
                   {/* Price */}
                   <div className="mt-2.5 flex flex-wrap items-baseline gap-x-2">
-                    <span className="text-[15px] font-bold sm:text-base text-[#111827]">
+                    <span className="text-[15px] font-bold sm:text-base" style={{ color: "var(--shop-text)" }}>
                       {formatMoney(product.price, "XOF")}
                     </span>
                     {product.original_price && product.original_price > product.price && (
-                      <span className="text-xs text-[#9CA3AF] line-through">
+                      <span className="text-xs line-through" style={{ color: "var(--shop-muted)" }}>
                         {formatMoney(product.original_price, "XOF")}
                       </span>
                     )}
                   </div>
 
-                  {/* Action Button: Obtenir -> (Exact Capture 1) */}
+                  {/* Action Button: Obtenir -> Uses radius & button style dynamically */}
                   <button
                     type="button"
                     onClick={() => {
@@ -337,7 +386,18 @@ export function StorefrontView({
                         window.location.href = productUrl;
                       }
                     }}
-                    className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-[#18181B] bg-white text-[#18181B] text-[13px] font-semibold hover:bg-[#18181B] hover:text-white transition-colors"
+                    style={{
+                      borderRadius: "var(--shop-radius)",
+                      backgroundColor:
+                        config.appearance.buttons === "solid" ? "var(--shop-accent)" : "transparent",
+                      color:
+                        config.appearance.buttons === "solid"
+                          ? "var(--shop-accent-foreground)"
+                          : "var(--shop-text)",
+                      borderColor:
+                        config.appearance.buttons === "solid" ? "transparent" : "var(--shop-text)",
+                    }}
+                    className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 border text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.99]"
                   >
                     Obtenir{" "}
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -352,15 +412,23 @@ export function StorefrontView({
     newsletter: (
       <section
         aria-label="Suivre la boutique"
-        className="my-12 grid gap-6 rounded-2xl border border-[#E7E3DC] p-6 sm:my-16 sm:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center bg-[#FCFBF9]"
+        className="my-12 grid gap-6 rounded-2xl border p-6 sm:my-16 sm:p-10 lg:grid-cols-[1fr_1.3fr] lg:items-center transition-colors"
+        style={{
+          backgroundColor: "var(--shop-surface)",
+          borderColor: "var(--shop-line)",
+        }}
       >
         <div>
-          <span className="block h-0.5 w-8 bg-[#E86F3D]" />
-          <h2 className="mt-4 text-2xl font-bold sm:text-3xl text-[#111827]">
+          <span className="block h-0.5 w-8" style={{ backgroundColor: "var(--shop-accent)" }} />
+          <h2
+            className="mt-4 text-2xl font-bold sm:text-3xl"
+            style={{ color: "var(--shop-text)", fontFamily: "var(--shop-display)" }}
+          >
             Suivre {config.name || "la boutique"}
           </h2>
-          <p className="mt-2 max-w-sm text-sm leading-relaxed text-[#74716B]">
-            {config.newsletter.description || "Recevez les nouveaux produits et offres exclusives par e-mail. Désinscription en un clic."}
+          <p className="mt-2 max-w-sm text-sm leading-relaxed" style={{ color: "var(--shop-muted)" }}>
+            {config.newsletter.description ||
+              "Recevez les nouveaux produits et offres exclusives par e-mail. Désinscription en un clic."}
           </p>
         </div>
         <form
@@ -373,20 +441,35 @@ export function StorefrontView({
           <input
             aria-label="Prénom"
             placeholder="Prénom (facultatif)"
-            className="h-11 min-w-0 rounded-full border border-[#E7E3DC] bg-white px-4 text-sm outline-none focus:border-[#18181B]"
+            style={{
+              backgroundColor: "var(--shop-bg)",
+              borderColor: "var(--shop-line)",
+              color: "var(--shop-text)",
+            }}
+            className="h-11 min-w-0 rounded-full border px-4 text-sm outline-none"
           />
           <input
             aria-label="Adresse e-mail"
             type="email"
             required
             placeholder="Votre adresse e-mail"
-            className="h-11 min-w-0 rounded-full border border-[#E7E3DC] bg-white px-4 text-sm outline-none focus:border-[#18181B]"
+            style={{
+              backgroundColor: "var(--shop-bg)",
+              borderColor: "var(--shop-line)",
+              color: "var(--shop-text)",
+            }}
+            className="h-11 min-w-0 rounded-full border px-4 text-sm outline-none"
           />
           <button
             type="submit"
-            className="h-11 rounded-full bg-[#E86F3D] px-6 text-sm font-bold text-white transition-opacity hover:opacity-90"
+            style={{
+              borderRadius: "var(--shop-radius)",
+              backgroundColor: "var(--shop-accent)",
+              color: "var(--shop-accent-foreground)",
+            }}
+            className="h-11 px-6 text-sm font-bold transition-opacity hover:opacity-90 shadow-xs"
           >
-            Suivre
+            {config.newsletter.buttonLabel || "Suivre"}
           </button>
         </form>
       </section>
@@ -394,16 +477,26 @@ export function StorefrontView({
     about: (
       <section
         aria-label="À propos"
-        className="my-12 border-y border-[#E7E3DC] py-10 sm:my-16 sm:py-14"
+        className="my-12 border-y py-10 sm:my-16 sm:py-14 transition-colors"
+        style={{ borderColor: "var(--shop-line)" }}
       >
         <div className="max-w-2xl">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#E86F3D]">
+          <span
+            className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+            style={{ color: "var(--shop-accent)" }}
+          >
             Notre univers
           </span>
-          <h2 className="mt-3 text-2xl font-bold sm:text-3xl text-[#111827]">
+          <h2
+            className="mt-3 text-2xl font-bold sm:text-3xl"
+            style={{ color: "var(--shop-text)", fontFamily: "var(--shop-display)" }}
+          >
             {config.about.title || "À propos de la boutique"}
           </h2>
-          <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[#74716B]">
+          <p
+            className="mt-4 whitespace-pre-wrap text-sm leading-7"
+            style={{ color: "var(--shop-muted)" }}
+          >
             {config.about.text || config.description}
           </p>
         </div>
@@ -413,11 +506,22 @@ export function StorefrontView({
 
   return (
     <div
-      className="min-h-full bg-[#FCFBF9] text-[#20201F]"
-      style={style}
+      className="@container min-h-full transition-colors duration-200"
+      style={{
+        ...style,
+        backgroundColor: "var(--shop-bg)",
+        color: "var(--shop-text)",
+        fontFamily: "var(--shop-body)",
+      }}
     >
       {/* ─── HEADER (Exact Capture 3 & 4) ─── */}
-      <header className="sticky top-0 z-30 border-b border-[#E7E3DC] bg-[#FCFBF9]/95 backdrop-blur-sm">
+      <header
+        className="sticky top-0 z-30 border-b backdrop-blur-sm transition-colors duration-200"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--shop-bg) 95%, transparent)",
+          borderColor: "var(--shop-line)",
+        }}
+      >
         <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           {/* Logo & Brand Name */}
           <Link
@@ -428,20 +532,37 @@ export function StorefrontView({
             {config.logo ? (
               <img src={config.logo} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#18181B] font-bold text-xs text-white uppercase tracking-wider">
+              <span
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full font-bold text-xs uppercase tracking-wider"
+                style={{
+                  backgroundColor: "var(--shop-text)",
+                  color: "var(--shop-bg)",
+                  fontFamily: "var(--shop-display)",
+                }}
+              >
                 {config.name.trim().charAt(0) || "D"}
               </span>
             )}
-            <span className="truncate text-[15px] font-bold uppercase tracking-[0.16em] text-[#18181B]">
+            <span
+              className="truncate text-[15px] font-bold uppercase tracking-[0.16em]"
+              style={{ color: "var(--shop-text)", fontFamily: "var(--shop-display)" }}
+            >
               {config.name || "DUKAIO"}
             </span>
           </Link>
 
-          {/* Navigation link: Boutique with black underline indicator (Desktop only) */}
+          {/* Navigation link: Boutique with underline indicator (Desktop only) */}
           {!isMobile && (
             <nav className="hidden items-center gap-6 md:flex" aria-label="Navigation de la boutique">
-              <span className="relative text-sm font-bold text-[#18181B] after:absolute after:-bottom-[22px] after:left-1/2 after:h-0.5 after:w-6 after:-translate-x-1/2 after:bg-[#18181B]">
+              <span
+                className="relative text-sm font-bold"
+                style={{ color: "var(--shop-text)" }}
+              >
                 Boutique
+                <span
+                  className="absolute -bottom-[22px] left-1/2 h-0.5 w-6 -translate-x-1/2"
+                  style={{ backgroundColor: "var(--shop-text)" }}
+                />
               </span>
             </nav>
           )}
@@ -449,13 +570,21 @@ export function StorefrontView({
           {/* Right Header Actions: Search (desktop only), Wishlist, Bag */}
           <div className="flex items-center justify-end gap-2">
             {!isMobile && config.products.search && (
-              <label className="mr-2 hidden h-10 w-64 items-center gap-2 rounded-full border border-[#E7E3DC] bg-white px-4 text-sm transition-colors focus-within:border-[#18181B] lg:flex">
-                <Search className="h-4 w-4 shrink-0 text-[#74716B]" />
+              <label
+                style={{
+                  borderColor: "var(--shop-line)",
+                  backgroundColor: "var(--shop-surface)",
+                  color: "var(--shop-text)",
+                }}
+                className="mr-2 hidden h-10 w-64 items-center gap-2 rounded-full border px-4 text-sm transition-colors lg:flex"
+              >
+                <Search className="h-4 w-4 shrink-0" style={{ color: "var(--shop-muted)" }} />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Rechercher…"
-                  className="w-full min-w-0 bg-transparent outline-none placeholder:text-[#74716B]"
+                  className="w-full min-w-0 bg-transparent outline-none"
+                  style={{ color: "var(--shop-text)" }}
                 />
               </label>
             )}
@@ -468,26 +597,31 @@ export function StorefrontView({
                   alert(`Vous avez ${liked.length} produit(s) favori(s).`);
                 }
               }}
-              className="relative grid h-10 w-10 place-items-center rounded-full transition-colors hover:bg-[#F4F2EE]"
+              className="relative grid h-10 w-10 place-items-center rounded-full transition-colors"
+              style={{ color: "var(--shop-text)" }}
             >
-              <Heart className="h-[18px] w-[18px] text-[#20201F]" strokeWidth={1.8} />
+              <Heart className="h-[18px] w-[18px]" strokeWidth={1.8} />
               {liked.length > 0 && (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#E86F3D]" />
+                <span
+                  className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
+                  style={{ backgroundColor: "var(--shop-accent)" }}
+                />
               )}
             </button>
 
             <a
               href={getBuyerPortalUrl("/mes-achats")}
-              className="grid h-10 w-10 place-items-center rounded-full hover:bg-[#F4F2EE] transition-colors"
+              className="grid h-10 w-10 place-items-center rounded-full transition-colors"
+              style={{ color: "var(--shop-text)" }}
               title="Mes achats"
             >
-              <ShoppingBag className="h-[18px] w-[18px] text-[#20201F]" strokeWidth={1.8} />
+              <ShoppingBag className="h-[18px] w-[18px]" strokeWidth={1.8} />
             </a>
           </div>
         </div>
       </header>
 
-      {/* ─── MAIN CONTENT SECTIONS ─── */}
+      {/* ─── MAIN CONTENT SECTIONS (Order and visibility driven strictly by config.sections) ─── */}
       <main className="mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 pb-16">
         {config.sections
           .filter((section) => section.visible)
@@ -497,8 +631,14 @@ export function StorefrontView({
       </main>
 
       {/* ─── FOOTER ─── */}
-      <footer className="mt-8 border-t border-[#E7E3DC]">
-        <div className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-8 text-xs text-[#74716B] sm:flex-row sm:justify-between sm:px-6 lg:px-8">
+      <footer
+        className="mt-8 border-t transition-colors"
+        style={{ borderColor: "var(--shop-line)" }}
+      >
+        <div
+          className="mx-auto flex max-w-[1280px] flex-col gap-3 px-4 py-8 text-xs sm:flex-row sm:justify-between sm:px-6 lg:px-8"
+          style={{ color: "var(--shop-muted)" }}
+        >
           <span>
             © 2026 {config.name} · {config.slug || storeSlug}.dukaio.com
           </span>
@@ -508,7 +648,8 @@ export function StorefrontView({
                 href={config.socials.instagram}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-[#18181B] transition-colors"
+                className="hover:underline transition-colors"
+                style={{ color: "var(--shop-text)" }}
               >
                 Instagram
               </a>
@@ -518,7 +659,8 @@ export function StorefrontView({
                 href={config.socials.tiktok}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-[#18181B] transition-colors"
+                className="hover:underline transition-colors"
+                style={{ color: "var(--shop-text)" }}
               >
                 TikTok
               </a>
@@ -528,14 +670,16 @@ export function StorefrontView({
                 href={config.socials.youtube}
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-[#18181B] transition-colors"
+                className="hover:underline transition-colors"
+                style={{ color: "var(--shop-text)" }}
               >
                 YouTube
               </a>
             )}
             <a
               href={`mailto:contact@${config.slug || storeSlug}.dukaio.com`}
-              className="hover:text-[#18181B] transition-colors"
+              className="hover:underline transition-colors"
+              style={{ color: "var(--shop-text)" }}
             >
               Contact
             </a>

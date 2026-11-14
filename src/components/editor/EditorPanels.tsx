@@ -476,7 +476,7 @@ function AppearancePanel({ config, onChange }: PanelProps) {
 
       <EditorCard title="Formes & boutons">
         <div>
-          <span className="mb-2 block text-xs font-semibold">Coins arrondis</span>
+          <span className="mb-2 block text-xs font-semibold">Arrondi des boutons</span>
           <div className="grid grid-cols-4 gap-2">
             {([0, 8, 14, 20] as const).map((radius) => (
               <button
@@ -487,17 +487,20 @@ function AppearancePanel({ config, onChange }: PanelProps) {
                   onChange({ ...config, appearance: { ...config.appearance, radius } })
                 }
                 className={`flex h-16 flex-col items-center justify-center gap-2 rounded-lg border text-[11px] ${
-                  config.appearance.radius === radius ? "border-foreground bg-secondary" : "border-border"
+                  config.appearance.radius === radius ? "border-foreground bg-secondary font-bold" : "border-border"
                 }`}
               >
                 <span
                   className="h-4 w-8 border-2 border-foreground"
-                  style={{ borderRadius: Math.min(radius, 10) }}
+                  style={{ borderRadius: `${radius}px` }}
                 />
                 {radius === 0 ? "Aucun" : radius === 8 ? "Petit" : radius === 14 ? "Moyen" : "Grand"}
               </button>
             ))}
           </div>
+          <span className="mt-2 block text-[11px] text-muted-foreground">
+            S'applique aux boutons d'action (« Obtenir », « Acheter », « Je le veux »). Les images et cadres conservent leurs arrondis fixes.
+          </span>
         </div>
 
         <div className="pt-3">
