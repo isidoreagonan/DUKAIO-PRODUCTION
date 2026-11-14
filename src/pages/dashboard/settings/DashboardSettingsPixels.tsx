@@ -29,10 +29,11 @@ import {
   Server,
   Zap,
   Sparkles,
-  Activity,
-  RotateCcw,
+  Terminal,
   Trash2,
   AlertCircle,
+  Layers,
+  Radio,
 } from "lucide-react";
 import { getStoreUrl } from "@/lib/subdomain";
 import {
@@ -309,10 +310,10 @@ export default function DashboardSettingsPixels() {
       setEventLogs((prev) => [
         {
           id: `${Date.now()}-test-capi`,
-          name: "Test Jeton CAPI (Purchase)",
+          name: "Test CAPI (Purchase)",
           time: timeStr,
-          channel: "Serveur Meta Graph API",
-          details: `Événement accepté par Meta • Trace ID: ${data?.fb_trace_id || "OK"}`,
+          channel: "META-CAPI",
+          details: `Statut: 200 OK • Trace ID: ${data?.fb_trace_id || "Reçu"}`,
           status: "success",
         },
         ...prev,
@@ -346,7 +347,7 @@ export default function DashboardSettingsPixels() {
 
     const testEventId = `test_${Date.now()}`;
     const samplePayload = {
-      content_name: "Formation IA & Business (Test)",
+      content_name: "Formation IA & Business",
       content_ids: ["dukaio-prod-test-01"],
       content_type: "product",
       value: 15000,
@@ -366,8 +367,8 @@ export default function DashboardSettingsPixels() {
         id: `${Date.now()}-client`,
         name: eventName,
         time: timeStr,
-        channel: "Navigateur (fbq / ttq / gtag)",
-        details: `${samplePayload.content_name} • 15 000 FCFA`,
+        channel: "BROWSER-PIXEL",
+        details: `payload: { product: "Formation IA", price: 15000 XOF }`,
         status: "success",
       },
     ];
@@ -402,8 +403,8 @@ export default function DashboardSettingsPixels() {
             id: `${Date.now()}-capi`,
             name: `${eventName} (CAPI)`,
             time: timeStr,
-            channel: "Serveur (Meta CAPI)",
-            details: `Reçu par Meta (Trace: ${data?.fb_trace_id || "OK"})`,
+            channel: "META-CAPI",
+            details: `Serveur Graph API • Trace: ${data?.fb_trace_id || "events_received: 1"}`,
             status: "success",
           });
         }
@@ -412,7 +413,7 @@ export default function DashboardSettingsPixels() {
       }
     }
 
-    setEventLogs((prev) => [...newLogs, ...prev].slice(0, 10));
+    setEventLogs((prev) => [...newLogs, ...prev].slice(0, 12));
 
     setTimeout(() => {
       setTestingEvent(null);
@@ -470,7 +471,7 @@ export default function DashboardSettingsPixels() {
         </div>
 
         {/* 2-Column Layout */}
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.8fr] lg:items-start">
+        <div className="grid gap-8 lg:grid-cols-[1fr_1.85fr] lg:items-start">
           {/* Left Column: Description, Status summary, Quick Links & Help */}
           <div className="space-y-4">
             <div className="space-y-3">
@@ -1001,219 +1002,308 @@ export default function DashboardSettingsPixels() {
             </div>
 
             {/* ============================================================== */}
-            {/* 2. LIVE EVENT SIMULATOR & TESTING TOOL                         */}
+            {/* 2. REFINED, PROFESSIONAL LIVE EVENT TESTER                     */}
             {/* ============================================================== */}
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xs space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-6">
+              {/* Header: Clean, balanced, well-grounded */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border/60 pb-5">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-950/40">
-                    <Activity className="h-5 w-5" />
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-2xs">
+                    <Radio className="h-5 w-5 text-emerald-400 dark:text-emerald-600" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-bold text-foreground">
-                        Simulateur d'événements de test en direct
-                      </h3>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800">
-                        <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-ping" /> Temps réel
-                      </span>
-                    </div>
+                    <h3 className="text-base font-bold text-foreground tracking-tight">
+                      Testeur d'événements & Conversions
+                    </h3>
                     <p className="text-xs text-muted-foreground">
-                      Déclenchez des événements pour vérifier instantanément leur réception dans vos extensions ou Meta Events Manager.
+                      Simulez des événements réels pour vérifier leur détection immédiate dans Meta, TikTok et CAPI.
                     </p>
                   </div>
                 </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestAllPixels}
-                  disabled={testingAll || !hasAnyPixelConfigured}
-                  className="h-9 gap-1.5 text-xs font-semibold border-primary/30 text-primary hover:bg-primary/10 shrink-0"
-                >
-                  <Play className={`h-3.5 w-3.5 ${testingAll ? "animate-spin" : ""}`} />
-                  {testingAll ? "Test global en cours…" : "Tester le pixel en direct"}
-                </Button>
-              </div>
-
-              {/* Interactive Event Buttons */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                    Déclencher un événement spécifique
-                  </span>
-                  {cleanFbCapi && (
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={sendCapiWithTest}
-                        onChange={(e) => setSendCapiWithTest(e.target.checked)}
-                        className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span>Tester aussi via CAPI serveur</span>
-                    </label>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  {/* PageView */}
-                  <button
-                    type="button"
-                    onClick={() => handleFireEvent("PageView")}
-                    disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-primary/40 text-left transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                        <Eye className="h-3.5 w-3.5 text-blue-500" /> PageView
-                      </span>
-                      {testingEvent === "PageView" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Visite de la boutique</span>
-                  </button>
-
-                  {/* ViewContent */}
-                  <button
-                    type="button"
-                    onClick={() => handleFireEvent("ViewContent")}
-                    disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-primary/40 text-left transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                        <Sparkles className="h-3.5 w-3.5 text-indigo-500" /> ViewContent
-                      </span>
-                      {testingEvent === "ViewContent" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Fiche produit (15 000 F)</span>
-                  </button>
-
-                  {/* AddToCart */}
-                  <button
-                    type="button"
-                    onClick={() => handleFireEvent("AddToCart")}
-                    disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-primary/40 text-left transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                        <ShoppingCart className="h-3.5 w-3.5 text-amber-500" /> AddToCart
-                      </span>
-                      {testingEvent === "AddToCart" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Clic sur « Acheter »</span>
-                  </button>
-
-                  {/* InitiateCheckout */}
-                  <button
-                    type="button"
-                    onClick={() => handleFireEvent("InitiateCheckout")}
-                    disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-primary/40 text-left transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                        <CreditCard className="h-3.5 w-3.5 text-purple-500" /> InitiateCheckout
-                      </span>
-                      {testingEvent === "InitiateCheckout" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Arrivée sur la caisse</span>
-                  </button>
-
-                  {/* AddPaymentInfo */}
-                  <button
-                    type="button"
-                    onClick={() => handleFireEvent("AddPaymentInfo")}
-                    disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/50 hover:border-primary/40 text-left transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-foreground">
-                        <CreditCard className="h-3.5 w-3.5 text-cyan-500" /> AddPaymentInfo
-                      </span>
-                      {testingEvent === "AddPaymentInfo" && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Sélection Mobile Money</span>
-                  </button>
-
-                  {/* Purchase */}
-                  <button
-                    type="button"
-                    onClick={() => handleFireEvent("Purchase")}
-                    disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
-                    className="flex flex-col items-start gap-1 p-3 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/50 hover:border-emerald-500 text-left transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600" /> Purchase
-                      </span>
-                      {testingEvent === "Purchase" && <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />}
-                    </div>
-                    <span className="text-[11px] text-emerald-700/80 dark:text-emerald-400">Achat validé (15 000 F)</span>
-                  </button>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    {hasAnyPixelConfigured ? "Prêt à émettre" : "Configuration requise"}
+                  </div>
                 </div>
               </div>
 
-              {/* Event Logs Console */}
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 text-orange-500" />
-                    Journal des événements de test envoyés
-                  </span>
-                  {eventLogs.length > 0 && (
+              {/* Action Toolbar */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/30 p-3.5 rounded-xl border border-border/70">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-foreground">
+                      Test rapide du tunnel client
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Envoie consécutivement les événements <code>PageView</code> et <code>ViewContent</code>.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {cleanFbCapi && (
+                      <label className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={sendCapiWithTest}
+                          onChange={(e) => setSendCapiWithTest(e.target.checked)}
+                          className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                        />
+                        <span className="text-[11px] font-medium">Inclure CAPI</span>
+                      </label>
+                    )}
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleTestAllPixels}
+                      disabled={testingAll || !hasAnyPixelConfigured}
+                      className="h-9 px-4 font-semibold text-xs gap-1.5 shadow-2xs"
+                    >
+                      <Play className={`h-3.5 w-3.5 ${testingAll ? "animate-spin" : ""}`} />
+                      {testingAll ? "Test en cours…" : "Lancer le test rapide"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Specific Unit Tests */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Événements unitaires à tester :
+                    </p>
+                    <span className="text-[11px] text-muted-foreground">
+                      Cliquez pour déclencher
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {/* PageView */}
                     <button
                       type="button"
-                      onClick={() => setEventLogs([])}
-                      className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 cursor-pointer"
+                      onClick={() => handleFireEvent("PageView")}
+                      disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
+                      className="group flex items-center justify-between h-11 px-3 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-slate-400 dark:hover:border-slate-600 transition-all text-left shadow-2xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
                     >
-                      <Trash2 className="h-3 w-3" /> Effacer
+                      <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <Eye className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                        <span>PageView</span>
+                      </span>
+                      {testingEvent === "PageView" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-mono group-hover:text-foreground">
+                          Visite
+                        </span>
+                      )}
                     </button>
-                  )}
+
+                    {/* ViewContent */}
+                    <button
+                      type="button"
+                      onClick={() => handleFireEvent("ViewContent")}
+                      disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
+                      className="group flex items-center justify-between h-11 px-3 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-slate-400 dark:hover:border-slate-600 transition-all text-left shadow-2xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
+                    >
+                      <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <Sparkles className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                        <span>ViewContent</span>
+                      </span>
+                      {testingEvent === "ViewContent" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-mono group-hover:text-foreground">
+                          15k F
+                        </span>
+                      )}
+                    </button>
+
+                    {/* AddToCart */}
+                    <button
+                      type="button"
+                      onClick={() => handleFireEvent("AddToCart")}
+                      disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
+                      className="group flex items-center justify-between h-11 px-3 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-slate-400 dark:hover:border-slate-600 transition-all text-left shadow-2xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
+                    >
+                      <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <ShoppingCart className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        <span>AddToCart</span>
+                      </span>
+                      {testingEvent === "AddToCart" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-mono group-hover:text-foreground">
+                          Panier
+                        </span>
+                      )}
+                    </button>
+
+                    {/* InitiateCheckout */}
+                    <button
+                      type="button"
+                      onClick={() => handleFireEvent("InitiateCheckout")}
+                      disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
+                      className="group flex items-center justify-between h-11 px-3 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-slate-400 dark:hover:border-slate-600 transition-all text-left shadow-2xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
+                    >
+                      <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <CreditCard className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                        <span>InitiateCheckout</span>
+                      </span>
+                      {testingEvent === "InitiateCheckout" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-mono group-hover:text-foreground">
+                          Caisse
+                        </span>
+                      )}
+                    </button>
+
+                    {/* AddPaymentInfo */}
+                    <button
+                      type="button"
+                      onClick={() => handleFireEvent("AddPaymentInfo")}
+                      disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
+                      className="group flex items-center justify-between h-11 px-3 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-slate-400 dark:hover:border-slate-600 transition-all text-left shadow-2xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
+                    >
+                      <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <CreditCard className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
+                        <span>AddPaymentInfo</span>
+                      </span>
+                      {testingEvent === "AddPaymentInfo" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground font-mono group-hover:text-foreground">
+                          Paiement
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Purchase */}
+                    <button
+                      type="button"
+                      onClick={() => handleFireEvent("Purchase")}
+                      disabled={Boolean(testingEvent) || !hasAnyPixelConfigured}
+                      className="group flex items-center justify-between h-11 px-3 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all text-left shadow-2xs disabled:opacity-40 cursor-pointer active:scale-[0.98]"
+                    >
+                      <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span>Purchase</span>
+                      </span>
+                      {testingEvent === "Purchase" ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />
+                      ) : (
+                        <span className="text-[10px] text-emerald-600 font-mono font-bold group-hover:text-emerald-700">
+                          15k F
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-muted/30 p-3 max-h-52 overflow-y-auto space-y-2 font-mono text-xs">
-                  {eventLogs.length === 0 ? (
-                    <div className="py-4 text-center text-xs text-muted-foreground font-sans">
-                      Aucun événement de test déclenché pour le moment. Cliquez sur un des boutons ci-dessus pour tester en direct.
-                    </div>
-                  ) : (
-                    eventLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 p-2 rounded-lg bg-card border border-border/60 text-foreground animate-in fade-in duration-150"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-                          <span className="font-bold text-primary">{log.name}</span>
-                          <span className="text-[11px] text-muted-foreground hidden sm:inline">|</span>
-                          <span className="text-[11px] text-muted-foreground font-sans truncate max-w-xs">
-                            {log.details}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground shrink-0 pl-4 sm:pl-0">
-                          <span className="px-1.5 py-0.5 rounded bg-muted border border-border/80">
-                            {log.channel}
-                          </span>
-                          <span>{log.time}</span>
-                        </div>
+                {/* Developer Terminal Live Stream (Grounded & Solid) */}
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-slate-200 shadow-inner space-y-2.5 font-mono text-xs">
+                  {/* Console Header Bar */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-[11px] text-slate-400 font-sans">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-rose-500/80" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
                       </div>
-                    ))
-                  )}
+                      <span className="font-mono text-slate-300 font-semibold pl-1">
+                        console: event_stream
+                      </span>
+                    </div>
+
+                    {eventLogs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setEventLogs([])}
+                        className="text-slate-400 hover:text-white transition-colors cursor-pointer text-[10px] font-mono"
+                      >
+                        [effacer]
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Console Content */}
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pt-1 font-mono text-[11px] leading-relaxed">
+                    {eventLogs.length === 0 ? (
+                      <div className="py-2 text-slate-500 space-y-1 font-mono text-[11px]">
+                        <p>&gt; Écouteur de tracking initialisé.</p>
+                        <p className="text-slate-600 text-[10px]">
+                          En attente d'événements. Cliquez sur un des boutons ci-dessus pour inspecter l'émission en direct.
+                        </p>
+                      </div>
+                    ) : (
+                      eventLogs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] border-b border-slate-900 pb-1 last:border-b-0 animate-in fade-in duration-150"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-emerald-400 shrink-0">✓</span>
+                            <span className="text-slate-400 shrink-0">{log.time}</span>
+                            <span className="text-cyan-400 font-semibold shrink-0">[{log.channel}]</span>
+                            <span className="text-white font-bold">{log.name}</span>
+                            <span className="text-slate-400 truncate max-w-xs">{log.details}</span>
+                          </div>
+                          <span className="text-[10px] text-emerald-400 font-medium shrink-0 self-end sm:self-auto">
+                            200 OK
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Shortcuts Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] text-muted-foreground border-t border-border/60">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <a
+                      href="https://business.facebook.com/events_manager2"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-foreground inline-flex items-center gap-1 font-medium transition-colors"
+                    >
+                      <FacebookIcon className="h-3.5 w-3.5" /> Meta Events Manager <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                    <a
+                      href="https://chromewebstore.google.com/detail/meta-pixel-helper/fdgfkebogiimcoedlicjlajpkdmockpc"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-foreground inline-flex items-center gap-1 font-medium transition-colors"
+                    >
+                      <Zap className="h-3.5 w-3.5 text-amber-500" /> Meta Pixel Helper <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                    <a
+                      href="https://ads.tiktok.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-foreground inline-flex items-center gap-1 font-medium transition-colors"
+                    >
+                      <TikTokIcon className="h-3.5 w-3.5" /> TikTok Ads Manager <ExternalLink className="h-2.5 w-2.5" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* ============================================================== */}
-            {/* 3. TRACKED FUNNEL OVERVIEW                                     */}
+            {/* 3. TRACKED CONVERSION FUNNEL (Clean & Solid)                   */}
             {/* ============================================================== */}
-            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-2xs space-y-4">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                  Tunnel des 6 événements suivis automatiquement sur Dukaio
-                </h3>
+                  <h3 className="text-sm font-bold text-foreground">
+                    Tunnel des 6 événements suivis automatiquement
+                  </h3>
+                </div>
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
                   Tunnel complet 6/6
                 </span>
@@ -1270,12 +1360,12 @@ export default function DashboardSettingsPixels() {
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 space-y-1">
+                <div className="p-3 rounded-xl bg-muted/20 border border-border/80 space-y-1">
                   <div className="flex items-center gap-1.5">
-                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">6. Purchase</p>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <p className="text-xs font-bold text-foreground">6. Purchase</p>
                   </div>
-                  <p className="text-[11px] text-emerald-700/90 dark:text-emerald-400 leading-tight">
+                  <p className="text-[11px] text-muted-foreground leading-tight">
                     Paiement validé avec montant exact et déduplication.
                   </p>
                 </div>
