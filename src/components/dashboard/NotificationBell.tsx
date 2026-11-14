@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCheck,
+  Check,
   ExternalLink,
   Clock,
   Inbox,
@@ -14,12 +15,15 @@ import {
   CheckCircle2,
   Mail,
   Zap,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface Notification {
   id: string;
@@ -112,10 +116,21 @@ export default function NotificationBell({ className }: { className?: string }) 
       .eq("user_id", user.id)
       .eq("is_read", false);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    toast.success("Toutes les notifications marquées comme lues");
+  };
+
+  const toggleReadStatus = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const notif = notifications.find((n) => n.id === id);
+    if (!notif || !user) return;
+    const newStatus = !notif.is_read;
+    await supabase.from("notifications").update({ is_read: newStatus } as any).eq("id", id);
+    setNotifications((prev) => prev.map((item) => (item.id === id ? { ...item, is_read: newStatus } : item)));
+    toast.success(newStatus ? "Marqué comme non lu" : "Marqué comme lu", { duration: 1800 });
   };
 
   const toggleExpand = async (n: Notification) => {
-    // If not read, mark as read in background
+    // If clicking on an unread item, mark it as read automatically
     if (!n.is_read && user) {
       await supabase.from("notifications").update({ is_read: true } as any).eq("id", n.id);
       setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, is_read: true } : item)));
@@ -188,9 +203,9 @@ export default function NotificationBell({ className }: { className?: string }) 
 
       {/* Dropdown Popover */}
       {open && (
-        <div className="absolute right-0 top-full mt-2.5 w-[330px] sm:w-[410px] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 top-full mt-2.5 w-[330px] sm:w-[390px] rounded-2xl border border-border bg-card shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
-          <div className="p-4 border-b border-border/70 flex items-center justify-between gap-2 bg-card">
+          <div className="p-3.5 border-b border-border/70 flex items-center justify-between gap-2 bg-card">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-foreground">Notifications</h3>
               {unreadCount > 0 ? (
@@ -215,7 +230,7 @@ export default function NotificationBell({ className }: { className?: string }) 
           </div>
 
           {/* Filter Bar */}
-          <div className="flex items-center gap-1 px-4 py-2 border-b border-border/50 bg-muted/20 text-xs">
+          <div className="flex items-center gap-1 px-3.5 py-1.5 border-b border-border/50 bg-muted/20 text-xs">
             <button
               type="button"
               onClick={() => setFilter("all")}
@@ -242,18 +257,18 @@ export default function NotificationBell({ className }: { className?: string }) 
             </button>
           </div>
 
-          {/* List of Notifications */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-border/60">
+          {/* List of Notifications (compact height: displays ~2 items, scrolls for more) */}
+          <div className="max-h-[175px] overflow-y-auto divide-y divide-border/60 scrollbar-thin">
             {filteredList.length === 0 ? (
-              <div className="py-10 text-center px-4 space-y-2">
-                <div className="h-10 w-10 rounded-full bg-muted/60 flex items-center justify-center mx-auto text-muted-foreground">
-                  <Inbox className="h-5 w-5 opacity-60" />
+              <div className="py-8 text-center px-4 space-y-1.5">
+                <div className="h-8 w-8 rounded-full bg-muted/60 flex items-center justify-center mx-auto text-muted-foreground">
+                  <Inbox className="h-4 w-4 opacity-60" />
                 </div>
                 <p className="text-xs font-semibold text-foreground">
                   {filter === "unread" ? "Aucune notification non lue" : "Aucune notification pour le moment"}
                 </p>
-                <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                  Vos alertes de commandes, ventes, formulaires de contact et mises à jour s'afficheront ici en direct.
+                <p className="text-[10px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                  Vos alertes de commandes, ventes et mises à jour s'afficheront ici.
                 </p>
               </div>
             ) : (
@@ -264,19 +279,19 @@ export default function NotificationBell({ className }: { className?: string }) 
                     key={n.id}
                     onClick={() => toggleExpand(n)}
                     className={cn(
-                      "p-3.5 transition-colors cursor-pointer group hover:bg-muted/40",
+                      "p-3 transition-colors cursor-pointer group hover:bg-muted/40",
                       !n.is_read ? "bg-primary/[0.04]" : "bg-card"
                     )}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2.5">
                       {/* Icon */}
                       <div className="h-8 w-8 rounded-xl bg-muted/70 flex items-center justify-center shrink-0 mt-0.5 border border-border/60">
                         {getNotificationIcon(n.type)}
                       </div>
 
                       {/* Content summary */}
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-start justify-between gap-1.5">
                           <div className="flex items-center gap-1.5 min-w-0">
                             {!n.is_read && (
                               <span className="h-2 w-2 rounded-full bg-primary shrink-0 animate-pulse" />
@@ -314,8 +329,27 @@ export default function NotificationBell({ className }: { className?: string }) 
                               </span>
                             </div>
 
-                            {n.link && (
-                              <div className="pt-1">
+                            <div className="flex items-center justify-between pt-1 border-t border-border/40">
+                              {/* Toggle read/unread button */}
+                              <button
+                                type="button"
+                                onClick={(e) => toggleReadStatus(n.id, e)}
+                                className="text-[11px] font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1 py-1 cursor-pointer"
+                              >
+                                {n.is_read ? (
+                                  <>
+                                    <EyeOff className="h-3 w-3 text-muted-foreground" />
+                                    <span>Marquer comme non lu</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="h-3 w-3 text-primary" />
+                                    <span>Marquer comme lu</span>
+                                  </>
+                                )}
+                              </button>
+
+                              {n.link && (
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -327,25 +361,45 @@ export default function NotificationBell({ className }: { className?: string }) 
                                 >
                                   Voir les détails <ExternalLink className="h-3 w-3" />
                                 </button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
 
-                      {/* Chevron toggle indicator */}
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-foreground shrink-0 mt-1 transition-transform"
-                        title={isExpanded ? "Replier" : "Déplier"}
-                        tabIndex={-1}
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-3.5 w-3.5" />
-                        ) : (
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        )}
-                      </button>
+                      {/* Right actions: Quick unread toggle + Chevron */}
+                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                        <button
+                          type="button"
+                          onClick={(e) => toggleReadStatus(n.id, e)}
+                          className={cn(
+                            "h-6 w-6 rounded-md flex items-center justify-center transition-colors cursor-pointer",
+                            n.is_read
+                              ? "text-muted-foreground/60 hover:text-foreground hover:bg-muted/70"
+                              : "text-primary hover:bg-primary/10"
+                          )}
+                          title={n.is_read ? "Marquer comme non lu" : "Marquer comme lu"}
+                        >
+                          {n.is_read ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          className="h-6 w-6 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground transition-transform"
+                          title={isExpanded ? "Replier" : "Déplier"}
+                          tabIndex={-1}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
