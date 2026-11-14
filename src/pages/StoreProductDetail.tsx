@@ -74,6 +74,7 @@ export default function StoreProductDetail() {
   const [notFound, setNotFound] = useState(false);
   const [liked, setLiked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [reviewStats, setReviewStats] = useState<{ count: number; averageRating: string } | null>(null);
 
   const { countryCode, targetCurrency, isLocalDifferent, rates } = useCurrency();
 
@@ -238,6 +239,23 @@ export default function StoreProductDetail() {
           if (lessonsData) setLessons(lessonsData as any);
         }
 
+        const { data: revData } = await supabase
+          .from("product_reviews")
+          .select("sentiment")
+          .eq("product_id", prod.id)
+          .eq("is_public", true);
+
+        if (revData && revData.length > 0) {
+          const positive = revData.filter((r) => r.sentiment === "positive").length;
+          const score = Math.max(1, Math.round(((positive / revData.length) * 4 + 1) * 10) / 10);
+          setReviewStats({
+            count: revData.length,
+            averageRating: score.toFixed(1),
+          });
+        } else {
+          setReviewStats(null);
+        }
+
         const { data: related } = await supabase
           .from("products")
           .select("id, title, price, original_price, type, thumbnail_url, sales_count, category")
@@ -312,7 +330,6 @@ export default function StoreProductDetail() {
       ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
       : null;
 
-  const salesCount = product.sales_count || 14;
   const formatLabel =
     product.type === "course"
       ? "Formation vidéo · PDF"
@@ -415,11 +432,14 @@ export default function StoreProductDetail() {
               <span>
                 Par <span className="font-semibold text-[#111827] underline underline-offset-2">{sellerName}</span>
               </span>
-              <span className="flex items-center gap-1 font-medium text-[#111827]">
-                <Star className="h-3.5 w-3.5 fill-[#111827] text-[#111827]" /> 4.9
-              </span>
-              {!product.hide_sales_count && (
-                <span>{salesCount} ventes</span>
+              {reviewStats && reviewStats.count > 0 && (
+                <span className="flex items-center gap-1 font-medium text-[#111827]">
+                  <Star className="h-3.5 w-3.5 fill-[#111827] text-[#111827]" /> {reviewStats.averageRating}
+                  <span className="text-xs text-[#74716B]">({reviewStats.count})</span>
+                </span>
+              )}
+              {!product.hide_sales_count && Boolean(product.sales_count && product.sales_count > 0) && (
+                <span>{product.sales_count} {product.sales_count === 1 ? "vente" : "ventes"}</span>
               )}
             </div>
 

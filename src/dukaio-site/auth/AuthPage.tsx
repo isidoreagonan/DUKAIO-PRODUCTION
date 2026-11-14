@@ -9,7 +9,7 @@ import { Input } from "@/dukaio-site/ui/input";
 import { Logo } from "@/dukaio-site/site/Logo";
 import { CountryPicker } from "./CountryPicker";
 import { detectUserCountry } from "@/lib/geo";
-import { getDashboardUrl, isDashboardSubdomain } from "@/lib/subdomain";
+import { getDashboardUrl, isDashboardSubdomain, isBuyerSubdomain } from "@/lib/subdomain";
 import creator from "@/dukaio-site/assets/creator-studio.jpg";
 
 function GoogleLogo() {
@@ -27,6 +27,10 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 
   useEffect(() => {
     const goToDashboard = () => {
+      // Safety: Never redirect to seller dashboard if visitor is on the buyer portal
+      if (typeof window !== "undefined" && isBuyerSubdomain()) {
+        return;
+      }
       if (typeof window !== "undefined" && !isDashboardSubdomain()) {
         window.location.replace(getDashboardUrl("/dashboard"));
       } else {

@@ -10,17 +10,6 @@ import creator from "@/dukaio-site/assets/creator-studio.jpg";
 import { setBuyerOtpVerified, setBuyerSession } from "@/lib/buyerSession";
 import "@/dukaio-site/dukaio-site.css";
 
-function GoogleLogo() {
-  return (
-    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="!h-[18px] !w-[18px]">
-      <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z" />
-      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z" />
-      <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z" />
-      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z" />
-    </svg>
-  );
-}
-
 export default function BuyerLogin() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -129,22 +118,6 @@ export default function BuyerLogin() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/buyer-oauth-callback`,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      toast.error("La connexion avec Google a échoué.");
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="dk-site bg-background text-foreground min-h-dvh">
       <div className="auth-page grid min-h-dvh lg:grid-cols-[1.08fr_1fr]">
@@ -183,68 +156,55 @@ export default function BuyerLogin() {
                     <strong className="text-foreground">{email}</strong>.
                   </>
                 ) : (
-                  "Connectez-vous pour retrouver vos fichiers, cours et licences."
+                  "Connectez-vous pour retrouver vos fichiers, cours et licences achetés."
                 )}
               </p>
 
               {step === "email" ? (
-                <>
-                  {/* Google OAuth Button */}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleGoogleSignIn}
-                    disabled={loading}
-                    className="auth-google mt-7 h-12 w-full gap-2.5 px-3 font-medium shadow-none hover:bg-muted"
-                  >
-                    <GoogleLogo />
-                    Se connecter avec Google
-                  </Button>
-
-                  {/* Divider */}
-                  <div className="my-6 flex items-center gap-4">
-                    <span className="h-px flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground">ou avec votre email</span>
-                    <span className="h-px flex-1 bg-border" />
+                <form onSubmit={handleSendOtp} className="mt-8 space-y-4">
+                  <div>
+                    <label htmlFor="email" className="auth-label block text-xs font-semibold text-foreground mb-1.5">
+                      Adresse email utilisée lors de votre commande
+                    </label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="vous@exemple.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      maxLength={254}
+                      className="auth-input h-11"
+                    />
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                      Nous vous enverrons un code de vérification sécurisé à 6 chiffres.
+                    </p>
                   </div>
 
-                  {/* Email Input Form */}
-                  <form onSubmit={handleSendOtp} className="space-y-4">
-                    <div>
-                      <label htmlFor="email" className="auth-label block text-xs font-semibold text-foreground mb-1.5">
-                        Adresse email
-                      </label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="vous@exemple.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        maxLength={254}
-                        className="auth-input h-11"
-                      />
-                    </div>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary h-12 w-full font-semibold gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours…
+                      </>
+                    ) : (
+                      <>
+                        Recevoir mon code de connexion <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
 
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="btn-primary h-12 w-full font-semibold gap-2"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" /> Envoi en cours…
-                        </>
-                      ) : (
-                        <>
-                          Recevoir mon code de connexion <ArrowRight className="h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </>
+                  <div className="pt-2">
+                    <p className="text-[11px] text-muted-foreground/80 leading-relaxed text-center">
+                      🔒 Connexion sécurisée sans mot de passe : votre adresse email vous donne un accès direct à vos achats.
+                    </p>
+                  </div>
+                </form>
               ) : (
                 /* Step === "otp" */
                 <form onSubmit={handleVerifyOtp} className="space-y-4 mt-7">

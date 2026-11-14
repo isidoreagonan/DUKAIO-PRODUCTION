@@ -327,18 +327,22 @@ export function StorefrontView({
                       <span className="truncate uppercase tracking-wider font-semibold">
                         {product.category || product.type || "Digital"}
                       </span>
-                      <span className="flex shrink-0 items-center gap-1 font-medium" style={{ color: "var(--shop-text)" }}>
-                        {config.products.showRatings && (
-                          <>
-                            <Star className="h-3 w-3 fill-current" /> 4.9
-                          </>
-                        )}
-                        {config.products.showSales && (
-                          <span className="hidden sm:inline">
-                            · {product.sales_count || 1240} ventes
-                          </span>
-                        )}
-                      </span>
+                      {((config.products.showRatings && Boolean((product as any).rating)) ||
+                        (config.products.showSales && Boolean(product.sales_count && product.sales_count > 0))) && (
+                        <span className="flex shrink-0 items-center gap-1 font-medium" style={{ color: "var(--shop-text)" }}>
+                          {config.products.showRatings && Boolean((product as any).rating) && (
+                            <>
+                              <Star className="h-3 w-3 fill-current" /> {(product as any).rating}
+                            </>
+                          )}
+                          {config.products.showSales && Boolean(product.sales_count && product.sales_count > 0) && (
+                            <span className="hidden sm:inline">
+                              {config.products.showRatings && Boolean((product as any).rating) ? " · " : ""}
+                              {product.sales_count} {product.sales_count === 1 ? "vente" : "ventes"}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                   )}
 
