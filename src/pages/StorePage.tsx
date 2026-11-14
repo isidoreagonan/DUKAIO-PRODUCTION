@@ -191,6 +191,22 @@ export default function StorePage() {
     googleAdsId: ownerProfile?.google_ads_id,
   });
 
+  // Apply dynamic SEO title and meta description to document head
+  useEffect(() => {
+    if (!themeConfig) return;
+    const pageTitle = themeConfig.seo?.title || `${themeConfig.name} — Boutique officielle`;
+    const pageDesc = themeConfig.seo?.description || themeConfig.description || "";
+    document.title = pageTitle;
+
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement("meta");
+      metaDesc.setAttribute("name", "description");
+      document.head.appendChild(metaDesc);
+    }
+    if (pageDesc) metaDesc.setAttribute("content", pageDesc);
+  }, [themeConfig]);
+
   const handleBuyClick = (product: StorefrontProduct) => {
     trackEvent("AddToCart", {
       content_name: product.title,

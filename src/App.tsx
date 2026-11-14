@@ -40,6 +40,12 @@ import CheckoutPage from "./pages/CheckoutPage";
 import DashboardOverview from "./pages/dashboard/DashboardOverview";
 import DashboardProducts from "./pages/dashboard/DashboardProducts";
 import DashboardSettings from "./pages/dashboard/DashboardSettings";
+import DashboardSettingsIdentity from "./pages/dashboard/settings/DashboardSettingsIdentity";
+import DashboardSettingsPixels from "./pages/dashboard/settings/DashboardSettingsPixels";
+import DashboardSettingsPages from "./pages/dashboard/settings/DashboardSettingsPages";
+import DashboardSettingsSEO from "./pages/dashboard/settings/DashboardSettingsSEO";
+import DashboardSettingsDomain from "./pages/dashboard/settings/DashboardSettingsDomain";
+import DashboardSettingsAccount from "./pages/dashboard/settings/DashboardSettingsAccount";
 import CreateProduct from "./pages/dashboard/CreateProduct";
 import EditProduct from "./pages/dashboard/EditProduct";
 import DashboardSales from "./pages/dashboard/DashboardSales";
@@ -239,13 +245,28 @@ const App = () => {
                 <Route path="/withdrawals/new" element={<ProtectedRoute><WithdrawNew /></ProtectedRoute>} />
                 <Route path="/dashboard/withdrawals/new" element={<ProtectedRoute><WithdrawNew /></ProtectedRoute>} />
 
-                {/* Settings, Profile, Appearance & Stores */}
+                {/* Settings Hub & Dedicated Settings Pages (Exact Captures 1, 2, 3, 4, 5) */}
                 <Route path="/settings" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
                 <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-                <Route path="/dashboard/profile" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-                <Route path="/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
-                <Route path="/dashboard/appearance" element={<ProtectedRoute><DashboardSettings /></ProtectedRoute>} />
+                <Route path="/settings/identity" element={<ProtectedRoute><DashboardSettingsIdentity /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/identity" element={<ProtectedRoute><DashboardSettingsIdentity /></ProtectedRoute>} />
+                <Route path="/settings/profile" element={<ProtectedRoute><DashboardSettingsIdentity /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/profile" element={<ProtectedRoute><DashboardSettingsIdentity /></ProtectedRoute>} />
+                <Route path="/settings/domain" element={<ProtectedRoute><DashboardSettingsDomain /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/domain" element={<ProtectedRoute><DashboardSettingsDomain /></ProtectedRoute>} />
+                <Route path="/settings/pages" element={<ProtectedRoute><DashboardSettingsPages /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/pages" element={<ProtectedRoute><DashboardSettingsPages /></ProtectedRoute>} />
+                <Route path="/settings/seo" element={<ProtectedRoute><DashboardSettingsSEO /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/seo" element={<ProtectedRoute><DashboardSettingsSEO /></ProtectedRoute>} />
+                <Route path="/settings/pixels" element={<ProtectedRoute><DashboardSettingsPixels /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/pixels" element={<ProtectedRoute><DashboardSettingsPixels /></ProtectedRoute>} />
+                <Route path="/settings/account" element={<ProtectedRoute><DashboardSettingsAccount /></ProtectedRoute>} />
+                <Route path="/dashboard/settings/account" element={<ProtectedRoute><DashboardSettingsAccount /></ProtectedRoute>} />
+
+                <Route path="/profile" element={<ProtectedRoute><DashboardSettingsIdentity /></ProtectedRoute>} />
+                <Route path="/dashboard/profile" element={<ProtectedRoute><DashboardSettingsIdentity /></ProtectedRoute>} />
+                <Route path="/appearance" element={<Navigate to="/dashboard/boutique" replace />} />
+                <Route path="/dashboard/appearance" element={<Navigate to="/dashboard/boutique" replace />} />
                 <Route path="/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
                 <Route path="/dashboard/stores" element={<ProtectedRoute><DashboardStores /></ProtectedRoute>} />
                 <Route path="/boutique" element={<ProtectedRoute><DashboardStoreEditor /></ProtectedRoute>} />
@@ -337,6 +358,8 @@ const App = () => {
                 <Route path="/legal" element={<StoreLegalPage kind="legal" />} />
                 <Route path="/terms" element={<StoreLegalPage kind="terms" />} />
                 <Route path="/privacy" element={<StoreLegalPage kind="privacy" />} />
+                <Route path="/about" element={<StoreLegalPage kind="about" />} />
+                <Route path="/a-propos" element={<StoreLegalPage kind="about" />} />
                 <Route path="/produit/:productId" element={<StoreProductDetail />} />
                 <Route path="/product/:productId" element={<StoreProductDetail />} />
                 <Route path="/checkout/:productId" element={<CheckoutPage />} />
@@ -352,6 +375,8 @@ const App = () => {
                 <Route path="/store/:slug/legal" element={<StoreLegalPage kind="legal" />} />
                 <Route path="/store/:slug/terms" element={<StoreLegalPage kind="terms" />} />
                 <Route path="/store/:slug/privacy" element={<StoreLegalPage kind="privacy" />} />
+                <Route path="/store/:slug/about" element={<StoreLegalPage kind="about" />} />
+                <Route path="/store/:slug/a-propos" element={<StoreLegalPage kind="about" />} />
                 <Route path="/store/:slug/:productId" element={<StoreProductDetail />} />
                 <Route path="/:productId" element={<StoreProductDetail />} />
 

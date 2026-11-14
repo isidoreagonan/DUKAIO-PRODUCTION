@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Scale, FileText, Shield, ArrowLeft } from "lucide-react";
+import { Scale, FileText, Shield, ArrowLeft, Info } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import { getStoreSubdomain } from "@/lib/subdomain";
 
-type LegalKind = "legal" | "terms" | "privacy";
+type LegalKind = "legal" | "terms" | "privacy" | "about";
 
 interface StoreLegal {
   id: string;
@@ -16,12 +16,14 @@ interface StoreLegal {
   legal_notice: string | null;
   terms_of_use: string | null;
   privacy_policy: string | null;
+  description: string | null;
 }
 
 const META: Record<LegalKind, { title: string; icon: any; field: keyof StoreLegal }> = {
   legal: { title: "Mentions légales", icon: Scale, field: "legal_notice" },
   terms: { title: "Conditions générales", icon: FileText, field: "terms_of_use" },
   privacy: { title: "Politique de confidentialité", icon: Shield, field: "privacy_policy" },
+  about: { title: "À propos", icon: Info, field: "description" },
 };
 
 const StoreLegalPage = ({ kind }: { kind: LegalKind }) => {
@@ -44,7 +46,7 @@ const StoreLegalPage = ({ kind }: { kind: LegalKind }) => {
       const cleanSlug = rawSlug.toLowerCase().replace(/\s+/g, "-");
       const { data } = await supabase
         .from("stores")
-        .select("id, name, slug, logo_url, brand_color, legal_notice, terms_of_use, privacy_policy" as any)
+        .select("id, name, slug, logo_url, brand_color, legal_notice, terms_of_use, privacy_policy, description" as any)
         .eq("slug", cleanSlug)
         .eq("is_archived", false)
         .maybeSingle();

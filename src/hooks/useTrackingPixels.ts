@@ -5,6 +5,9 @@ export interface PixelConfig {
   facebookPixelId?: string | null;
   tiktokPixelId?: string | null;
   googleAdsId?: string | null;
+  snapchatPixelId?: string | null;
+  gtmId?: string | null;
+  customJs?: string | null;
 }
 
 export type StandardTrackingEvent =
@@ -229,6 +232,83 @@ export function initGoogleAds(adsId: string) {
 }
 
 /**
+ * Initialize Snapchat Pixel
+ */
+export function initSnapchatPixel(snapId: string) {
+  if (typeof window === "undefined" || !snapId) return;
+  const cleanId = snapId.trim();
+  if (!cleanId) return;
+  try {
+    if (!(window as any).snaptr) {
+      (function (e: any, t: any, n: string) {
+        if (e.snaptr) return;
+        var a: any = (e.snaptr = function () {
+          a.handleRequest ? a.handleRequest.apply(a, arguments) : a.queue.push(arguments);
+        });
+        a.queue = [];
+        var s = "script",
+          r: any = t.createElement(s);
+        r.async = !0;
+        r.src = n;
+        var u = t.getElementsByTagName(s)[0];
+        u.parentNode.insertBefore(r, u);
+      })(window, document, "https://sc-static.net/scevent.min.js");
+    }
+    (window as any).snaptr("init", cleanId);
+    (window as any).snaptr("track", "PAGE_VIEW");
+    debugLog("Snapchat Pixel", `init & PAGE_VIEW (${cleanId})`);
+  } catch (err) {
+    console.error("[Tracking] Snapchat init error:", err);
+  }
+}
+
+/**
+ * Initialize Google Tag Manager
+ */
+export function initGoogleTagManager(gtmId: string) {
+  if (typeof window === "undefined" || !gtmId) return;
+  const cleanId = gtmId.trim();
+  if (!cleanId) return;
+  try {
+    const scriptId = `gtm-${cleanId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+    if (!document.getElementById(scriptId)) {
+      (function (w: any, d: any, s: string, l: string, i: string) {
+        w[l] = w[l] || [];
+        w[l].push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l !== "dataLayer" ? "&l=" + l : "";
+        j.async = true;
+        j.src = "https://www.googletagmanager.com/gtm.js?id=" + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, "script", "dataLayer", cleanId);
+      debugLog("Google Tag Manager", `init (${cleanId})`);
+    }
+  } catch (err) {
+    console.error("[Tracking] GTM init error:", err);
+  }
+}
+
+/**
+ * Inject Custom JavaScript safely into DOM
+ */
+export function injectCustomScript(code: string) {
+  if (typeof window === "undefined" || !code) return;
+  try {
+    const scriptId = "dukaio-custom-tracking-script";
+    if (!document.getElementById(scriptId)) {
+      const el = document.createElement("script");
+      el.id = scriptId;
+      el.text = code.replace(/<\/?script[^>]*>/gi, "");
+      document.body.appendChild(el);
+      debugLog("Custom JS", "injected");
+    }
+  } catch (err) {
+    console.error("[Tracking] Custom script error:", err);
+  }
+}
+
+/**
  * Synchronous initialization of all configured pixels
  */
 export function initTrackingPixels(config: PixelConfig) {
@@ -236,6 +316,9 @@ export function initTrackingPixels(config: PixelConfig) {
   if (config.facebookPixelId) initFacebookPixel(config.facebookPixelId);
   if (config.tiktokPixelId) initTikTokPixel(config.tiktokPixelId);
   if (config.googleAdsId) initGoogleAds(config.googleAdsId);
+  if (config.snapchatPixelId) initSnapchatPixel(config.snapchatPixelId);
+  if (config.gtmId) initGoogleTagManager(config.gtmId);
+  if (config.customJs) injectCustomScript(config.customJs);
 }
 
 /**
@@ -249,7 +332,14 @@ export function useTrackingPixels(config: PixelConfig) {
   useEffect(() => {
     if (!config) return;
     initTrackingPixels(config);
-  }, [config.facebookPixelId, config.tiktokPixelId, config.googleAdsId]);
+  }, [
+    config.facebookPixelId,
+    config.tiktokPixelId,
+    config.googleAdsId,
+    config.snapchatPixelId,
+    config.gtmId,
+    config.customJs,
+  ]);
 
   useEffect(() => {
     // Avoid double pageview firing on initial mount if already fired during init
