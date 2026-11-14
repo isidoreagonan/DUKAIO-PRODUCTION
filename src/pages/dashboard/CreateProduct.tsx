@@ -40,70 +40,186 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
   }
 }
 
-const DigitalProductsShapes = () => (
-  <div className="relative w-[110%] md:w-3/5 max-w-[140px] h-[80%] md:h-24 flex flex-col items-center justify-end translate-x-2 md:translate-x-0 translate-y-2 md:translate-y-0">
-    <div className="absolute bottom-[2rem] md:bottom-[3rem] w-[75%] h-10 md:h-12 bg-amber-400 rounded-t-lg shadow-sm border-t border-amber-300">
-      <div className="absolute top-0 right-0 w-1/3 h-2 md:h-2.5 bg-amber-300 rounded-tr-lg"></div>
-    </div>
-    <div className="absolute bottom-[1rem] md:bottom-[1.8rem] w-[85%] h-10 md:h-12 bg-fuchsia-700 rounded-t-lg shadow-md border-t border-fuchsia-600">
-      <div className="absolute top-0 right-2 w-1/3 h-2 md:h-2.5 bg-fuchsia-600 rounded-tr-lg"></div>
-    </div>
-    <div className="absolute bottom-[0.25rem] md:bottom-[0.6rem] w-[95%] h-10 md:h-12 bg-pink-500 rounded-t-lg shadow-lg border-t border-pink-400">
-      <div className="absolute top-0 right-3 w-1/3 h-2 md:h-2.5 bg-pink-400 rounded-tr-lg"></div>
-    </div>
-    <div className="absolute bottom-[-0.25rem] md:bottom-0 w-full h-[0.9rem] md:h-[1.1rem] bg-indigo-500 rounded-t-md shadow-xl border-t border-indigo-400 flex items-center justify-center z-10">
-      <div className="w-1/3 h-1 md:h-1.5 bg-indigo-700/50 rounded-full shadow-inner"></div>
-    </div>
-  </div>
+const DigitalProductsIllustration = ({ className = "w-48 h-36" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 240 180"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <defs>
+      <filter id="dp-blur" x="20" y="130" width="200" height="30" filterUnits="userSpaceOnUse">
+        <feGaussianBlur stdDeviation="5" />
+      </filter>
+      <linearGradient id="dp-yellow" x1="120" y1="40" x2="120" y2="78" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#FDE047" />
+        <stop offset="1" stopColor="#EAB308" />
+      </linearGradient>
+      <linearGradient id="dp-magenta" x1="120" y1="72" x2="120" y2="110" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#F472B6" />
+        <stop offset="1" stopColor="#C026D3" />
+      </linearGradient>
+      <linearGradient id="dp-blue" x1="120" y1="104" x2="120" y2="142" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#60A5FA" />
+        <stop offset="1" stopColor="#2563EB" />
+      </linearGradient>
+      <filter id="dp-drop" x="20" y="20" width="200" height="150" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="3" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.14" />
+      </filter>
+    </defs>
+
+    {/* Ambient Floor Shadow */}
+    <ellipse cx="120" cy="148" rx="76" ry="9" fill="#000000" fillOpacity="0.12" filter="url(#dp-blur)" />
+
+    {/* Bottom Layer: Vibrant Blue */}
+    <g filter="url(#dp-drop)">
+      <rect x="40" y="104" width="160" height="38" rx="12" fill="url(#dp-blue)" />
+      {/* Front bottom notch/handle */}
+      <rect x="100" y="126" width="40" height="6" rx="3" fill="#1D4ED8" fillOpacity="0.7" />
+      {/* Subtle top reflection line */}
+      <rect x="48" y="106" width="144" height="2" rx="1" fill="#FFFFFF" fillOpacity="0.25" />
+    </g>
+
+    {/* Middle Layer: Magenta / Fuchsia */}
+    <g filter="url(#dp-drop)">
+      <rect x="51" y="72" width="138" height="38" rx="12" fill="url(#dp-magenta)" />
+      {/* Subtle top reflection line */}
+      <rect x="59" y="74" width="122" height="2" rx="1" fill="#FFFFFF" fillOpacity="0.3" />
+    </g>
+
+    {/* Top Layer: Sunny Yellow */}
+    <g filter="url(#dp-drop)">
+      <rect x="63" y="40" width="114" height="38" rx="12" fill="url(#dp-yellow)" />
+      {/* Top reflection line */}
+      <rect x="71" y="42" width="98" height="2.5" rx="1.25" fill="#FFFFFF" fillOpacity="0.45" />
+    </g>
+  </svg>
 );
 
-const CourseShapes = () => (
-  <div className="relative w-[110%] md:w-3/5 max-w-[140px] h-[90%] md:h-28 flex flex-col items-center justify-end pb-1 md:pb-2 translate-x-2 md:translate-x-0 translate-y-1 md:translate-y-0">
-    <div className="absolute top-2 left-0 w-8 md:w-10 h-8 md:h-10 bg-orange-200/60 rounded-full blur-xl"></div>
-    <div className="absolute bottom-4 md:bottom-6 right-0 w-10 md:w-12 h-10 md:h-12 bg-rose-200/60 rounded-full blur-xl"></div>
+const CourseIllustration = ({ className = "w-48 h-36" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 240 180"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <defs>
+      <filter id="course-blur" x="30" y="140" width="180" height="25" filterUnits="userSpaceOnUse">
+        <feGaussianBlur stdDeviation="4.5" />
+      </filter>
+      <linearGradient id="course-bezel" x1="120" y1="34" x2="120" y2="128" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#1E293B" />
+        <stop offset="1" stopColor="#0F172A" />
+      </linearGradient>
+      <linearGradient id="course-orange" x1="120" y1="63" x2="120" y2="99" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#FB923C" />
+        <stop offset="1" stopColor="#EA580C" />
+      </linearGradient>
+      <filter id="course-play-glow" x="90" y="55" width="60" height="60" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="#EA580C" floodOpacity="0.4" />
+      </filter>
+      <filter id="course-cap-shadow" x="35" y="10" width="70" height="50" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.25" />
+      </filter>
+    </defs>
 
-    <div className="absolute top-0 left-0 md:left-4 z-20 animate-bounce" style={{ animationDuration: "4s" }}>
-      <div className="relative w-10 md:w-14 h-8 md:h-10">
-        <div className="absolute top-0 left-0 w-10 md:w-14 h-3 md:h-4 bg-indigo-600 rounded-sm" style={{ transform: "skew(-20deg) rotate(-10deg)" }}></div>
-        <div className="absolute top-1.5 md:top-2 left-1.5 md:left-2 w-6 md:w-8 h-4 md:h-6 bg-indigo-800 rounded-b-md"></div>
-        <div className="absolute top-1 right-1.5 md:right-2 w-1 h-4 md:h-5 bg-amber-400 origin-top rotate-12">
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 md:w-1.5 h-1.5 md:h-2 bg-amber-500 rounded-sm"></div>
-        </div>
-      </div>
-    </div>
+    {/* Ambient Floor Shadow */}
+    <ellipse cx="120" cy="154" rx="60" ry="7" fill="#000000" fillOpacity="0.14" filter="url(#course-blur)" />
 
-    <div className="relative z-10 w-[95%] aspect-[16/10] bg-slate-800 rounded-t-md p-1 md:p-1.5 border-b-2 md:border-b-4 border-slate-900 shadow-2xl flex flex-col">
-      <div className="flex-1 bg-slate-900 rounded-sm overflow-hidden relative flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-rose-500/20"></div>
-        <div className="relative w-6 md:w-8 h-6 md:h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
-          <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[6px] md:border-l-[7px] border-l-white border-b-[4px] border-b-transparent ml-0.5"></div>
-        </div>
-      </div>
-    </div>
-    
-    <div className="w-1/3 h-1 md:h-1.5 bg-slate-700"></div>
-    <div className="w-1/2 h-1 md:h-1.5 bg-slate-500 rounded-t-sm"></div>
-  </div>
+    {/* Stand Foot and Stem */}
+    <rect x="113" y="122" width="14" height="24" rx="2" fill="#1E293B" />
+    <rect x="90" y="143" width="60" height="7" rx="3.5" fill="#334155" />
+
+    {/* Monitor Frame */}
+    <rect x="48" y="34" width="144" height="94" rx="12" fill="url(#course-bezel)" stroke="#334155" strokeWidth="1.5" />
+
+    {/* Inner Screen */}
+    <rect x="55" y="41" width="130" height="80" rx="8" fill="#0B0F19" />
+
+    {/* Ambient Center Glow */}
+    <circle cx="120" cy="81" r="32" fill="#EA580C" fillOpacity="0.08" />
+
+    {/* Orange Play Button */}
+    <g filter="url(#course-play-glow)">
+      <circle cx="120" cy="81" r="18" fill="url(#course-orange)" />
+      {/* White Play Triangle */}
+      <polygon points="115,71 115,91 131,81" fill="#FFFFFF" />
+    </g>
+
+    {/* Graduation Cap floating on top-left of the monitor */}
+    <g transform="translate(52, 14) rotate(-10)" filter="url(#course-cap-shadow)">
+      {/* Skullcap base */}
+      <path d="M14 20 C14 27 38 27 38 20 Z" fill="#312E81" />
+      {/* Mortarboard Diamond Top */}
+      <polygon points="26,7 50,17 26,27 2,17" fill="#4338CA" stroke="#4F46E5" strokeWidth="1" />
+      {/* Center Button */}
+      <circle cx="26" cy="17" r="2.5" fill="#FBBF24" />
+      {/* Golden Tassel */}
+      <path d="M26 17 Q36 21 40 30" stroke="#F59E0B" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      <circle cx="40" cy="31" r="1.8" fill="#FBBF24" />
+    </g>
+  </svg>
 );
 
-const ServicesShapes = () => (
-  <div className="relative w-[110%] md:w-3/5 max-w-[140px] h-[80%] md:h-24 flex flex-col items-center justify-end pb-2 md:pb-4 translate-x-2 md:translate-x-0 translate-y-2 md:translate-y-0">
-    <div className="relative z-10 w-[75%] md:w-[70%] aspect-[5/3.5] bg-amber-400 rounded-lg shadow-xl border-b-[4px] md:border-b-[6px] border-amber-500 overflow-hidden">
-      <div className="absolute top-0 w-full h-1/2 bg-amber-300"></div>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/4 h-full bg-blue-500 shadow-sm"></div>
-    </div>
+const ServicesIllustration = ({ className = "w-48 h-36" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 240 180"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+  >
+    <defs>
+      <filter id="serv-blur" x="30" y="135" width="180" height="25" filterUnits="userSpaceOnUse">
+        <feGaussianBlur stdDeviation="4.5" />
+      </filter>
+      <linearGradient id="serv-box" x1="120" y1="62" x2="120" y2="138" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#FDE047" />
+        <stop offset="1" stopColor="#F59E0B" />
+      </linearGradient>
+      <linearGradient id="serv-ribbon" x1="120" y1="62" x2="120" y2="138" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#60A5FA" />
+        <stop offset="1" stopColor="#3B82F6" />
+      </linearGradient>
+      <filter id="serv-box-shadow" x="40" y="50" width="160" height="100" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000000" floodOpacity="0.12" />
+      </filter>
+      <filter id="serv-badge-shadow" x="145" y="22" width="75" height="36" filterUnits="userSpaceOnUse">
+        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000000" floodOpacity="0.08" />
+      </filter>
+    </defs>
 
-    <div className="absolute top-0 right-0 md:right-2 animate-bounce" style={{ animationDuration: "3s" }}>
-      <div className="bg-rose-500 rounded-full w-5 h-5 md:w-7 md:h-7 flex items-center justify-center shadow-lg shadow-rose-500/30 text-white font-bold text-[10px] md:text-sm">
-        $
-      </div>
-    </div>
-    <div className="absolute top-3 md:top-4 left-0 md:left-2 animate-pulse" style={{ animationDuration: "2s" }}>
-      <div className="bg-emerald-500 rounded-full p-1 md:p-1.5 shadow-lg shadow-emerald-500/30">
-        <Check className="w-3 h-3 md:w-4 md:h-4 text-white" />
-      </div>
-    </div>
-  </div>
+    {/* Ambient Floor Shadow */}
+    <ellipse cx="120" cy="148" rx="66" ry="8" fill="#000000" fillOpacity="0.12" filter="url(#serv-blur)" />
+
+    {/* Decorative Soft Mint Circle with Checkmark (Behind Left) */}
+    <g transform="translate(56, 56)">
+      <circle cx="14" cy="14" r="15" fill="#A7F3D0" fillOpacity="0.85" />
+      <path d="M8.5 14.5 L12.5 18.5 L19.5 10.5" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </g>
+
+    {/* Decorative Soft Rose Circle (Behind Right) */}
+    <circle cx="180" cy="66" r="14" fill="#FDA4AF" fillOpacity="0.8" />
+
+    {/* Package / Box */}
+    <g filter="url(#serv-box-shadow)">
+      {/* Box Body */}
+      <rect x="60" y="62" width="120" height="76" rx="16" fill="url(#serv-box)" />
+      {/* Vertical Blue Ribbon */}
+      <rect x="106" y="62" width="28" height="76" fill="url(#serv-ribbon)" />
+      {/* Ribbon Light Accent */}
+      <rect x="108" y="62" width="4" height="76" fill="#FFFFFF" fillOpacity="0.2" />
+      {/* Box Top Light Accent */}
+      <rect x="68" y="64" width="104" height="2.5" rx="1.25" fill="#FFFFFF" fillOpacity="0.35" />
+    </g>
+
+    {/* "BIENTÔT" Pill Badge (Floating Top Right) */}
+    <g filter="url(#serv-badge-shadow)">
+      <rect x="152" y="26" width="62" height="24" rx="12" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
+      <text x="183" y="42" textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="700" letterSpacing="0.8" fontFamily="system-ui, -apple-system, sans-serif">
+        BIENTÔT
+      </text>
+    </g>
+  </svg>
 );
 
 const productTypes = [
@@ -111,9 +227,7 @@ const productTypes = [
     type: "file" as ProductType,
     label: "Produits digitaux",
     description: "E-books, templates, audios : téléchargement instantané.",
-    bgGradient: "bg-gradient-to-br from-[#F4F7FE] to-blue-50/50 dark:from-slate-800 dark:to-slate-900",
-    bgRadial: "circle_at_top_right,_var(--tw-gradient-stops)",
-    illustration: <DigitalProductsShapes />,
+    illustration: <DigitalProductsIllustration />,
     features: ["Tous formats acceptés (PDF, ZIP, MP3…)", "Livraison automatique", "Téléchargement sécurisé"],
     icon: FileText,
     color: "bg-blue-600",
@@ -122,9 +236,7 @@ const productTypes = [
     type: "course" as ProductType,
     label: "Formations",
     description: "Créez des formations avec vidéo et contenu téléchargeable.",
-    bgGradient: "bg-gradient-to-br from-orange-50/80 to-amber-50/50 dark:from-slate-800 dark:to-slate-900",
-    bgRadial: "circle_at_top_left,_var(--tw-gradient-stops)",
-    illustration: <CourseShapes />,
+    illustration: <CourseIllustration />,
     features: ["Contenu vidéo, texte & téléchargeable", "Suivi de progression des étudiants", "Modules structurés"],
     icon: GraduationCap,
     color: "bg-orange-500",
@@ -133,9 +245,7 @@ const productTypes = [
     type: "service" as ProductType,
     label: "Services",
     description: "Vendez vos prestations de services en ligne.",
-    bgGradient: "bg-gradient-to-br from-orange-50/50 to-[#FFF6F0] dark:from-slate-800 dark:to-slate-900",
-    bgRadial: "circle_at_center,_var(--tw-gradient-stops)",
-    illustration: <ServicesShapes />,
+    illustration: <ServicesIllustration />,
     features: ["Planification", "Paiement d'avance", "Gestion client"],
     icon: Layers,
     color: "bg-rose-500",
@@ -669,9 +779,8 @@ const CreateProduct = () => {
         <ErrorBoundary>
         {selectedTypeData && step > 1 && (
           <div className="flex items-center gap-3 md:gap-4 mb-6 p-3 md:p-4 rounded-xl bg-secondary border border-border/50">
-            <div className={`relative h-14 w-16 md:h-16 md:w-20 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm flex items-center justify-center ${selectedTypeData.bgGradient}`}>
-              <div className={`absolute inset-0 bg-[radial-gradient(${selectedTypeData.bgRadial})] opacity-50`}></div>
-              <div className="absolute inset-0 flex items-center justify-center transform scale-[0.35] md:scale-[0.4] origin-center">
+            <div className="relative h-14 w-16 md:h-16 md:w-20 shrink-0 overflow-hidden rounded-lg border border-border shadow-sm flex items-center justify-center bg-card p-1">
+              <div className="w-full h-full flex items-center justify-center">
                 {selectedTypeData.illustration}
               </div>
             </div>
@@ -707,92 +816,51 @@ const CreateProduct = () => {
             {/* Step 1: Type */}
             {step === 1 && (
               <div>
-                <h2 className="text-2xl font-bold text-foreground mb-8 italic">
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-8 italic tracking-tight">
                   Quel type de produit désirez-vous créer ?
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {productTypes.map((pt) => (
-                    <button
-                      key={pt.type}
-                      disabled={pt.comingSoon}
-                      onClick={() => setSelectedType(pt.type)}
-                      className={`relative group rounded-2xl border-2 text-left transition-all duration-300 overflow-hidden hover:shadow-xl flex flex-row md:flex-col items-center md:items-stretch h-24 md:h-auto ${
-                        selectedType === pt.type
-                          ? "border-blue-500 shadow-blue-500/20 ring-4 ring-blue-500/10"
-                          : pt.comingSoon
-                            ? "border-border/50 opacity-70 cursor-not-allowed"
-                            : "border-border hover:border-blue-300"
-                      } md:bg-card`}
-                    >
-                      {/* Background Layer */}
-                      <div className={`absolute inset-0 md:bottom-auto md:h-28 lg:h-32 ${pt.bgGradient} transition-transform duration-500 md:group-hover:scale-105 origin-bottom`}>
-                        <div className={`absolute inset-0 bg-[radial-gradient(${pt.bgRadial})] opacity-50`}></div>
-                      </div>
-
-                      {/* Text Content */}
-                      <div className="relative z-10 p-4 sm:p-5 flex-1 md:mt-28 lg:mt-32 md:bg-card flex flex-col justify-center md:justify-start h-full md:h-auto">
-                        <h3 className={`text-[15px] sm:text-lg font-bold md:mb-1.5 ${selectedType === pt.type ? "text-blue-600 dark:text-blue-400" : "text-foreground"}`}>
-                          {pt.label}
-                        </h3>
-                        <p className="hidden md:block text-sm text-muted-foreground leading-relaxed">
-                          {pt.description}
-                        </p>
-                      </div>
-
-                      {/* Illustration */}
-                      <div className="relative z-10 w-32 sm:w-36 h-full md:absolute md:top-0 md:inset-x-0 md:w-full md:h-28 lg:h-32 flex items-end justify-end md:justify-center overflow-hidden md:overflow-visible transition-transform duration-500 md:group-hover:scale-105">
-                        {pt.illustration}
-                      </div>
-
-                      {selectedType === pt.type && (
-                        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-20 h-5 w-5 md:h-6 md:w-6 rounded-full bg-white dark:bg-slate-800 border-[1.5px] border-blue-500 shadow-md flex items-center justify-center animate-in zoom-in">
-                          <Check className="h-3 w-3 md:h-3.5 md:w-3.5 text-blue-600 dark:text-blue-500 stroke-[3]" />
-                        </div>
-                      )}
-                      
-                      {pt.comingSoon && (
-                        <div className="absolute top-2 right-2 md:top-4 md:right-4 z-20 px-2 py-0.5 md:px-2.5 md:py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-sm">
-                          Bientôt
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {selectedTypeData && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-8 rounded-2xl border border-border bg-card/50 p-6 sm:p-8"
-                  >
-                    <div className="flex flex-col md:flex-row gap-8 md:gap-12 md:items-center">
-                      {/* Text Block */}
-                      <div className="md:w-1/3">
-                        <div className="inline-flex items-center justify-center p-2 mb-4 rounded-xl border border-border bg-card text-foreground shadow-sm">
-                          <Sparkles className="w-5 h-5" />
-                        </div>
-                        <h3 className="text-xl font-bold text-foreground mb-2">
-                          Idéal pour vos {selectedTypeData.label.toLowerCase()}
-                        </h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {selectedTypeData.description}
-                        </p>
-                      </div>
-                      
-                      {/* Features Grid */}
-                      <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {selectedTypeData.features.map((f, i) => (
-                          <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border shadow-sm">
-                            <div className="mt-0.5 flex-shrink-0 flex items-center justify-center text-foreground">
-                              <Check className="h-4 w-4 stroke-[2.5]" />
-                            </div>
-                            <span className="text-sm font-medium text-foreground leading-snug">{f}</span>
+                  {productTypes.map((pt) => {
+                    const isSelected = selectedType === pt.type;
+                    return (
+                      <button
+                        key={pt.type}
+                        type="button"
+                        disabled={pt.comingSoon}
+                        onClick={() => setSelectedType(pt.type)}
+                        className={`relative rounded-3xl border-2 text-left transition-colors duration-200 p-6 flex flex-col justify-between min-h-[310px] md:min-h-[350px] bg-card ${
+                          isSelected
+                            ? "border-amber-400 dark:border-amber-500 shadow-md ring-2 ring-amber-400/20"
+                            : pt.comingSoon
+                              ? "border-border/60 opacity-60 cursor-not-allowed"
+                              : "border-border hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
+                        }`}
+                      >
+                        {/* Selected Checkmark Badge */}
+                        {isSelected && (
+                          <div className="absolute top-4 right-4 z-20 h-6 w-6 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm">
+                            <Check className="h-3.5 w-3.5 stroke-[3]" />
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                        )}
+
+                        {/* Illustration Container with 100% transparent background */}
+                        <div className="w-full h-44 flex items-center justify-center select-none">
+                          {pt.illustration}
+                        </div>
+
+                        {/* Text Content */}
+                        <div className="mt-4">
+                          <h3 className="text-lg font-bold text-foreground mb-1.5">
+                            {pt.label}
+                          </h3>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {pt.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
@@ -1126,7 +1194,7 @@ const CreateProduct = () => {
           )}
           {step < TOTAL_STEPS ? (
             <Button
-              className="rounded-full px-8 bg-amber-500 hover:bg-amber-600 text-white"
+              className="rounded-full px-12 py-2.5 h-11 bg-[#F6B158] hover:bg-[#ea9f3f] text-white font-semibold text-base shadow-sm transition-colors"
               disabled={!canNext()}
               onClick={handleNextStep}
             >
@@ -1134,7 +1202,7 @@ const CreateProduct = () => {
             </Button>
           ) : (
             <Button
-              className="rounded-full px-8 bg-amber-500 hover:bg-amber-600 text-white"
+              className="rounded-full px-12 py-2.5 h-11 bg-[#F6B158] hover:bg-[#ea9f3f] text-white font-semibold text-base shadow-sm transition-colors"
               disabled={saving}
               onClick={handleSubmit}
             >
