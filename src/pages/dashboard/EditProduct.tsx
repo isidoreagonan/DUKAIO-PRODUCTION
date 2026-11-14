@@ -4,7 +4,8 @@ import {
   ArrowLeft, Eye, EyeOff, MoreVertical, Save, Loader2,
   FileText, DollarSign, Upload, AlignLeft, Palette, HelpCircle, Search, Settings,
   Package, Shield, Link2, MessageSquare, ShoppingCart, Lock, Fingerprint,
-  BarChart3, EyeOff as EyeOffIcon, MapPin, Sparkles, Plus, Trash2, Globe, Image as ImageIcon
+  BarChart3, EyeOff as EyeOffIcon, MapPin, Sparkles, Plus, Trash2, Globe, Image as ImageIcon,
+  CheckCircle2, Cloud
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -290,6 +291,11 @@ const EditProduct = () => {
     }
   };
 
+  const isAnyFileUploading =
+    uploadedFiles.some(f => f.isUploading) ||
+    courseLessons.some(l => l.isUploading) ||
+    !!thumbnailData?.isUploading;
+
   const persistProduct = async ({
     showToast = true,
     manageSaving = true,
@@ -300,6 +306,11 @@ const EditProduct = () => {
     forceUnpublish?: boolean;
   } = {}) => {
     if (!id || !user) return false;
+
+    if (isAnyFileUploading) {
+      toast.error("Veuillez attendre la fin du téléversement de vos fichiers avant d'enregistrer.");
+      return false;
+    }
 
     if (type === "file" && uploadedFiles.length === 0 && !forceUnpublish) {
       if (isPublished) {
@@ -378,23 +389,15 @@ const EditProduct = () => {
       if (type === "course") {
         await supabase.from("course_lessons").delete().eq("product_id", id);
         if (courseLessons.length > 0) {
-          const lessonsToInsert = [];
-          for (const lesson of courseLessons) {
-            let videoUrl = lesson.video_url;
-            if (lesson.video_type === "upload" && lesson.file) {
-              const uploaded = await uploadFile(lesson.file, "course-videos", () => { });
-              if (uploaded?.url) videoUrl = uploaded.url;
-            }
-            lessonsToInsert.push({
-              product_id: id,
-              title: lesson.title || `Leçon ${lesson.position + 1}`,
-              description: lesson.description || null,
-              video_url: videoUrl || null,
-              video_type: lesson.video_type,
-              duration_minutes: lesson.duration_minutes,
-              position: lesson.position,
-            });
-          }
+          const lessonsToInsert = courseLessons.map((lesson) => ({
+            product_id: id,
+            title: lesson.title || `Leçon ${lesson.position + 1}`,
+            description: lesson.description || null,
+            video_url: lesson.video_url || null,
+            video_type: lesson.video_type,
+            duration_minutes: lesson.duration_minutes,
+            position: lesson.position,
+          }));
           await supabase.from("course_lessons").insert(lessonsToInsert);
         }
       }
@@ -429,6 +432,11 @@ const EditProduct = () => {
 
   const togglePublish = async () => {
     if (!id) return;
+
+    if (isAnyFileUploading) {
+      toast.error("Veuillez attendre la fin du téléversement de vos fichiers avant de publier.");
+      return;
+    }
 
     if (isPublished) {
       const { error } = await supabase.from("products").update({ is_published: false }).eq("id", id);
@@ -503,8 +511,13 @@ const EditProduct = () => {
               size="sm"
               variant={isPublished ? "destructive" : "default"}
               onClick={togglePublish}
+              disabled={saving || isAnyFileUploading}
             >
-              {isPublished ? (
+              {saving ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Traitement...</>
+              ) : isAnyFileUploading ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Upload en cours...</>
+              ) : isPublished ? (
                 <><EyeOff className="h-4 w-4 mr-1.5" /> Dépublier</>
               ) : (
                 <><Eye className="h-4 w-4 mr-1.5" /> Publier</>
@@ -893,16 +906,25 @@ const EditProduct = () => {
                         {uploadedFiles.length > 0 && (
                           <div className="space-y-3">
                             {uploadedFiles.map((uf, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                              <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border bg-card shadow-xs">
                                 <div className="flex-1 min-w-0 mr-4">
                                   <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
                                   {uf.isUploading ? (
-                                    <div className="mt-2 flex items-center gap-2">
-                                      <Progress value={uf.progress} className="h-1.5 flex-1" />
-                                      <span className="text-xs text-muted-foreground">{uf.progress}%</span>
+                                    <div className="mt-2 space-y-1.5">
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                                          <Loader2 className="h-3 w-3 animate-spin" />
+                                          Téléversement vers Bunny.net CDN en cours...
+                                        </span>
+                                        <span className="font-bold text-foreground">{uf.progress}%</span>
+                                      </div>
+                                      <Progress value={uf.progress} className="h-2 w-full bg-amber-100 dark:bg-amber-950/40" />
                                     </div>
                                   ) : (
-                                    <p className="text-xs text-green-500 mt-1">Téléversé avec succès</p>
+                                    <div className="mt-1 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                      <CheckCircle2 className="h-3.5 w-3.5" />
+                                      <span>Téléversé et sécurisé sur Bunny.net CDN</span>
+                                    </div>
                                   )}
                                 </div>
                                 <button
@@ -1284,10 +1306,34 @@ const EditProduct = () => {
 
 
             {/* Save button */}
-            <div className="flex justify-end mt-4">
-              <Button onClick={handleSave} disabled={saving} className="gap-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Enregistrer
+            <div className="flex items-center justify-end gap-3 mt-4">
+              {isAnyFileUploading && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Veuillez attendre la fin des téléversements pour enregistrer.
+                </p>
+              )}
+              <Button
+                onClick={handleSave}
+                disabled={saving || isAnyFileUploading}
+                className="gap-2 rounded-full px-6"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enregistrement...
+                  </>
+                ) : isAnyFileUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Téléversement en cours...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Enregistrer les modifications
+                  </>
+                )}
               </Button>
             </div>
           </div>

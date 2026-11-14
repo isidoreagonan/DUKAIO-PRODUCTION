@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, GraduationCap, Key, Layers, Check, ArrowLeft,
   Upload, Image as ImageIcon, Package,
-  Shield, Clock, Hash, Percent, Video, BookOpen, Download, Loader2, Sparkles
+  Shield, Clock, Hash, Percent, Video, BookOpen, Download, Loader2, Sparkles,
+  CheckCircle2, Cloud, Film
 } from "lucide-react";
 import axios from "axios";
 import RichTextEditor from "@/components/RichTextEditor";
@@ -207,16 +208,21 @@ const CreateProduct = () => {
     setStep(step + 1);
   };
 
+  const isAnyFileUploading =
+    uploadedFiles.some(f => f.isUploading) ||
+    courseLessons.some(l => l.isUploading) ||
+    !!thumbnailData?.isUploading;
+
   const canNext = () => {
+    if (isAnyFileUploading) return false;
     switch (step) {
       case 1: return !!selectedType;
       case 2: return true; // Validation is done on click
       case 3: return true; // Validation is done on click
       case 4: return !thumbnailData?.isUploading;
       case 5:
-        if (selectedType === "file") return uploadedFiles.some(f => f.url && !f.isUploading);
-        if (thumbnailData?.isUploading || uploadedFiles.some(f => f.isUploading)) return false;
-        if (selectedType === "course") return courseLessons.length > 0;
+        if (selectedType === "file") return uploadedFiles.some(f => f.url && !f.isUploading) && !uploadedFiles.some(f => f.isUploading);
+        if (selectedType === "course") return courseLessons.length > 0 && !courseLessons.some(l => l.isUploading);
         return true;
       default: return false;
     }
@@ -316,6 +322,10 @@ const CreateProduct = () => {
 
   const handleSubmit = async () => {
     if (!user || !selectedType || !title.trim()) return;
+    if (isAnyFileUploading) {
+      toast.error("Veuillez attendre la fin du téléversement de vos fichiers avant de publier");
+      return;
+    }
     if (selectedType === "file" && uploadedFiles.filter(f => f.url).length === 0) {
       toast.error("Veuillez ajouter au moins un fichier pour ce produit");
       return;
@@ -377,23 +387,15 @@ const CreateProduct = () => {
       createdProductId = productResult.id;
 
       if (selectedType === "course" && courseLessons.length > 0) {
-        const lessonsToInsert = [];
-        for (const lesson of courseLessons) {
-          let videoUrl = lesson.video_url;
-          if (lesson.video_type === "upload" && lesson.file) {
-            const uploaded = await uploadFile(lesson.file, "course-videos", () => {});
-            if (uploaded?.url) videoUrl = uploaded.url;
-          }
-          lessonsToInsert.push({
-            product_id: productResult.id,
-            title: lesson.title || `Leçon ${lesson.position + 1}`,
-            description: lesson.description || null,
-            video_url: videoUrl || null,
-            video_type: lesson.video_type,
-            duration_minutes: lesson.duration_minutes,
-            position: lesson.position,
-          });
-        }
+        const lessonsToInsert = courseLessons.map((lesson) => ({
+          product_id: productResult.id,
+          title: lesson.title || `Leçon ${lesson.position + 1}`,
+          description: lesson.description || null,
+          video_url: lesson.video_url || null,
+          video_type: lesson.video_type,
+          duration_minutes: lesson.duration_minutes,
+          position: lesson.position,
+        }));
         const { error: lessonsError } = await supabase.from("course_lessons").insert(lessonsToInsert);
         if (lessonsError) {
           toast.error("Produit créé mais erreur sur les leçons: " + lessonsError.message);
@@ -492,16 +494,25 @@ const CreateProduct = () => {
               {uploadedFiles.length > 0 && (
                 <div className="space-y-3">
                   {uploadedFiles.map((uf, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                    <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border bg-card shadow-xs">
                       <div className="flex-1 min-w-0 mr-4">
                         <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
                         {uf.isUploading ? (
-                          <div className="mt-2 flex items-center gap-2">
-                            <Progress value={uf.progress} className="h-1.5 flex-1" />
-                            <span className="text-xs text-muted-foreground">{uf.progress}%</span>
+                          <div className="mt-2 space-y-1.5">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Téléversement vers Bunny.net CDN en cours...
+                              </span>
+                              <span className="font-bold text-foreground">{uf.progress}%</span>
+                            </div>
+                            <Progress value={uf.progress} className="h-2 w-full bg-amber-100 dark:bg-amber-950/40" />
                           </div>
                         ) : (
-                          <p className="text-xs text-green-500 mt-1">Téléversé avec succès</p>
+                          <div className="mt-1 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Téléversé et sécurisé sur Bunny.net CDN</span>
+                          </div>
                         )}
                       </div>
                       <button
@@ -1020,22 +1031,47 @@ const CreateProduct = () => {
           )}
           {step < TOTAL_STEPS ? (
             <Button
-              className="rounded-full px-12 py-2.5 h-11 bg-[#F6B158] hover:bg-[#ea9f3f] text-white font-semibold text-base shadow-sm transition-colors"
-              disabled={!canNext()}
+              className="rounded-full px-12 py-2.5 h-11 bg-[#F6B158] hover:bg-[#ea9f3f] text-white font-semibold text-base shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={!canNext() || isAnyFileUploading}
               onClick={handleNextStep}
             >
-              Continuer
+              {isAnyFileUploading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Téléversement en cours...
+                </span>
+              ) : (
+                "Continuer"
+              )}
             </Button>
           ) : (
             <Button
-              className="rounded-full px-12 py-2.5 h-11 bg-[#F6B158] hover:bg-[#ea9f3f] text-white font-semibold text-base shadow-sm transition-colors"
-              disabled={saving}
+              className="rounded-full px-12 py-2.5 h-11 bg-[#F6B158] hover:bg-[#ea9f3f] text-white font-semibold text-base shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              disabled={saving || !canNext() || isAnyFileUploading}
               onClick={handleSubmit}
             >
-              {saving ? "Enregistrement..." : "Publier"}
+              {saving ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Enregistrement...
+                </span>
+              ) : isAnyFileUploading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Téléversement en cours...
+                </span>
+              ) : (
+                "Publier"
+              )}
             </Button>
           )}
         </div>
+        {isAnyFileUploading && (
+          <p className="text-center text-xs text-amber-600 dark:text-amber-400 font-medium mt-3 flex items-center justify-center gap-1.5">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Veuillez attendre la fin du téléversement de tous vos fichiers avant de continuer.
+          </p>
+        )}
       </div>
 
       <FileSizeLimitDialog 

@@ -2,11 +2,16 @@ import { useState } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
   Plus, Trash2, GripVertical, Video, Upload, Link,
-  ChevronDown, ChevronUp, Clock, PlayCircle
+  ChevronDown, ChevronUp, Clock, PlayCircle,
+  Loader2, CheckCircle2, Cloud, AlertCircle, Film
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { uploadToBunny, deleteFromBunny } from "@/lib/bunnyStorage";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export interface Lesson {
   id: string;
@@ -17,6 +22,12 @@ export interface Lesson {
   duration_minutes: number | null;
   position: number;
   file?: File | null;
+  isUploading?: boolean;
+  progress?: number;
+  error?: string;
+  file_name?: string;
+  file_size?: number;
+  bunny_path?: string;
 }
 
 interface CourseLessonsManagerProps {
@@ -33,9 +44,18 @@ const createLesson = (position: number): Lesson => ({
   duration_minutes: null,
   position,
   file: null,
+  isUploading: false,
+  progress: 0,
 });
 
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+};
+
 const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManagerProps) => {
+  const { user } = useAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const addLesson = () => {
@@ -49,7 +69,11 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
     onLessonsChange(lessons.map(l => l.id === id ? { ...l, ...changes } : l));
   };
 
-  const removeLesson = (id: string) => {
+  const removeLesson = async (id: string) => {
+    const target = lessons.find(l => l.id === id);
+    if (target?.bunny_path) {
+      await deleteFromBunny(target.bunny_path, "files");
+    }
     const updated = lessons
       .filter(l => l.id !== id)
       .map((l, i) => ({ ...l, position: i }));
@@ -63,6 +87,51 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => prev === id ? null : id);
+  };
+
+  const handleVideoSelect = async (lessonId: string, file: File) => {
+    if (!file) return;
+
+    // Max size 500MB
+    const maxBytes = 500 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast.error("La vidéo ne doit pas dépasser 500 Mo");
+      return;
+    }
+
+    const cleanExt = (file.name.split(".").pop() || "mp4").toLowerCase();
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const bunnyPath = `courses/${user?.id || "anonymous"}/${Date.now()}_${cleanName}`;
+
+    updateLesson(lessonId, {
+      isUploading: true,
+      progress: 0,
+      file_name: file.name,
+      file_size: file.size,
+      error: undefined,
+    });
+
+    try {
+      const res = await uploadToBunny(file, bunnyPath, "files", (percent) => {
+        updateLesson(lessonId, { progress: percent });
+      });
+
+      updateLesson(lessonId, {
+        isUploading: false,
+        progress: 100,
+        video_url: res.url,
+        bunny_path: res.path,
+        file: null,
+      });
+      toast.success(`Vidéo "${file.name}" téléversée avec succès sur Bunny.net CDN !`);
+    } catch (err: any) {
+      console.error("[CourseLessonsManager] Video upload error:", err);
+      updateLesson(lessonId, {
+        isUploading: false,
+        error: err.message || "Erreur de téléversement",
+      });
+      toast.error(`Échec du téléversement : ${err.message || "Erreur de connexion"}`);
+    }
   };
 
   return (
@@ -136,19 +205,27 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
                           autoFocus
                         />
                       ) : (
-                        <p
-                          className="text-sm font-medium text-foreground truncate cursor-pointer"
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
                           onClick={() => toggleExpand(lesson.id)}
                         >
-                          {lesson.title || <span className="text-muted-foreground italic">Sans titre</span>}
-                        </p>
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {lesson.title || <span className="text-muted-foreground italic">Sans titre</span>}
+                          </p>
+                          {lesson.isUploading && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full shrink-0">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {lesson.progress || 0}%
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
                       {lesson.video_url && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Video className="h-3 w-3" />
+                        <span className="text-xs text-muted-foreground flex items-center gap-1" title="Vidéo configurée">
+                          <Video className="h-3 w-3 text-emerald-500" />
                         </span>
                       )}
                       {lesson.duration_minutes && (
@@ -208,7 +285,7 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
                             <label className="text-xs font-medium text-foreground mb-1 block">Type de contenu vidéo</label>
                             <Select
                               value={lesson.video_type}
-                              onValueChange={(v) => updateLesson(lesson.id, { video_type: v as "external" | "upload", video_url: "", file: null })}
+                              onValueChange={(v) => updateLesson(lesson.id, { video_type: v as "external" | "upload", video_url: "", file: null, error: undefined })}
                             >
                               <SelectTrigger className="h-9 text-sm">
                                 <SelectValue />
@@ -218,7 +295,7 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
                                   <span className="flex items-center gap-2"><Link className="h-3.5 w-3.5" /> Lien externe (YouTube, Vimeo…)</span>
                                 </SelectItem>
                                 <SelectItem value="upload">
-                                  <span className="flex items-center gap-2"><Upload className="h-3.5 w-3.5" /> Upload vidéo</span>
+                                  <span className="flex items-center gap-2"><Upload className="h-3.5 w-3.5" /> Upload vidéo (Bunny.net CDN)</span>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
@@ -237,26 +314,147 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
                             </div>
                           ) : (
                             <div>
-                              <label className="text-xs font-medium text-foreground mb-1 block">Fichier vidéo</label>
-                              <div
-                                className="rounded-lg border-2 border-dashed border-border bg-secondary/30 p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                                onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
-                              >
-                                <Upload className="h-5 w-5 text-muted-foreground mx-auto mb-2" />
-                                <p className="text-xs text-muted-foreground">
-                                  {lesson.file ? `📎 ${lesson.file.name}` : "Cliquez pour uploader (MP4, WebM… max 500MB)"}
-                                </p>
-                                <input
-                                  id={`lesson-video-${lesson.id}`}
-                                  type="file"
-                                  accept="video/*"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const f = e.target.files?.[0];
-                                    if (f) updateLesson(lesson.id, { file: f, video_url: f.name });
-                                  }}
-                                />
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="text-xs font-medium text-foreground">Fichier vidéo</label>
+                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Cloud className="h-3 w-3 text-sky-500" />
+                                  <span>Bunny.net CDN</span>
+                                </span>
                               </div>
+
+                              {/* Upload in progress state */}
+                              {lesson.isUploading ? (
+                                <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-2.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                                        <Loader2 className="h-4 w-4 animate-spin text-amber-600 dark:text-amber-400" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-semibold text-foreground truncate">
+                                          {lesson.file_name || "Vidéo en cours"}
+                                        </p>
+                                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                                          Téléversement vers Bunny.net CDN en cours...
+                                          {lesson.file_size ? ` (${formatFileSize(lesson.file_size)})` : ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <span className="text-base font-bold text-amber-600 dark:text-amber-400 shrink-0">
+                                      {lesson.progress || 0}%
+                                    </span>
+                                  </div>
+
+                                  <Progress value={lesson.progress || 0} className="h-2 w-full bg-amber-200/60 dark:bg-amber-900/40" />
+
+                                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                                    <span className="italic">Ne quittez pas la page pendant le transfert</span>
+                                    <span className="font-mono font-bold text-foreground">{lesson.progress || 0}% / 100%</span>
+                                  </div>
+                                </div>
+                              ) : lesson.video_url && !lesson.isUploading ? (
+                                /* Uploaded state */
+                                <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                                      <Film className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p className="text-xs font-semibold text-foreground truncate">
+                                        {lesson.file_name || lesson.video_url.split("/").pop() || "Vidéo téléversée"}
+                                      </p>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                          Téléversé avec succès sur Bunny.net CDN (100%)
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                                      onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
+                                    >
+                                      Remplacer
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 text-xs text-destructive hover:text-destructive"
+                                      onClick={async () => {
+                                        if (lesson.bunny_path) {
+                                          await deleteFromBunny(lesson.bunny_path, "files");
+                                        }
+                                        updateLesson(lesson.id, {
+                                          video_url: "",
+                                          bunny_path: undefined,
+                                          file_name: undefined,
+                                          file_size: undefined,
+                                          progress: 0,
+                                          isUploading: false,
+                                          error: undefined,
+                                        });
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : lesson.error ? (
+                                /* Error state */
+                                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3.5 space-y-2">
+                                  <div className="flex items-center gap-2 text-destructive text-xs font-semibold">
+                                    <AlertCircle className="h-4 w-4 shrink-0" />
+                                    <span>Échec de l'upload : {lesson.error}</span>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
+                                  >
+                                    Réessayer le téléversement
+                                  </Button>
+                                </div>
+                              ) : (
+                                /* Empty state / Dropzone */
+                                <div
+                                  className="rounded-xl border-2 border-dashed border-border bg-secondary/30 hover:bg-secondary/50 p-6 text-center cursor-pointer hover:border-primary/50 transition-all"
+                                  onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
+                                >
+                                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2 text-primary">
+                                    <Upload className="h-4 w-4" />
+                                  </div>
+                                  <p className="text-xs font-semibold text-foreground">
+                                    Cliquez pour choisir et uploader la vidéo
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    MP4, WebM, MOV (jusqu'à 500 Mo)
+                                  </p>
+                                  <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[10px] font-medium text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
+                                    <Cloud className="h-3 w-3 text-sky-500" />
+                                    <span>Stockage haute vitesse Bunny.net CDN</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <input
+                                id={`lesson-video-${lesson.id}`}
+                                type="file"
+                                accept="video/mp4,video/webm,video/quicktime,video/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleVideoSelect(lesson.id, f);
+                                  e.target.value = "";
+                                }}
+                              />
                             </div>
                           )}
 
