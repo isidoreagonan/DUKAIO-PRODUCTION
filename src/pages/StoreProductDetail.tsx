@@ -462,12 +462,22 @@ export default function StoreProductDetail() {
               </p>
             )}
 
-            {/* Primary Action Button « Je le veux » (SOLID BLACK, EXACT IMAGE 2) */}
+            {/* Primary Action Button « Je le veux » (dynamically styled with shop accent & button style) */}
             <button
               type="button"
               onClick={handleBuy}
-              style={{ borderRadius: "var(--shop-radius, 12px)" }}
-              className="mt-6 h-[52px] w-full bg-[#18181B] text-white text-[15px] font-bold hover:bg-black active:scale-[0.99] shadow-sm flex items-center justify-center transition-all"
+              style={{
+                borderRadius: "var(--shop-radius, 12px)",
+                backgroundColor:
+                  themeConfig.appearance.buttons === "solid" ? "var(--shop-accent)" : "transparent",
+                color:
+                  themeConfig.appearance.buttons === "solid"
+                    ? "var(--shop-accent-foreground)"
+                    : "var(--shop-text)",
+                borderColor:
+                  themeConfig.appearance.buttons === "solid" ? "transparent" : "var(--shop-accent)",
+              }}
+              className="mt-6 h-[52px] w-full text-[15px] font-bold border shadow-xs flex items-center justify-center transition-all hover:opacity-90 active:scale-[0.99]"
             >
               Je le veux
             </button>
@@ -686,8 +696,18 @@ export default function StoreProductDetail() {
         <button
           type="button"
           onClick={handleBuy}
-          style={{ borderRadius: "var(--shop-radius, 12px)" }}
-          className="h-11 bg-[#18181B] px-6 text-sm font-bold text-white shadow-sm hover:bg-black active:scale-95 transition-all"
+          style={{
+            borderRadius: "var(--shop-radius, 12px)",
+            backgroundColor:
+              themeConfig.appearance.buttons === "solid" ? "var(--shop-accent)" : "transparent",
+            color:
+              themeConfig.appearance.buttons === "solid"
+                ? "var(--shop-accent-foreground)"
+                : "var(--shop-text)",
+            borderColor:
+              themeConfig.appearance.buttons === "solid" ? "transparent" : "var(--shop-accent)",
+          }}
+          className="h-11 px-6 text-sm font-bold border shadow-xs transition-all hover:opacity-90 active:scale-95"
         >
           Je le veux
         </button>
