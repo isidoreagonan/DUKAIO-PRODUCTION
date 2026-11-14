@@ -18,6 +18,7 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { QuickSearchDialog } from "./QuickSearchDialog";
 import { getStoreUrl } from "@/lib/subdomain";
 import UserAvatar from "@/components/UserAvatar";
+import NotificationBell from "./NotificationBell";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -245,7 +246,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </div>
 
-              {/* Nova IA Button (Flower / AI style) */}
+              {/* 1. Nova IA Button (Flower / AI style) */}
               <button
                 onClick={() => navigate("/dashboard/nova")}
                 aria-label="Nova IA"
@@ -255,7 +256,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Sparkles className="h-4 w-4 stroke-[2]" />
               </button>
 
-              {/* Quick Add Product button [+] */}
+              {/* 2. Quick Add Product button [+] */}
               <button
                 onClick={() => navigate("/dashboard/products/new")}
                 aria-label="Nouveau produit"
@@ -265,31 +266,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Plus className="h-4 w-4 stroke-[2.5]" />
               </button>
 
-              {/* Theme switch (Eye / Moon / Sun) */}
-              <button
-                onClick={toggleTheme}
-                aria-label="Mode sombre/clair"
-                className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                title="Changer de thème"
-              >
-                {isDark ? (
-                  <Sun className="h-3.5 w-3.5 text-amber-500" />
-                ) : (
-                  <Moon className="h-3.5 w-3.5 text-slate-500" />
-                )}
-              </button>
+              {/* 3. Notification Bell (with realtime badge and expandable dropdown) */}
+              <NotificationBell />
 
-              {/* Grid / Tous les outils */}
-              <button
-                onClick={() => navigate("/dashboard/menu")}
-                aria-label="Tous les outils"
-                className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] border border-border/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                title="Tous les outils"
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </button>
-
-              {/* Profile Avatar */}
+              {/* 4. Profile Avatar */}
               <button
                 onClick={() => navigate("/dashboard/profile")}
                 aria-label="Mon profil"
@@ -347,19 +327,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Search className="h-4 w-4" />
             </button>
 
-            {/* 2. Theme / Mode sombre (grey circle) */}
-            <button
-              onClick={toggleTheme}
-              aria-label="Changer de thème"
-              className="h-8 w-8 rounded-full bg-[#F4F6F8] dark:bg-[#1E2536] flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
-              title="Thème"
-            >
-              {isDark ? (
-                <Sun className="h-4 w-4 text-amber-500" />
-              ) : (
-                <Moon className="h-4 w-4 text-slate-500" />
-              )}
-            </button>
+            {/* 2. Notifications en temps réel */}
+            <NotificationBell />
 
             {/* 3. Nova IA (purple flower circle) */}
             <button
