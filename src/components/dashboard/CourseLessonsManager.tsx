@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
 import {
   Plus, Trash2, GripVertical, Video, Upload, Link,
@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadToBunny, deleteFromBunny } from "@/lib/bunnyStorage";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface Lesson {
@@ -35,6 +36,14 @@ interface CourseLessonsManagerProps {
   onLessonsChange: (lessons: Lesson[]) => void;
 }
 
+interface UploadState {
+  isUploading: boolean;
+  progress: number;
+  fileName: string;
+  fileSize?: number;
+  error?: string;
+}
+
 const createLesson = (position: number): Lesson => ({
   id: crypto.randomUUID(),
   title: "",
@@ -57,32 +66,45 @@ const formatFileSize = (bytes?: number) => {
 const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManagerProps) => {
   const { user } = useAuth();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [uploadMap, setUploadMap] = useState<Record<string, UploadState>>({});
+
+  // Use a ref to guarantee closures always access the latest lessons array
+  const lessonsRef = useRef<Lesson[]>(lessons);
+  useEffect(() => {
+    lessonsRef.current = lessons;
+  }, [lessons]);
+
+  const updateLesson = (id: string, changes: Partial<Lesson>) => {
+    const updated = lessonsRef.current.map(l => l.id === id ? { ...l, ...changes } : l);
+    lessonsRef.current = updated;
+    onLessonsChange(updated);
+  };
 
   const addLesson = () => {
     const newLesson = createLesson(lessons.length);
-    const updated = [...lessons, newLesson];
+    const updated = [...lessonsRef.current, newLesson];
+    lessonsRef.current = updated;
     onLessonsChange(updated);
     setExpandedId(newLesson.id);
   };
 
-  const updateLesson = (id: string, changes: Partial<Lesson>) => {
-    onLessonsChange(lessons.map(l => l.id === id ? { ...l, ...changes } : l));
-  };
-
   const removeLesson = async (id: string) => {
-    const target = lessons.find(l => l.id === id);
+    const target = lessonsRef.current.find(l => l.id === id);
     if (target?.bunny_path) {
       await deleteFromBunny(target.bunny_path, "files");
     }
-    const updated = lessons
+    const updated = lessonsRef.current
       .filter(l => l.id !== id)
       .map((l, i) => ({ ...l, position: i }));
+    lessonsRef.current = updated;
     onLessonsChange(updated);
     if (expandedId === id) setExpandedId(null);
   };
 
   const handleReorder = (reordered: Lesson[]) => {
-    onLessonsChange(reordered.map((l, i) => ({ ...l, position: i })));
+    const updated = reordered.map((l, i) => ({ ...l, position: i }));
+    lessonsRef.current = updated;
+    onLessonsChange(updated);
   };
 
   const toggleExpand = (id: string) => {
@@ -99,10 +121,19 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
       return;
     }
 
-    const cleanExt = (file.name.split(".").pop() || "mp4").toLowerCase();
-    const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const bunnyPath = `courses/${user?.id || "anonymous"}/${Date.now()}_${cleanName}`;
+    // Set local state to prevent disappearance
+    setUploadMap(prev => ({
+      ...prev,
+      [lessonId]: {
+        isUploading: true,
+        progress: 0,
+        fileName: file.name,
+        fileSize: file.size,
+        error: undefined,
+      }
+    }));
 
+    // Update parent lesson state
     updateLesson(lessonId, {
       isUploading: true,
       progress: 0,
@@ -112,8 +143,39 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
     });
 
     try {
-      const res = await uploadToBunny(file, bunnyPath, "files", (percent) => {
-        updateLesson(lessonId, { progress: percent });
+      let currentUserId = user?.id;
+      if (!currentUserId) {
+        const { data } = await supabase.auth.getUser();
+        currentUserId = data?.user?.id || "anonymous";
+      }
+
+      const cleanName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const storagePath = `courses/${currentUserId}/${Date.now()}_${cleanName}`;
+
+      const res = await uploadToBunny(file, storagePath, "files", (percent) => {
+        setUploadMap(prev => {
+          if (!prev[lessonId]) return prev;
+          return {
+            ...prev,
+            [lessonId]: {
+              ...prev[lessonId],
+              progress: percent,
+              isUploading: true,
+            }
+          };
+        });
+
+        updateLesson(lessonId, {
+          isUploading: true,
+          progress: percent,
+        });
+      });
+
+      // Succeeded
+      setUploadMap(prev => {
+        const next = { ...prev };
+        delete next[lessonId];
+        return next;
       });
 
       updateLesson(lessonId, {
@@ -121,16 +183,33 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
         progress: 100,
         video_url: res.url,
         bunny_path: res.path,
+        file_name: file.name,
+        file_size: file.size,
         file: null,
+        error: undefined,
       });
-      toast.success(`Vidéo "${file.name}" téléversée avec succès sur Bunny.net CDN !`);
+
+      toast.success(`Vidéo "${file.name}" téléversée avec succès !`);
     } catch (err: any) {
       console.error("[CourseLessonsManager] Video upload error:", err);
+      const errMsg = err.message || "Erreur de connexion lors du téléversement";
+
+      setUploadMap(prev => ({
+        ...prev,
+        [lessonId]: {
+          isUploading: false,
+          progress: 0,
+          fileName: file.name,
+          error: errMsg,
+        }
+      }));
+
       updateLesson(lessonId, {
         isUploading: false,
-        error: err.message || "Erreur de téléversement",
+        error: errMsg,
       });
-      toast.error(`Échec du téléversement : ${err.message || "Erreur de connexion"}`);
+
+      toast.error(`Échec du téléversement : ${errMsg}`);
     }
   };
 
@@ -172,311 +251,320 @@ const CourseLessonsManager = ({ lessons, onLessonsChange }: CourseLessonsManager
           className="space-y-2"
         >
           <AnimatePresence initial={false}>
-            {lessons.map((lesson, index) => (
-              <Reorder.Item
-                key={lesson.id}
-                value={lesson}
-                className="list-none"
-              >
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-xl border border-border bg-card overflow-hidden"
+            {lessons.map((lesson, index) => {
+              const uploadInfo = uploadMap[lesson.id];
+              const isUploading = uploadInfo?.isUploading || lesson.isUploading;
+              const uploadProgress = uploadInfo?.progress ?? lesson.progress ?? 0;
+              const uploadFileName = uploadInfo?.fileName || lesson.file_name;
+              const uploadFileSize = uploadInfo?.fileSize || lesson.file_size;
+              const uploadError = uploadInfo?.error || lesson.error;
+
+              return (
+                <Reorder.Item
+                  key={lesson.id}
+                  value={lesson}
+                  className="list-none"
                 >
-                  {/* Header row */}
-                  <div className="flex items-center gap-2 p-3">
-                    <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors">
-                      <GripVertical className="h-4 w-4" />
-                    </div>
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="rounded-xl border border-border bg-card overflow-hidden"
+                  >
+                    {/* Header row */}
+                    <div className="flex items-center gap-2 p-3">
+                      <div className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors">
+                        <GripVertical className="h-4 w-4" />
+                      </div>
 
-                    <div className="h-7 w-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{index + 1}</span>
-                    </div>
+                      <div className="h-7 w-7 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{index + 1}</span>
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      {expandedId === lesson.id ? (
-                        <Input
-                          value={lesson.title}
-                          onChange={(e) => updateLesson(lesson.id, { title: e.target.value })}
-                          placeholder="Titre de la leçon"
-                          className="h-8 text-sm"
-                          autoFocus
-                        />
-                      ) : (
-                        <div
-                          className="flex items-center gap-2 cursor-pointer"
+                      <div className="flex-1 min-w-0">
+                        {expandedId === lesson.id ? (
+                          <Input
+                            value={lesson.title}
+                            onChange={(e) => updateLesson(lesson.id, { title: e.target.value })}
+                            placeholder="Titre de la leçon"
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                        ) : (
+                          <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            onClick={() => toggleExpand(lesson.id)}
+                          >
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {lesson.title || <span className="text-muted-foreground italic">Sans titre</span>}
+                            </p>
+                            {isUploading && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full shrink-0">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                {uploadProgress}%
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        {lesson.video_url && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1" title="Vidéo configurée">
+                            <Video className="h-3 w-3 text-emerald-500" />
+                          </span>
+                        )}
+                        {lesson.duration_minutes && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {lesson.duration_minutes}min
+                          </span>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
                           onClick={() => toggleExpand(lesson.id)}
                         >
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {lesson.title || <span className="text-muted-foreground italic">Sans titre</span>}
-                          </p>
-                          {lesson.isUploading && (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full shrink-0">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              {lesson.progress || 0}%
-                            </span>
+                          {expandedId === lesson.id ? (
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronDown className="h-3.5 w-3.5" />
                           )}
-                        </div>
-                      )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => removeLesson(lesson.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
-                      {lesson.video_url && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1" title="Vidéo configurée">
-                          <Video className="h-3 w-3 text-emerald-500" />
-                        </span>
-                      )}
-                      {lesson.duration_minutes && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {lesson.duration_minutes}min
-                        </span>
-                      )}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => toggleExpand(lesson.id)}
-                      >
-                        {expandedId === lesson.id ? (
-                          <ChevronUp className="h-3.5 w-3.5" />
-                        ) : (
-                          <ChevronDown className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => removeLesson(lesson.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Expanded content */}
-                  <AnimatePresence>
-                    {expandedId === lesson.id && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-3 pb-4 space-y-4 border-t border-border pt-3">
-                          {/* Description */}
-                          <div>
-                            <label className="text-xs font-medium text-foreground mb-1 block">Description (optionnel)</label>
-                            <Input
-                              value={lesson.description}
-                              onChange={(e) => updateLesson(lesson.id, { description: e.target.value })}
-                              placeholder="Brève description de la leçon"
-                              className="h-9 text-sm"
-                            />
-                          </div>
-
-                          {/* Video type selector */}
-                          <div>
-                            <label className="text-xs font-medium text-foreground mb-1 block">Type de contenu vidéo</label>
-                            <Select
-                              value={lesson.video_type}
-                              onValueChange={(v) => updateLesson(lesson.id, { video_type: v as "external" | "upload", video_url: "", file: null, error: undefined })}
-                            >
-                              <SelectTrigger className="h-9 text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="external">
-                                  <span className="flex items-center gap-2"><Link className="h-3.5 w-3.5" /> Lien externe (YouTube, Vimeo…)</span>
-                                </SelectItem>
-                                <SelectItem value="upload">
-                                  <span className="flex items-center gap-2"><Upload className="h-3.5 w-3.5" /> Upload vidéo (Bunny.net CDN)</span>
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {/* Video input */}
-                          {lesson.video_type === "external" ? (
+                    {/* Expanded content */}
+                    <AnimatePresence>
+                      {expandedId === lesson.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-3 pb-4 space-y-4 border-t border-border pt-3">
+                            {/* Description */}
                             <div>
-                              <label className="text-xs font-medium text-foreground mb-1 block">URL de la vidéo</label>
+                              <label className="text-xs font-medium text-foreground mb-1 block">Description (optionnel)</label>
                               <Input
-                                value={lesson.video_url}
-                                onChange={(e) => updateLesson(lesson.id, { video_url: e.target.value })}
-                                placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
+                                value={lesson.description}
+                                onChange={(e) => updateLesson(lesson.id, { description: e.target.value })}
+                                placeholder="Brève description de la leçon"
                                 className="h-9 text-sm"
                               />
                             </div>
-                          ) : (
-                            <div>
-                              <div className="flex items-center justify-between mb-1.5">
-                                <label className="text-xs font-medium text-foreground">Fichier vidéo</label>
-                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                                  <Cloud className="h-3 w-3 text-sky-500" />
-                                  <span>Bunny.net CDN</span>
-                                </span>
-                              </div>
 
-                              {/* Upload in progress state */}
-                              {lesson.isUploading ? (
-                                <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-2.5">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                      <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
-                                        <Loader2 className="h-4 w-4 animate-spin text-amber-600 dark:text-amber-400" />
+                            {/* Video type selector */}
+                            <div>
+                              <label className="text-xs font-medium text-foreground mb-1 block">Type de contenu vidéo</label>
+                              <Select
+                                value={lesson.video_type}
+                                onValueChange={(v) => updateLesson(lesson.id, { video_type: v as "external" | "upload", video_url: "", file: null, error: undefined })}
+                              >
+                                <SelectTrigger className="h-9 text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="external">
+                                    <span className="flex items-center gap-2"><Link className="h-3.5 w-3.5" /> Lien externe (YouTube, Vimeo…)</span>
+                                  </SelectItem>
+                                  <SelectItem value="upload">
+                                    <span className="flex items-center gap-2"><Upload className="h-3.5 w-3.5" /> Upload vidéo direct</span>
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {/* Video input */}
+                            {lesson.video_type === "external" ? (
+                              <div>
+                                <label className="text-xs font-medium text-foreground mb-1 block">URL de la vidéo</label>
+                                <Input
+                                  value={lesson.video_url}
+                                  onChange={(e) => updateLesson(lesson.id, { video_url: e.target.value })}
+                                  placeholder="https://youtube.com/watch?v=... ou https://vimeo.com/..."
+                                  className="h-9 text-sm"
+                                />
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <label className="text-xs font-medium text-foreground">Fichier vidéo</label>
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                    <Cloud className="h-3 w-3 text-blue-500" />
+                                    <span>Hébergement cloud sécurisé</span>
+                                  </span>
+                                </div>
+
+                                {/* Upload in progress state */}
+                                {isUploading ? (
+                                  <div className="rounded-lg border border-blue-200 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-950/20 p-3 space-y-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <div className="h-7 w-7 rounded-md bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center shrink-0">
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-semibold text-foreground truncate">
+                                            {uploadFileName || "Vidéo en cours"}
+                                          </p>
+                                          <p className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                                            Téléversement en cours...
+                                            {uploadFileSize ? ` (${formatFileSize(uploadFileSize)})` : ""}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                                        {uploadProgress}%
+                                      </span>
+                                    </div>
+
+                                    <Progress value={uploadProgress} className="h-1.5 w-full bg-blue-100 dark:bg-blue-900/40" />
+
+                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                                      <span className="italic">Ne quittez pas la page pendant le transfert</span>
+                                      <span className="font-semibold text-foreground">{uploadProgress}% / 100%</span>
+                                    </div>
+                                  </div>
+                                ) : lesson.video_url && !uploadError ? (
+                                  /* Uploaded state */
+                                  <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20 p-2.5 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className="h-7 w-7 rounded-md bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                                        <Film className="h-3.5 w-3.5" />
                                       </div>
                                       <div className="min-w-0">
                                         <p className="text-xs font-semibold text-foreground truncate">
-                                          {lesson.file_name || "Vidéo en cours"}
+                                          {uploadFileName || lesson.file_name || lesson.video_url.split("/").pop() || "Vidéo téléversée"}
                                         </p>
-                                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                                          Téléversement vers Bunny.net CDN en cours...
-                                          {lesson.file_size ? ` (${formatFileSize(lesson.file_size)})` : ""}
-                                        </p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                          <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                            Vidéo téléversée avec succès (100%)
+                                          </span>
+                                        </div>
                                       </div>
                                     </div>
-                                    <span className="text-base font-bold text-amber-600 dark:text-amber-400 shrink-0">
-                                      {lesson.progress || 0}%
-                                    </span>
-                                  </div>
-
-                                  <Progress value={lesson.progress || 0} className="h-2 w-full bg-amber-200/60 dark:bg-amber-900/40" />
-
-                                  <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                                    <span className="italic">Ne quittez pas la page pendant le transfert</span>
-                                    <span className="font-mono font-bold text-foreground">{lesson.progress || 0}% / 100%</span>
-                                  </div>
-                                </div>
-                              ) : lesson.video_url && !lesson.isUploading ? (
-                                /* Uploaded state */
-                                <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                                      <Film className="h-4 w-4" />
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                        onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
+                                      >
+                                        Remplacer
+                                      </Button>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                        onClick={async () => {
+                                          if (lesson.bunny_path) {
+                                            await deleteFromBunny(lesson.bunny_path, "files");
+                                          }
+                                          updateLesson(lesson.id, {
+                                            video_url: "",
+                                            bunny_path: undefined,
+                                            file_name: undefined,
+                                            file_size: undefined,
+                                            progress: 0,
+                                            isUploading: false,
+                                            error: undefined,
+                                          });
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
                                     </div>
-                                    <div className="min-w-0">
-                                      <p className="text-xs font-semibold text-foreground truncate">
-                                        {lesson.file_name || lesson.video_url.split("/").pop() || "Vidéo téléversée"}
-                                      </p>
-                                      <div className="flex items-center gap-1.5 mt-0.5">
-                                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                                        <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                                          Téléversé avec succès sur Bunny.net CDN (100%)
-                                        </span>
-                                      </div>
-                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-1 shrink-0">
+                                ) : uploadError ? (
+                                  /* Error state */
+                                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2.5 space-y-2">
+                                    <div className="flex items-center gap-2 text-destructive text-xs font-semibold">
+                                      <AlertCircle className="h-4 w-4 shrink-0" />
+                                      <span>Échec du téléversement : {uploadError}</span>
+                                    </div>
                                     <Button
                                       type="button"
-                                      variant="ghost"
+                                      variant="outline"
                                       size="sm"
-                                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                                      className="h-7 text-xs"
                                       onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
                                     >
-                                      Remplacer
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 text-xs text-destructive hover:text-destructive"
-                                      onClick={async () => {
-                                        if (lesson.bunny_path) {
-                                          await deleteFromBunny(lesson.bunny_path, "files");
-                                        }
-                                        updateLesson(lesson.id, {
-                                          video_url: "",
-                                          bunny_path: undefined,
-                                          file_name: undefined,
-                                          file_size: undefined,
-                                          progress: 0,
-                                          isUploading: false,
-                                          error: undefined,
-                                        });
-                                      }}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
+                                      Réessayer le téléversement
                                     </Button>
                                   </div>
-                                </div>
-                              ) : lesson.error ? (
-                                /* Error state */
-                                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3.5 space-y-2">
-                                  <div className="flex items-center gap-2 text-destructive text-xs font-semibold">
-                                    <AlertCircle className="h-4 w-4 shrink-0" />
-                                    <span>Échec de l'upload : {lesson.error}</span>
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs"
+                                ) : (
+                                  /* Empty state / Dropzone */
+                                  <div
+                                    className="rounded-lg border-2 border-dashed border-border bg-secondary/20 hover:bg-secondary/40 p-5 text-center cursor-pointer hover:border-primary/50 transition-all"
                                     onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
                                   >
-                                    Réessayer le téléversement
-                                  </Button>
-                                </div>
-                              ) : (
-                                /* Empty state / Dropzone */
-                                <div
-                                  className="rounded-xl border-2 border-dashed border-border bg-secondary/30 hover:bg-secondary/50 p-6 text-center cursor-pointer hover:border-primary/50 transition-all"
-                                  onClick={() => document.getElementById(`lesson-video-${lesson.id}`)?.click()}
-                                >
-                                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2 text-primary">
-                                    <Upload className="h-4 w-4" />
+                                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-1.5 text-primary">
+                                      <Upload className="h-4 w-4" />
+                                    </div>
+                                    <p className="text-xs font-semibold text-foreground">
+                                      Cliquez pour choisir et uploader la vidéo
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                                      MP4, WebM, MOV (jusqu'à 500 Mo)
+                                    </p>
+                                    <div className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-full bg-blue-50/60 dark:bg-blue-950/40 text-[10px] font-medium text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
+                                      <Cloud className="h-3 w-3 text-blue-500" />
+                                      <span>Hébergement vidéo haute vitesse</span>
+                                    </div>
                                   </div>
-                                  <p className="text-xs font-semibold text-foreground">
-                                    Cliquez pour choisir et uploader la vidéo
-                                  </p>
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                                    MP4, WebM, MOV (jusqu'à 500 Mo)
-                                  </p>
-                                  <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-[10px] font-medium text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/50">
-                                    <Cloud className="h-3 w-3 text-sky-500" />
-                                    <span>Stockage haute vitesse Bunny.net CDN</span>
-                                  </div>
-                                </div>
-                              )}
+                                )}
 
-                              <input
-                                id={`lesson-video-${lesson.id}`}
-                                type="file"
-                                accept="video/mp4,video/webm,video/quicktime,video/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const f = e.target.files?.[0];
-                                  if (f) handleVideoSelect(lesson.id, f);
-                                  e.target.value = "";
-                                }}
+                                <input
+                                  id={`lesson-video-${lesson.id}`}
+                                  type="file"
+                                  accept="video/mp4,video/webm,video/quicktime,video/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const f = e.target.files?.[0];
+                                    if (f) handleVideoSelect(lesson.id, f);
+                                    e.target.value = "";
+                                  }}
+                                />
+                              </div>
+                            )}
+
+                            {/* Duration */}
+                            <div>
+                              <label className="text-xs font-medium text-foreground mb-1 block">Durée (minutes)</label>
+                              <Input
+                                type="number"
+                                value={lesson.duration_minutes ?? ""}
+                                onChange={(e) => updateLesson(lesson.id, { duration_minutes: e.target.value ? parseInt(e.target.value) : null })}
+                                placeholder="Ex: 15"
+                                className="h-9 text-sm w-32"
+                                min="0"
                               />
                             </div>
-                          )}
-
-                          {/* Duration */}
-                          <div>
-                            <label className="text-xs font-medium text-foreground mb-1 block">Durée (minutes)</label>
-                            <Input
-                              type="number"
-                              value={lesson.duration_minutes ?? ""}
-                              onChange={(e) => updateLesson(lesson.id, { duration_minutes: e.target.value ? parseInt(e.target.value) : null })}
-                              placeholder="Ex: 15"
-                              className="h-9 text-sm w-32"
-                              min="0"
-                            />
                           </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </Reorder.Item>
-            ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                </Reorder.Item>
+              );
+            })}
           </AnimatePresence>
         </Reorder.Group>
       )}

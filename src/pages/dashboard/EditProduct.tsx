@@ -277,8 +277,13 @@ const EditProduct = () => {
     folder: string,
     onProgress: (progress: number) => void
   ): Promise<{ url: string; path: string } | null> => {
+    let currentUserId = user?.id;
+    if (!currentUserId) {
+      const { data } = await supabase.auth.getUser();
+      currentUserId = data?.user?.id || "anonymous";
+    }
     const ext = file.name.split(".").pop();
-    const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
+    const path = `${folder}/${currentUserId}/${Date.now()}.${ext}`;
     const isPublic = folder === "thumbnails" || folder === "banners" || folder === "seo-images";
     const zone = isPublic ? "media" : "files";
 
@@ -286,7 +291,7 @@ const EditProduct = () => {
       const res = await uploadToBunny(file, path, zone, onProgress);
       return { url: res.url, path: res.path };
     } catch (err: any) {
-      toast.error(`Erreur upload: ${err.message}`);
+      toast.error(`Erreur téléversement : ${err.message || "Échec de connexion"}`);
       return null;
     }
   };
@@ -906,24 +911,24 @@ const EditProduct = () => {
                         {uploadedFiles.length > 0 && (
                           <div className="space-y-3">
                             {uploadedFiles.map((uf, idx) => (
-                              <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border bg-card shadow-xs">
+                              <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-card">
                                 <div className="flex-1 min-w-0 mr-4">
-                                  <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
+                                  <p className="text-xs font-semibold truncate text-foreground">{uf.name}</p>
                                   {uf.isUploading ? (
-                                    <div className="mt-2 space-y-1.5">
-                                      <div className="flex items-center justify-between text-xs">
-                                        <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                                    <div className="mt-1.5 space-y-1">
+                                      <div className="flex items-center justify-between text-[11px]">
+                                        <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1.5">
                                           <Loader2 className="h-3 w-3 animate-spin" />
-                                          Téléversement vers Bunny.net CDN en cours...
+                                          Téléversement en cours...
                                         </span>
-                                        <span className="font-bold text-foreground">{uf.progress}%</span>
+                                        <span className="font-semibold text-blue-600 dark:text-blue-400">{uf.progress}%</span>
                                       </div>
-                                      <Progress value={uf.progress} className="h-2 w-full bg-amber-100 dark:bg-amber-950/40" />
+                                      <Progress value={uf.progress} className="h-1.5 w-full bg-blue-100 dark:bg-blue-900/40" />
                                     </div>
                                   ) : (
                                     <div className="mt-1 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                                       <CheckCircle2 className="h-3.5 w-3.5" />
-                                      <span>Téléversé et sécurisé sur Bunny.net CDN</span>
+                                      <span>Téléversé et sécurisé</span>
                                     </div>
                                   )}
                                 </div>
@@ -1308,7 +1313,7 @@ const EditProduct = () => {
             {/* Save button */}
             <div className="flex items-center justify-end gap-3 mt-4">
               {isAnyFileUploading && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1.5">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   Veuillez attendre la fin des téléversements pour enregistrer.
                 </p>

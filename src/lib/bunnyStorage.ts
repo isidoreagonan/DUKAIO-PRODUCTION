@@ -44,7 +44,7 @@ export async function uploadToBunny(
   });
 
   if (response.status !== 200 || !response.data?.url) {
-    throw new Error(response.data?.error || "Échec de l'upload sur Bunny.net");
+    throw new Error(response.data?.error || "Échec du téléversement du fichier");
   }
 
   return {

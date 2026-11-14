@@ -270,11 +270,17 @@ const CreateProduct = () => {
   ): Promise<{ url: string; path: string } | null> => {
     const isPublicMedia = folder === "thumbnails" || folder === "banners" || folder === "seo-images";
 
+    let currentUserId = user?.id;
+    if (!currentUserId) {
+      const { data } = await supabase.auth.getUser();
+      currentUserId = data?.user?.id || "anonymous";
+    }
+
     // Media assets (Thumbnails, Covers, SEO images, Banners) are stored on Supabase Storage (100GB plan)
     if (isPublicMedia) {
       const ext = file.name.split(".").pop() || "jpg";
       const cleanExt = ext.toLowerCase().replace(/[^a-z0-9]/g, "");
-      const path = `${user!.id}/${folder}_${Date.now()}.${cleanExt}`;
+      const path = `${currentUserId}/${folder}_${Date.now()}.${cleanExt}`;
 
       try {
         const { error: uploadErr } = await supabase.storage
@@ -307,15 +313,15 @@ const CreateProduct = () => {
       }
     }
 
-    // Heavy downloadable product files (zip, software, courses, videos) are stored on Bunny.net
+    // Heavy downloadable product files (zip, software, courses, videos)
     const ext = file.name.split(".").pop();
-    const path = `${folder}/${user!.id}/${Date.now()}.${ext}`;
+    const path = `${folder}/${currentUserId}/${Date.now()}.${ext}`;
 
     try {
       const res = await uploadToBunny(file, path, "files", onProgress);
       return { url: res.url, path: res.path };
     } catch (err: any) {
-      toast.error(`Erreur upload fichier produit: ${err.message}`);
+      toast.error(`Erreur téléversement fichier : ${err.message || "Échec"}`);
       return null;
     }
   };
@@ -494,29 +500,29 @@ const CreateProduct = () => {
               {uploadedFiles.length > 0 && (
                 <div className="space-y-3">
                   {uploadedFiles.map((uf, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl border bg-card shadow-xs">
+                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-card">
                       <div className="flex-1 min-w-0 mr-4">
-                        <p className="text-sm font-medium truncate text-foreground">{uf.name}</p>
+                        <p className="text-xs font-semibold truncate text-foreground">{uf.name}</p>
                         {uf.isUploading ? (
-                          <div className="mt-2 space-y-1.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                          <div className="mt-1.5 space-y-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1.5">
                                 <Loader2 className="h-3 w-3 animate-spin" />
-                                Téléversement vers Bunny.net CDN en cours...
+                                Téléversement en cours...
                               </span>
-                              <span className="font-bold text-foreground">{uf.progress}%</span>
+                              <span className="font-semibold text-blue-600 dark:text-blue-400">{uf.progress}%</span>
                             </div>
-                            <Progress value={uf.progress} className="h-2 w-full bg-amber-100 dark:bg-amber-950/40" />
+                            <Progress value={uf.progress} className="h-1.5 w-full bg-blue-100 dark:bg-blue-900/40" />
                           </div>
                         ) : (
                           <div className="mt-1 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                             <CheckCircle2 className="h-3.5 w-3.5" />
-                            <span>Téléversé et sécurisé sur Bunny.net CDN</span>
+                            <span>Téléversé et sécurisé</span>
                           </div>
                         )}
                       </div>
                       <button
-                        className="p-2 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
+                        className="p-1.5 hover:bg-destructive/10 rounded-full text-destructive transition-colors"
                         onClick={async () => {
                           if (uf.path) {
                             await deleteFileFromR2(uf.path, false);
@@ -524,16 +530,16 @@ const CreateProduct = () => {
                           setUploadedFiles(prev => prev.filter(f => f.name !== uf.name));
                         }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                       </button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-            <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
-                <Shield className="h-4 w-4" />
+            <div className="mt-4 p-2.5 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40">
+              <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-400 font-medium">
+                <Shield className="h-3.5 w-3.5" />
                 <span>Téléchargement sécurisé avec liens temporaires</span>
               </div>
             </div>
