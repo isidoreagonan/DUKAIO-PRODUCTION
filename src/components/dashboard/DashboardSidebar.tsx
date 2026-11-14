@@ -138,9 +138,8 @@ export function DashboardSidebar({
   return (
     <TooltipProvider delayDuration={80}>
       <aside
-        className={`h-full rounded-[22px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] shadow-[0_2px_16px_rgba(0,0,0,0.03)] dark:shadow-none p-2.5 flex flex-col justify-between select-none transition-all duration-300 ease-in-out relative ${
-          isCollapsed ? "w-[60px]" : isMobile ? "w-[240px]" : "w-[220px]"
-        }`}
+        className={`h-full rounded-[22px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] shadow-[0_2px_16px_rgba(0,0,0,0.03)] dark:shadow-none p-2.5 flex flex-col justify-between select-none transition-all duration-300 ease-in-out relative ${isCollapsed ? "w-[60px]" : isMobile ? "w-[240px]" : "w-[220px]"
+          }`}
       >
         {/* Top: Header / Store selector / Toggle Button */}
         <div>
@@ -185,9 +184,8 @@ export function DashboardSidebar({
                         setActiveStoreId(store.id);
                         onNavigate?.();
                       }}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer ${
-                        store.id === activeStore?.id ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
-                      }`}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer ${store.id === activeStore?.id ? "bg-primary/10 text-primary font-semibold" : "text-foreground"
+                        }`}
                     >
                       <div className="h-5 w-5 rounded bg-secondary text-primary border border-border flex items-center justify-center font-bold text-[10px] shrink-0">
                         {(store.name?.charAt(0) || "D").toUpperCase()}
@@ -234,21 +232,18 @@ export function DashboardSidebar({
                   to={item.url}
                   end={item.end}
                   onClick={onNavigate}
-                  className={`group relative flex items-center h-9 rounded-xl transition-all duration-150 ${
-                    isCollapsed ? "justify-center w-9 mx-auto px-0" : "px-2 gap-2.5 w-full"
-                  } ${
-                    active
+                  className={`group relative flex items-center h-9 rounded-xl transition-all duration-150 ${isCollapsed ? "justify-center w-9 mx-auto px-0" : "px-2 gap-2.5 w-full"
+                    } ${active
                       ? "bg-[#F1F3F5] dark:bg-[#1E2536] text-[#0F172A] dark:text-[#F8FAFC] font-semibold"
                       : "text-[#475569] dark:text-[#94A3B8] hover:bg-[#F8FAFC] dark:hover:bg-[#1A2234] hover:text-foreground font-medium"
-                  }`}
+                    }`}
                 >
                   {/* Clean slim icon badge */}
                   <div
-                    className={`h-7 w-7 rounded-[9px] flex items-center justify-center shrink-0 transition-colors ${
-                      active
+                    className={`h-7 w-7 rounded-[9px] flex items-center justify-center shrink-0 transition-colors ${active
                         ? "bg-primary text-white shadow-2xs"
                         : "bg-secondary/70 dark:bg-[#1E2536] border border-border/70 text-foreground group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/30"
-                    }`}
+                      }`}
                   >
                     <Icon className="h-3.5 w-3.5 stroke-[2]" />
                   </div>
@@ -334,11 +329,10 @@ export function DashboardSidebar({
           {/* Profile Trigger Button */}
           <button
             onClick={() => setProfilePopoverOpen((prev) => !prev)}
-            className={`flex items-center rounded-xl hover:bg-secondary/70 transition-colors text-left outline-none ${
-              isCollapsed
+            className={`flex items-center rounded-xl hover:bg-secondary/70 transition-colors text-left outline-none ${isCollapsed
                 ? "h-9 w-9 mx-auto justify-center p-0"
                 : "w-full justify-between gap-2 p-1.5"
-            }`}
+              }`}
           >
             <div className="flex items-center gap-2 min-w-0">
               <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-amber-400 via-orange-500 to-blue-500 p-0.5 shrink-0 flex items-center justify-center">
@@ -371,9 +365,8 @@ export function DashboardSidebar({
             <div
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              className={`absolute z-50 bottom-0 ${
-                isCollapsed ? "left-[68px]" : "left-[228px]"
-              } w-[280px] rounded-[24px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] shadow-[0_16px_40px_rgba(0,0,0,0.12)] p-3.5 space-y-3 animate-in fade-in-0 zoom-in-95 duration-150`}
+              className={`absolute z-50 bottom-0 ${isCollapsed ? "left-[68px]" : "left-[228px]"
+                } w-[280px] rounded-[24px] border border-[#E2E8F0] dark:border-[#263043] bg-white dark:bg-[#151C2B] shadow-[0_16px_40px_rgba(0,0,0,0.12)] p-3.5 space-y-3 animate-in fade-in-0 zoom-in-95 duration-150`}
             >
               {/* Header: User avatar + name */}
               <div
@@ -420,9 +413,8 @@ export function DashboardSidebar({
                   {[...Array(14)].map((_, i) => (
                     <span
                       key={i}
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        i < 6 ? "bg-[#3B82F6]" : "bg-[#F97316]"
-                      }`}
+                      className={`h-1.5 w-1.5 rounded-full ${i < 6 ? "bg-[#3B82F6]" : "bg-[#F97316]"
+                        }`}
                     />
                   ))}
                 </div>
@@ -540,14 +532,12 @@ export function DashboardSidebar({
                     <span>Mode sombre</span>
                   </div>
                   <div
-                    className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      isDark ? "bg-primary" : "bg-muted-foreground/30"
-                    }`}
+                    className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isDark ? "bg-primary" : "bg-muted-foreground/30"
+                      }`}
                   >
                     <span
-                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                        isDark ? "translate-x-3" : "translate-x-0"
-                      }`}
+                      className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${isDark ? "translate-x-3" : "translate-x-0"
+                        }`}
                     />
                   </div>
                 </div>
@@ -653,9 +643,8 @@ export function DashboardSidebar({
                       {[...Array(14)].map((_, i) => (
                         <span
                           key={i}
-                          className={`h-2 w-2 rounded-full ${
-                            i < 6 ? "bg-[#3B82F6]" : "bg-[#F97316]"
-                          }`}
+                          className={`h-2 w-2 rounded-full ${i < 6 ? "bg-[#3B82F6]" : "bg-[#F97316]"
+                            }`}
                         />
                       ))}
                     </div>
@@ -727,7 +716,7 @@ export function DashboardSidebar({
                   <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
                 </button>
 
-                {/* Paramètres du compte */}
+                    {/* Paramètres du compte */}
                     <button
                       onClick={() => {
                         navigate("/dashboard/settings");
@@ -777,14 +766,12 @@ export function DashboardSidebar({
                         <span>Mode sombre</span>
                       </div>
                       <div
-                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                          isDark ? "bg-primary" : "bg-muted-foreground/30"
-                        }`}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${isDark ? "bg-primary" : "bg-muted-foreground/30"
+                          }`}
                       >
                         <span
-                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                            isDark ? "translate-x-4" : "translate-x-0"
-                          }`}
+                          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${isDark ? "translate-x-4" : "translate-x-0"
+                            }`}
                         />
                       </div>
                     </div>

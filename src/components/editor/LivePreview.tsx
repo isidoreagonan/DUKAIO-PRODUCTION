@@ -11,46 +11,86 @@ const deviceSizes: Record<PreviewDevice, { width: number; label: string }> = {
   desktop: { width: 1280, label: "Ordinateur" },
 };
 
-const defaultDemoProducts: StorefrontProduct[] = [
+export const defaultDemoProducts: StorefrontProduct[] = [
   {
     id: "demo-1",
-    title: "Pack Automatisation Facebook Ads & IA",
-    price: 15000,
+    title: "TikTok Ads Mastery — Vendre avec la publicité TikTok",
+    price: 5950,
     original_price: 25000,
-    thumbnail_url: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop",
+    thumbnail_url: "/images/demo/p-tiktok.jpg",
     type: "course",
-    category: "Formation",
-    sales_count: 142,
+    category: "Marketing",
+    sales_count: 1240,
   },
   {
     id: "demo-2",
-    title: "Template E-commerce Dukaio Haute Conversion",
-    price: 9000,
-    original_price: 18000,
-    thumbnail_url: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop",
-    type: "file",
-    category: "Fichier",
-    sales_count: 89,
+    title: "Formation IA Vidéo — Créer et revendre des vidéos",
+    price: 15000,
+    original_price: null,
+    thumbnail_url: "/images/demo/p-ia.jpg",
+    type: "course",
+    category: "Formation",
+    sales_count: 860,
   },
   {
     id: "demo-3",
-    title: "Guide Ultime Vente Digitale Afrique de l'Ouest",
-    price: 5000,
-    original_price: 10000,
-    thumbnail_url: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=800&auto=format&fit=crop",
+    title: "Guitare Facile — Apprendre à jouer pas à pas",
+    price: 3900,
+    original_price: 19000,
+    thumbnail_url: "/images/demo/p-guitare.jpg",
     type: "file",
     category: "Ebook",
-    sales_count: 310,
+    sales_count: 532,
   },
   {
     id: "demo-4",
-    title: "Bootcamp Closing & Vente par WhatsApp",
-    price: 25000,
-    original_price: 40000,
-    thumbnail_url: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=800&auto=format&fit=crop",
+    title: "Business en ligne — Le guide pratique complet",
+    price: 7500,
+    original_price: null,
+    thumbnail_url: "/images/demo/p-business.jpg",
+    type: "file",
+    category: "Ebook",
+    sales_count: 2105,
+  },
+  {
+    id: "demo-5",
+    title: "Pack Créatives TikTok — 120 templates prêts",
+    price: 9900,
+    original_price: 14900,
+    thumbnail_url: "/images/demo/p-tiktok.jpg",
+    type: "file",
+    category: "Marketing",
+    sales_count: 312,
+  },
+  {
+    id: "demo-6",
+    title: "Shooting produit avec l'IA — Méthode pro",
+    price: 12000,
+    original_price: null,
+    thumbnail_url: "/images/demo/p-ia.jpg",
     type: "course",
     category: "Formation",
-    sales_count: 67,
+    sales_count: 498,
+  },
+  {
+    id: "demo-7",
+    title: "Business en ligne — Édition revente PLR",
+    price: 18000,
+    original_price: 27000,
+    thumbnail_url: "/images/demo/p-business.jpg",
+    type: "license",
+    category: "PLR",
+    sales_count: 176,
+  },
+  {
+    id: "demo-8",
+    title: "Guitare Facile — Recueil de 50 morceaux",
+    price: 4500,
+    original_price: null,
+    thumbnail_url: "/images/demo/p-guitare.jpg",
+    type: "file",
+    category: "Ebook",
+    sales_count: 289,
   },
 ];
 
@@ -66,7 +106,7 @@ export function LivePreview({
   config,
   device,
   onDeviceChange,
-  products = defaultDemoProducts,
+  products = [],
   liveStoreUrl,
 }: LivePreviewProps) {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -89,6 +129,14 @@ export function LivePreview({
   const outerHeight = Math.max(480, bounds.height - 32);
   const chromeHeight = 36;
   const contentHeight = outerHeight - chromeHeight;
+
+  // When previewing, if seller has 0 or 1 product, complement with demo products to preview realistic layout
+  const displayProducts =
+    products.length === 0
+      ? defaultDemoProducts
+      : products.length < 2
+      ? [...products, ...defaultDemoProducts.slice(1)]
+      : products;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-slate-100/60 dark:bg-slate-900/40">
@@ -154,17 +202,17 @@ export function LivePreview({
           }`}
           style={{ width: outerWidth, height: outerHeight }}
         >
-          {/* Mock Browser Header */}
+          {/* Mock Browser Header (Exact Capture 3) */}
           <div className="grid h-9 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-background px-3">
             <div className="flex gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-rose-400" />
+              <span className="h-2 w-2 rounded-full bg-rose-500" />
               <span className="h-2 w-2 rounded-full bg-amber-400" />
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
             </div>
             <div className="truncate rounded-full bg-muted/80 px-3 py-0.5 text-center text-[10px] font-mono text-muted-foreground">
-              {config.slug || "boutique"}.dukaio.com
+              dukaio.com/{config.slug || "boutique"}
             </div>
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
           </div>
 
           {/* Scaled Webview Body */}
@@ -180,9 +228,10 @@ export function LivePreview({
             >
               <StorefrontView
                 config={config}
-                products={products.length > 0 ? products : defaultDemoProducts}
+                products={displayProducts}
                 sellerName={config.name || "DUKAIO"}
                 storeSlug={config.slug || "boutique"}
+                previewDevice={device}
                 isCustomizerPreview
               />
             </div>
@@ -192,4 +241,3 @@ export function LivePreview({
     </div>
   );
 }
-

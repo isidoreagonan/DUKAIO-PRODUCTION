@@ -380,15 +380,15 @@ export default function StoreProductDetail() {
 
         {/* 2-Column Product Grid (Exact Image 2) */}
         <div className="mt-5 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-          {/* Left Column: Product Image in rounded container */}
-          <div className="relative self-start overflow-hidden rounded-2xl bg-[#F3F4F6] p-4 sm:p-6 lg:p-8 flex items-center justify-center lg:sticky lg:top-24 border border-[#E5E7EB]/60">
+          {/* Left Column: Product Image in rounded container (Exact Attachment 3) */}
+          <div className="relative self-start overflow-hidden rounded-[18px] bg-[#F4F2EE] lg:sticky lg:top-24">
             <img
               src={
                 product.thumbnail_url ||
-                "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1024&auto=format&fit=crop"
+                "/images/demo/p-tiktok.jpg"
               }
               alt={product.title}
-              className="aspect-square w-full h-auto max-h-[480px] object-contain rounded-xl"
+              className="aspect-square w-full h-auto max-h-[520px] object-cover rounded-[18px]"
             />
             {discount && (
               <span className="absolute left-3.5 top-3.5 rounded-full bg-[#E86F3D] px-2.5 py-1 text-xs font-bold text-white shadow-sm">
@@ -628,15 +628,15 @@ export default function StoreProductDetail() {
                     : null;
                 return (
                   <Link key={p.id} to={getProductHref(p.id)} className="group min-w-0">
-                    <div className="relative aspect-square overflow-hidden rounded-2xl bg-[#F3F4F6] p-4 flex items-center justify-center border border-[#E5E7EB]/60">
+                    <div className="relative aspect-square overflow-hidden rounded-[14px] bg-[#F4F2EE]">
                       <img
                         src={
                           p.thumbnail_url ||
-                          "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop"
+                          "/images/demo/p-tiktok.jpg"
                         }
                         alt={p.title}
                         loading="lazy"
-                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                       />
                       {relDiscount && (
                         <span className="absolute left-2.5 top-2.5 rounded-full bg-[#E86F3D] px-2 py-0.5 text-[11px] font-bold text-white shadow-xs">

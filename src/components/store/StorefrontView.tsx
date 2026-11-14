@@ -23,6 +23,7 @@ interface StorefrontViewProps {
   storeSlug?: string;
   subSlug?: string | null;
   isCustomizerPreview?: boolean;
+  previewDevice?: "mobile" | "tablet" | "desktop";
   onProductClick?: (productId: string) => void;
   onBuyClick?: (product: StorefrontProduct) => void;
 }
@@ -34,6 +35,7 @@ export function StorefrontView({
   storeSlug = "boutique",
   subSlug = null,
   isCustomizerPreview = false,
+  previewDevice = "desktop",
   onProductClick,
   onBuyClick,
 }: StorefrontViewProps) {
@@ -47,6 +49,8 @@ export function StorefrontView({
       return [];
     }
   });
+
+  const isMobile = previewDevice === "mobile";
 
   const toggleLike = (id: string) => {
     setLiked((current) => {
@@ -113,13 +117,21 @@ export function StorefrontView({
     hero: (
       <section
         aria-label="Bandeau de la boutique"
-        className={`relative mt-4 sm:mt-6 flex items-center overflow-hidden rounded-2xl bg-[#1F2937] px-6 sm:px-12 text-white shadow-sm ${
-          config.hero.height === "compact" ? "min-h-28 sm:min-h-32" : "min-h-36 sm:min-h-44 lg:min-h-48"
+        className={`relative mt-4 flex items-center overflow-hidden rounded-2xl bg-[#1F2937] text-white shadow-sm ${
+          isMobile
+            ? "min-h-32 px-6 py-6"
+            : config.hero.height === "compact"
+            ? "min-h-28 px-6 sm:mt-6 sm:min-h-32 sm:px-12"
+            : "min-h-36 px-6 sm:mt-6 sm:min-h-44 sm:px-12 lg:min-h-48"
         }`}
       >
         {/* Glow accent */}
         <div className="absolute inset-0 bg-[radial-gradient(60%_120%_at_85%_50%,rgba(232,111,61,0.35),transparent_70%)] pointer-events-none" />
-        <h1 className="relative text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-none tracking-tight text-white">
+        <h1
+          className={`relative font-extrabold leading-none tracking-tight text-white ${
+            isMobile ? "text-3xl" : "text-3xl sm:text-5xl lg:text-6xl"
+          }`}
+        >
           {heroTitle.length > 2 ? heroTitle.slice(0, -2) : heroTitle}
           {heroTitle.length > 2 && (
             <span className="text-[#E86F3D]">{heroTitle.slice(-2)}</span>
@@ -130,9 +142,9 @@ export function StorefrontView({
     products: (
       <section aria-label="Produits" className="pt-8 sm:pt-12" id="produits">
         {/* Title & Sorting */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className={`flex flex-col gap-4 ${isMobile ? "" : "sm:flex-row sm:items-end sm:justify-between"}`}>
           <div className="min-w-0">
-            <h2 className="truncate text-2xl font-bold sm:text-3xl text-[#111827]">
+            <h2 className="text-2xl font-bold sm:text-3xl text-[#111827]">
               {config.products.title || "Tous les produits"}
             </h2>
             <p className="mt-1 text-sm text-[#74716B]">
@@ -144,7 +156,9 @@ export function StorefrontView({
             aria-label="Trier les produits"
             value={sort}
             onChange={(event) => setSort(event.target.value)}
-            className="h-10 w-full rounded-full border border-[#E7E3DC] bg-[#FCFBF9] px-4 text-sm text-[#20201F] outline-none focus:border-[#18181B] sm:w-auto font-medium"
+            className={`h-11 rounded-full border border-[#E7E3DC] bg-[#FCFBF9] px-4 text-sm text-[#20201F] outline-none focus:border-[#18181B] font-medium ${
+              isMobile ? "w-full mt-2" : "w-full sm:w-auto"
+            }`}
           >
             <option value="recent">Les plus récents</option>
             <option value="pop">Les plus vendus</option>
@@ -153,9 +167,13 @@ export function StorefrontView({
           </select>
         </div>
 
-        {/* Search for mobile */}
+        {/* Search for mobile (Clean rounded pill below sort) */}
         {config.products.search && (
-          <label className="mt-5 flex h-11 items-center gap-2 rounded-full border border-[#E7E3DC] px-4 text-sm focus-within:border-[#18181B] lg:hidden bg-white">
+          <label
+            className={`mt-4 flex h-11 items-center gap-2.5 rounded-full border border-[#E7E3DC] bg-white px-4 text-sm focus-within:border-[#18181B] ${
+              isMobile ? "flex" : "lg:hidden"
+            }`}
+          >
             <Search className="h-4 w-4 shrink-0 text-[#74716B]" />
             <input
               value={query}
@@ -166,9 +184,9 @@ export function StorefrontView({
           </label>
         )}
 
-        {/* Category Filter Pills (Exact Image 4) */}
+        {/* Category Filter Pills (Exact Image 1 & 3) */}
         {config.products.categories && categoryList.length > 1 && (
-          <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+          <div className="-mx-4 mt-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 scrollbar-none">
             {categoryList.map((item) => (
               <button
                 key={item}
@@ -177,7 +195,7 @@ export function StorefrontView({
                 className={`h-9 shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors ${
                   category === item
                     ? "border-[#18181B] bg-[#18181B] text-white"
-                    : "border-[#E7E3DC] text-[#74716B] hover:border-[#18181B] hover:text-[#18181B]"
+                    : "border-[#E7E3DC] bg-white text-[#74716B] hover:border-[#18181B] hover:text-[#18181B]"
                 }`}
               >
                 {item}
@@ -186,14 +204,20 @@ export function StorefrontView({
           </div>
         )}
 
-        {/* Product Cards Grid (4 columns, exact Image 4) */}
+        {/* Product Cards Grid: strictly 2 cols on mobile, 4 on desktop */}
         {filteredProducts.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-dashed border-[#E7E3DC] py-16 text-center">
             <p className="font-semibold text-base text-[#111827]">Aucun produit trouvé</p>
             <p className="mt-1 text-sm text-[#74716B]">Essayez une autre recherche ou filtre.</p>
           </div>
         ) : (
-          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10">
+          <div
+            className={`mt-8 grid ${
+              isMobile
+                ? "grid-cols-2 gap-3"
+                : "grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4 lg:gap-6"
+            }`}
+          >
             {filteredProducts.map((product) => {
               const discount =
                 product.original_price && product.original_price > product.price
@@ -204,8 +228,8 @@ export function StorefrontView({
 
               return (
                 <article key={product.id} className="group flex min-w-0 flex-col">
-                  {/* Image container in light rounded box (Exact Image 4) */}
-                  <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-[#F4F2EE] p-4 flex items-center justify-center border border-[#E7E3DC]/60">
+                  {/* Image container: Edge-to-edge square rounded, NO inner padding, NO glass border (Exact Capture 1) */}
+                  <div className="relative aspect-square w-full overflow-hidden rounded-[14px] bg-[#F4F2EE]">
                     <Link
                       to={productUrl}
                       onClick={(e) => {
@@ -220,15 +244,15 @@ export function StorefrontView({
                     <img
                       src={
                         product.thumbnail_url ||
-                        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop"
+                        "/images/demo/p-tiktok.jpg"
                       }
                       alt={product.title}
                       loading="lazy"
-                      className="pointer-events-none h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.035]"
+                      className="pointer-events-none h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.035]"
                     />
 
                     {discount > 0 && (
-                      <span className="absolute left-2.5 top-2.5 z-20 rounded-full bg-[#E86F3D] px-2 py-0.5 text-[11px] font-bold text-white shadow-xs">
+                      <span className="absolute left-2.5 top-2.5 z-20 rounded-full bg-[#E86F3D] px-2.5 py-0.5 text-[11px] font-bold text-white shadow-xs">
                         -{discount}%
                       </span>
                     )}
@@ -265,7 +289,7 @@ export function StorefrontView({
                         )}
                         {config.products.showSales && (
                           <span className="hidden sm:inline">
-                            · {product.sales_count || 12} ventes
+                            · {product.sales_count || 1240} ventes
                           </span>
                         )}
                       </span>
@@ -303,7 +327,7 @@ export function StorefrontView({
                     )}
                   </div>
 
-                  {/* Action Button: Obtenir -> (Exact Image 4) */}
+                  {/* Action Button: Obtenir -> (Exact Capture 1) */}
                   <button
                     type="button"
                     onClick={() => {
@@ -313,7 +337,7 @@ export function StorefrontView({
                         window.location.href = productUrl;
                       }
                     }}
-                    className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-[#18181B] text-[#18181B] text-[13px] font-semibold hover:bg-[#18181B] hover:text-white transition-colors"
+                    className="mt-3 flex h-10 w-full items-center justify-center gap-1.5 rounded-full border border-[#18181B] bg-white text-[#18181B] text-[13px] font-semibold hover:bg-[#18181B] hover:text-white transition-colors"
                   >
                     Obtenir{" "}
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -392,9 +416,9 @@ export function StorefrontView({
       className="min-h-full bg-[#FCFBF9] text-[#20201F]"
       style={style}
     >
-      {/* ─── HEADER (Exact Image 4) ─── */}
+      {/* ─── HEADER (Exact Capture 3 & 4) ─── */}
       <header className="sticky top-0 z-30 border-b border-[#E7E3DC] bg-[#FCFBF9]/95 backdrop-blur-sm">
-        <div className="mx-auto grid h-16 max-w-[1280px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 sm:px-6 md:grid-cols-[1fr_auto_1fr] lg:px-8">
+        <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           {/* Logo & Brand Name */}
           <Link
             to={subSlug ? "/" : `/store/${storeSlug}`}
@@ -409,20 +433,22 @@ export function StorefrontView({
               </span>
             )}
             <span className="truncate text-[15px] font-bold uppercase tracking-[0.16em] text-[#18181B]">
-              {config.name || "Boutique"}
+              {config.name || "DUKAIO"}
             </span>
           </Link>
 
-          {/* Navigation link: Boutique with black underline indicator */}
-          <nav className="hidden items-center gap-6 md:flex" aria-label="Navigation de la boutique">
-            <span className="relative text-sm font-bold text-[#18181B] after:absolute after:-bottom-[22px] after:left-1/2 after:h-0.5 after:w-6 after:-translate-x-1/2 after:bg-[#18181B]">
-              Boutique
-            </span>
-          </nav>
+          {/* Navigation link: Boutique with black underline indicator (Desktop only) */}
+          {!isMobile && (
+            <nav className="hidden items-center gap-6 md:flex" aria-label="Navigation de la boutique">
+              <span className="relative text-sm font-bold text-[#18181B] after:absolute after:-bottom-[22px] after:left-1/2 after:h-0.5 after:w-6 after:-translate-x-1/2 after:bg-[#18181B]">
+                Boutique
+              </span>
+            </nav>
+          )}
 
-          {/* Right Header Actions: Search, Wishlist, Bag */}
+          {/* Right Header Actions: Search (desktop only), Wishlist, Bag */}
           <div className="flex items-center justify-end gap-2">
-            {config.products.search && (
+            {!isMobile && config.products.search && (
               <label className="mr-2 hidden h-10 w-64 items-center gap-2 rounded-full border border-[#E7E3DC] bg-white px-4 text-sm transition-colors focus-within:border-[#18181B] lg:flex">
                 <Search className="h-4 w-4 shrink-0 text-[#74716B]" />
                 <input
